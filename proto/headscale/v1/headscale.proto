@@ -4,6 +4,7 @@ option  go_package = "github.com/juanfont/headscale/gen/go/v1";
 
 import "google/api/annotations.proto";
 
+import "headscale/v1/acl.proto";
 import "headscale/v1/namespace.proto";
 import "headscale/v1/preauthkey.proto";
 import "headscale/v1/machine.proto";
@@ -12,6 +13,16 @@ import "headscale/v1/apikey.proto";
 // import "headscale/v1/device.proto";
 
 service HeadscaleService {
+    // --- ACL start ---
+    rpc ACLPingPong(ACLPingPongRequest) returns (ACLPingPongResponse) {
+        option (google.api.http) = {
+            post: "/api/v1/acl/ping"
+            body: "*"
+        };
+    }
+
+    // --- ACL end ---
+
     // --- Namespace start ---
     rpc GetNamespace(GetNamespaceRequest) returns (GetNamespaceResponse) {
         option (google.api.http) = {

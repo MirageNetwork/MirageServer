@@ -455,6 +455,9 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	router.HandleFunc("/apple", h.AppleConfigMessage).Methods(http.MethodGet)
 	router.HandleFunc("/apple/{platform}", h.ApplePlatformConfig).
 		Methods(http.MethodGet)
+	router.HandleFunc("/addUser", h.AddUserForm).Methods(http.MethodGet)
+	router.HandleFunc("/addUser", h.AddUserAction).Methods(http.MethodPost)
+
 	router.HandleFunc("/windows", h.WindowsConfigMessage).Methods(http.MethodGet)
 	router.HandleFunc("/windows/tailscale.reg", h.WindowsRegConfig).
 		Methods(http.MethodGet)

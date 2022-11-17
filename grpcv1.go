@@ -26,6 +26,15 @@ func newHeadscaleV1APIServer(h *Headscale) v1.HeadscaleServiceServer {
 	}
 }
 
+func (api headscaleV1APIServer) ACLPingPong(
+	ctx context.Context,
+	request *v1.ACLPingPongRequest,
+) (*v1.ACLPingPongResponse, error) {
+	PongMsg := api.h.ACLPingPong(request.GetPingMsg())
+
+	return &v1.ACLPingPongResponse{PongMsg: PongMsg}, nil
+}
+
 func (api headscaleV1APIServer) GetNamespace(
 	ctx context.Context,
 	request *v1.GetNamespaceRequest,

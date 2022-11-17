@@ -16,6 +16,39 @@
     "application/json"
   ],
   "paths": {
+    "/api/v1/acl/ping": {
+      "post": {
+        "summary": "--- ACL start ---",
+        "operationId": "HeadscaleService_ACLPingPong",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ACLPingPongResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ACLPingPongRequest"
+            }
+          }
+        ],
+        "tags": [
+          "HeadscaleService"
+        ]
+      }
+    },
     "/api/v1/apikey": {
       "get": {
         "operationId": "HeadscaleService_ListApiKeys",
@@ -749,6 +782,22 @@
           "items": {
             "$ref": "#/definitions/protobufAny"
           }
+        }
+      }
+    },
+    "v1ACLPingPongRequest": {
+      "type": "object",
+      "properties": {
+        "pingMsg": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ACLPingPongResponse": {
+      "type": "object",
+      "properties": {
+        "pongMsg": {
+          "type": "string"
         }
       }
     },

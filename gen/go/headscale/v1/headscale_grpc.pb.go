@@ -22,6 +22,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type HeadscaleServiceClient interface {
+	// --- ACL start ---
+	ACLPingPong(ctx context.Context, in *ACLPingPongRequest, opts ...grpc.CallOption) (*ACLPingPongResponse, error)
 	// --- Namespace start ---
 	GetNamespace(ctx context.Context, in *GetNamespaceRequest, opts ...grpc.CallOption) (*GetNamespaceResponse, error)
 	CreateNamespace(ctx context.Context, in *CreateNamespaceRequest, opts ...grpc.CallOption) (*CreateNamespaceResponse, error)
@@ -57,6 +59,15 @@ type headscaleServiceClient struct {
 
 func NewHeadscaleServiceClient(cc grpc.ClientConnInterface) HeadscaleServiceClient {
 	return &headscaleServiceClient{cc}
+}
+
+func (c *headscaleServiceClient) ACLPingPong(ctx context.Context, in *ACLPingPongRequest, opts ...grpc.CallOption) (*ACLPingPongResponse, error) {
+	out := new(ACLPingPongResponse)
+	err := c.cc.Invoke(ctx, "/headscale.v1.HeadscaleService/ACLPingPong", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *headscaleServiceClient) GetNamespace(ctx context.Context, in *GetNamespaceRequest, opts ...grpc.CallOption) (*GetNamespaceResponse, error) {
@@ -261,6 +272,8 @@ func (c *headscaleServiceClient) ListApiKeys(ctx context.Context, in *ListApiKey
 // All implementations must embed UnimplementedHeadscaleServiceServer
 // for forward compatibility
 type HeadscaleServiceServer interface {
+	// --- ACL start ---
+	ACLPingPong(context.Context, *ACLPingPongRequest) (*ACLPingPongResponse, error)
 	// --- Namespace start ---
 	GetNamespace(context.Context, *GetNamespaceRequest) (*GetNamespaceResponse, error)
 	CreateNamespace(context.Context, *CreateNamespaceRequest) (*CreateNamespaceResponse, error)
@@ -295,6 +308,9 @@ type HeadscaleServiceServer interface {
 type UnimplementedHeadscaleServiceServer struct {
 }
 
+func (UnimplementedHeadscaleServiceServer) ACLPingPong(context.Context, *ACLPingPongRequest) (*ACLPingPongResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ACLPingPong not implemented")
+}
 func (UnimplementedHeadscaleServiceServer) GetNamespace(context.Context, *GetNamespaceRequest) (*GetNamespaceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNamespace not implemented")
 }
@@ -372,6 +388,24 @@ type UnsafeHeadscaleServiceServer interface {
 
 func RegisterHeadscaleServiceServer(s grpc.ServiceRegistrar, srv HeadscaleServiceServer) {
 	s.RegisterService(&HeadscaleService_ServiceDesc, srv)
+}
+
+func _HeadscaleService_ACLPingPong_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ACLPingPongRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HeadscaleServiceServer).ACLPingPong(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/headscale.v1.HeadscaleService/ACLPingPong",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HeadscaleServiceServer).ACLPingPong(ctx, req.(*ACLPingPongRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _HeadscaleService_GetNamespace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -777,6 +811,10 @@ var HeadscaleService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "headscale.v1.HeadscaleService",
 	HandlerType: (*HeadscaleServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ACLPingPong",
+			Handler:    _HeadscaleService_ACLPingPong_Handler,
+		},
 		{
 			MethodName: "GetNamespace",
 			Handler:    _HeadscaleService_GetNamespace_Handler,

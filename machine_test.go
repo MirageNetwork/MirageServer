@@ -274,8 +274,8 @@ func (s *Suite) TestGetACLFilteredPeers(c *check.C) {
 	machines, err := app.ListMachines()
 	c.Assert(err, check.IsNil)
 
-	peersOfTestMachine := getFilteredByACLPeers(machines, app.aclRules, testMachine)
-	peersOfAdminMachine := getFilteredByACLPeers(machines, app.aclRules, adminMachine)
+	peersOfTestMachine, _ := getFilteredByACLPeers(machines, app.aclRules, testMachine)
+	peersOfAdminMachine, _ := getFilteredByACLPeers(machines, app.aclRules, adminMachine)
 
 	c.Log(peersOfTestMachine)
 	c.Assert(len(peersOfTestMachine), check.Equals, 4)
@@ -949,7 +949,7 @@ func Test_getFilteredByACLPeers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getFilteredByACLPeers(
+			got, _ := getFilteredByACLPeers(
 				tt.args.machines,
 				tt.args.rules,
 				tt.args.machine,

@@ -161,9 +161,9 @@ type oidcCallbackTemplateConfig struct {
 var oidcCallbackTemplate = template.Must(
 	template.New("oidccallback").Parse(`<html>
 	<body>
-	<h1>headscale</h1>
+	<h1>蜃境</h1>
 	<p>
-			{{.Verb}} as {{.User}}, you can now close this window.
+			{{.Verb}} 用户身份：{{.User}}，你现在可关闭这个窗口了。
 	</p>
 	</body>
 	</html>`),
@@ -526,7 +526,7 @@ func (h *Headscale) validateMachineForOIDCCallback(
 		var content bytes.Buffer
 		if err := oidcCallbackTemplate.Execute(&content, oidcCallbackTemplateConfig{
 			User: claims.Email,
-			Verb: "Reauthenticated",
+			Verb: "已重认证",
 		}); err != nil {
 			log.Error().
 				Str("func", "OIDCCallback").
@@ -674,7 +674,7 @@ func renderOIDCCallbackTemplate(
 	var content bytes.Buffer
 	if err := oidcCallbackTemplate.Execute(&content, oidcCallbackTemplateConfig{
 		User: claims.Email,
-		Verb: "Authenticated",
+		Verb: "已认证",
 	}); err != nil {
 		log.Error().
 			Str("func", "OIDCCallback").

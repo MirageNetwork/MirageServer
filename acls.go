@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 	"github.com/tailscale/hujson"
 	"gopkg.in/yaml.v3"
 	"tailscale.com/tailcfg"
@@ -53,6 +54,34 @@ const (
 	protocolSCTP     = 132 // Stream Control Transmission Protocol
 	ProtocolFC       = 133 // Fibre Channel
 )
+
+// Test ACL update possibility by PingPong sequence.
+func (h *Headscale) ACLPingPong(PingMsg string) string {
+	if PingMsg != "ping" {
+		return "error"
+	}
+
+	cfg := h.cfg
+	aclPath := cfg.ACL.PolicyPath
+	if aclPath != "" {
+		if !strings.HasPrefix(aclPath, string(os.PathSeparator)) {
+			dir, _ := filepath.Split(viper.ConfigFileUsed())
+			if dir != "" {
+				aclPath = filepath.Join(dir, aclPath)
+			}
+		}
+		err := h.LoadACLPolicy(aclPath)
+		if err != nil {
+			log.Fatal().
+				Str("path", aclPath).
+				Err(err).
+				Msg("Could not load the ACL policy")
+		}
+	}
+	h.setLastStateChangeToNow()
+
+	return "pong"
+}
 
 // LoadACLPolicy loads the ACL policy from the specify path, and generates the ACL rules.
 func (h *Headscale) LoadACLPolicy(path string) error {

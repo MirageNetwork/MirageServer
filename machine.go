@@ -169,13 +169,14 @@ func getFilteredByACLPeers(
 	machines []Machine,
 	rules []tailcfg.FilterRule,
 	machine *Machine,
-) Machines {
+) (Machines, []tailcfg.NodeID) {
 	log.Trace().
 		Caller().
 		Str("machine", machine.Hostname).
 		Msg("Finding peers filtered by ACLs")
 
 	peers := make(map[uint64]Machine)
+	var invalidNodeIDs []tailcfg.NodeID
 	// Aclfilter peers here. We are itering through machines in all namespaces and search through the computed aclRules
 	// for match between rule SrcIPs and DstPorts. If the rule is a match we allow the machine to be viewable.
 	for _, peer := range machines {
@@ -224,6 +225,8 @@ func getFilteredByACLPeers(
 					machine.IPAddresses.ToStringSlice(),
 				) { // match all sources and source
 				peers[peer.ID] = peer
+			} else {
+				invalidNodeIDs = append(invalidNodeIDs, tailcfg.NodeID(peer.ID))
 			}
 		}
 	}
@@ -242,7 +245,7 @@ func getFilteredByACLPeers(
 		Str("machine", machine.Hostname).
 		Msgf("Found some machines: %v", machines)
 
-	return authorizedPeers
+	return authorizedPeers, invalidNodeIDs
 }
 
 func (h *Headscale) ListPeers(machine *Machine) (Machines, error) {
@@ -269,8 +272,9 @@ func (h *Headscale) ListPeers(machine *Machine) (Machines, error) {
 	return machines, nil
 }
 
-func (h *Headscale) getPeers(machine *Machine) (Machines, error) {
+func (h *Headscale) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) {
 	var peers Machines
+	var invalidNodeIDs []tailcfg.NodeID
 	var err error
 
 	// If ACLs rules are defined, filter visible host list with the ACLs
@@ -281,9 +285,9 @@ func (h *Headscale) getPeers(machine *Machine) (Machines, error) {
 		if err != nil {
 			log.Error().Err(err).Msg("Error retrieving list of machines")
 
-			return Machines{}, err
+			return Machines{}, []tailcfg.NodeID{}, err
 		}
-		peers = getFilteredByACLPeers(machines, h.aclRules, machine)
+		peers, invalidNodeIDs = getFilteredByACLPeers(machines, h.aclRules, machine)
 	} else {
 		peers, err = h.ListPeers(machine)
 		if err != nil {
@@ -292,8 +296,9 @@ func (h *Headscale) getPeers(machine *Machine) (Machines, error) {
 				Err(err).
 				Msg("Cannot fetch peers")
 
-			return Machines{}, err
+			return Machines{}, []tailcfg.NodeID{}, err
 		}
+		invalidNodeIDs = []tailcfg.NodeID{}
 	}
 
 	sort.Slice(peers, func(i, j int) bool { return peers[i].ID < peers[j].ID })
@@ -303,15 +308,15 @@ func (h *Headscale) getPeers(machine *Machine) (Machines, error) {
 		Str("machine", machine.Hostname).
 		Msgf("Found total peers: %s", peers.String())
 
-	return peers, nil
+	return peers, invalidNodeIDs, nil
 }
 
-func (h *Headscale) getValidPeers(machine *Machine) (Machines, error) {
+func (h *Headscale) getValidPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) {
 	validPeers := make(Machines, 0)
 
-	peers, err := h.getPeers(machine)
+	peers, nodeIDs, err := h.getPeers(machine)
 	if err != nil {
-		return Machines{}, err
+		return Machines{}, []tailcfg.NodeID{}, err
 	}
 
 	for _, peer := range peers {
@@ -320,7 +325,7 @@ func (h *Headscale) getValidPeers(machine *Machine) (Machines, error) {
 		}
 	}
 
-	return validPeers, nil
+	return validPeers, nodeIDs, nil
 }
 
 func (h *Headscale) ListMachines() ([]Machine, error) {

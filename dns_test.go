@@ -232,7 +232,7 @@ func (s *Suite) TestDNSConfigMapResponseWithMagicDNS(c *check.C) {
 		Proxied: true,
 	}
 
-	peersOfMachineInShared1, err := app.getPeers(machineInShared1)
+	peersOfMachineInShared1, _, err := app.getPeers(machineInShared1)
 	c.Assert(err, check.IsNil)
 
 	dnsConfig := getMapResponseDNSConfig(
@@ -379,7 +379,7 @@ func (s *Suite) TestDNSConfigMapResponseWithoutMagicDNS(c *check.C) {
 		Proxied: false,
 	}
 
-	peersOfMachine1Shared1, err := app.getPeers(machineInShared1)
+	peersOfMachine1Shared1, _, err := app.getPeers(machineInShared1)
 	c.Assert(err, check.IsNil)
 
 	dnsConfig := getMapResponseDNSConfig(

@@ -206,7 +206,7 @@ func (s *Suite) TestGetMapResponseUserProfiles(c *check.C) {
 	}
 	app.db.Save(machine2InShared1)
 
-	peersOfMachine1InShared1, err := app.getPeers(machineInShared1)
+	peersOfMachine1InShared1, _, err := app.getPeers(machineInShared1)
 	c.Assert(err, check.IsNil)
 
 	userProfiles := getMapResponseUserProfiles(

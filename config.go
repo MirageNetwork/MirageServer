@@ -72,6 +72,15 @@ type Config struct {
 	CLI CLIConfig
 
 	ACL ACLConfig
+
+	ali_IDaaS ALIConfig
+}
+type ALIConfig struct {
+	ali_app_id   string
+	ali_cli_id   string
+	ali_cli_key  string
+	ali_instance string
+	ali_org_id   string
 }
 
 type TLSConfig struct {
@@ -579,5 +588,12 @@ func GetHeadscaleConfig() (*Config, error) {
 		ACL: GetACLConfig(),
 
 		Log: GetLogConfig(),
+		ali_IDaaS: ALIConfig{
+			ali_app_id:   viper.GetString("ali_app_id"),
+			ali_cli_id:   viper.GetString("ali_cli_id"),
+			ali_cli_key:  viper.GetString("ali_cli_key"),
+			ali_instance: viper.GetString("ali_instance"),
+			ali_org_id:   viper.GetString("ali_org_id"),
+		},
 	}, nil
 }
