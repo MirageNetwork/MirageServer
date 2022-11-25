@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -101,27 +102,6 @@ type Headscale struct {
 	pollNetMapStreamWG sync.WaitGroup
 }
 
-// Look up the TLS constant relative to user-supplied TLS client
-// authentication mode. If an unknown mode is supplied, the default
-// value, tls.RequireAnyClientCert, is returned. The returned boolean
-// indicates if the supplied mode was valid.
-func LookupTLSClientAuthMode(mode string) (tls.ClientAuthType, bool) {
-	switch mode {
-	case DisabledClientAuth:
-		// Client cert is _not_ required.
-		return tls.NoClientCert, true
-	case RelaxedClientAuth:
-		// Client cert required, but _not verified_.
-		return tls.RequireAnyClientCert, true
-	case EnforcedClientAuth:
-		// Client cert is _required and verified_.
-		return tls.RequireAndVerifyClientCert, true
-	default:
-		// Return the default when an unknown value is supplied.
-		return tls.RequireAnyClientCert, false
-	}
-}
-
 func NewHeadscale(cfg *Config) (*Headscale, error) {
 	privateKey, err := readOrCreatePrivateKey(cfg.PrivateKeyPath)
 	if err != nil {
@@ -148,8 +128,12 @@ func NewHeadscale(cfg *Config) (*Headscale, error) {
 			cfg.DBuser,
 		)
 
-		if !cfg.DBssl {
-			dbString += " sslmode=disable"
+		if sslEnabled, err := strconv.ParseBool(cfg.DBssl); err == nil {
+			if !sslEnabled {
+				dbString += " sslmode=disable"
+			}
+		} else {
+			dbString += fmt.Sprintf(" sslmode=%s", cfg.DBssl)
 		}
 
 		if cfg.DBport != 0 {
@@ -858,12 +842,7 @@ func (h *Headscale) getTLSSettings() (*tls.Config, error) {
 			log.Warn().Msg("Listening with TLS but ServerURL does not start with https://")
 		}
 
-		log.Info().Msg(fmt.Sprintf(
-			"Client authentication (mTLS) is \"%s\". See the docs to learn about configuring this setting.",
-			h.cfg.TLS.ClientAuthMode))
-
 		tlsConfig := &tls.Config{
-			ClientAuth:   h.cfg.TLS.ClientAuthMode,
 			NextProtos:   []string{"http/1.1"},
 			Certificates: make([]tls.Certificate, 1),
 			MinVersion:   tls.VersionTLS12,
