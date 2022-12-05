@@ -1,0 +1,4 @@
+{
+    "go.inferGopath": false,
+    "nixEnvSelector.nixFile": "${workspaceRoot}/flake.nix"
+}
