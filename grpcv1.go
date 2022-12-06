@@ -373,36 +373,60 @@ func (api headscaleV1APIServer) MoveMachine(
 	return &v1.MoveMachineResponse{Machine: machine.toProto()}, nil
 }
 
-func (api headscaleV1APIServer) GetMachineRoute(
+func (api headscaleV1APIServer) GetRoutes(
 	ctx context.Context,
-	request *v1.GetMachineRouteRequest,
-) (*v1.GetMachineRouteResponse, error) {
-	machine, err := api.h.GetMachineByID(request.GetMachineId())
+	request *v1.GetRoutesRequest,
+) (*v1.GetRoutesResponse, error) {
+	routes, err := api.h.GetRoutes()
 	if err != nil {
 		return nil, err
 	}
 
-	return &v1.GetMachineRouteResponse{
-		Routes: machine.RoutesToProto(),
+	return &v1.GetRoutesResponse{
+		Routes: Routes(routes).toProto(),
 	}, nil
 }
 
-func (api headscaleV1APIServer) EnableMachineRoutes(
+func (api headscaleV1APIServer) EnableRoute(
 	ctx context.Context,
-	request *v1.EnableMachineRoutesRequest,
-) (*v1.EnableMachineRoutesResponse, error) {
+	request *v1.EnableRouteRequest,
+) (*v1.EnableRouteResponse, error) {
+	err := api.h.EnableRoute(request.GetRouteId())
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1.EnableRouteResponse{}, nil
+}
+
+func (api headscaleV1APIServer) DisableRoute(
+	ctx context.Context,
+	request *v1.DisableRouteRequest,
+) (*v1.DisableRouteResponse, error) {
+	err := api.h.DisableRoute(request.GetRouteId())
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1.DisableRouteResponse{}, nil
+}
+
+func (api headscaleV1APIServer) GetMachineRoutes(
+	ctx context.Context,
+	request *v1.GetMachineRoutesRequest,
+) (*v1.GetMachineRoutesResponse, error) {
 	machine, err := api.h.GetMachineByID(request.GetMachineId())
 	if err != nil {
 		return nil, err
 	}
 
-	err = api.h.EnableRoutes(machine, request.GetRoutes()...)
+	routes, err := api.h.GetMachineRoutes(machine)
 	if err != nil {
 		return nil, err
 	}
 
-	return &v1.EnableMachineRoutesResponse{
-		Routes: machine.RoutesToProto(),
+	return &v1.GetMachineRoutesResponse{
+		Routes: Routes(routes).toProto(),
 	}, nil
 }
 
@@ -506,6 +530,7 @@ func (api headscaleV1APIServer) DebugCreateMachine(
 
 		HostInfo: HostInfo(hostinfo),
 	}
+
 	nodeKey := key.NodePublic{}
 	err = nodeKey.UnmarshalText([]byte(request.GetKey()))
 	if err != nil {

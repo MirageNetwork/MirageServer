@@ -32,6 +32,15 @@ func (h *Headscale) handlePollCommon(
 	machine.DiscoKey = DiscoPublicKeyStripPrefix(mapRequest.DiscoKey)
 	now := time.Now().UTC()
 
+	err := h.processMachineRoutes(machine)
+	if err != nil {
+		log.Error().
+			Caller().
+			Err(err).
+			Str("machine", machine.Hostname).
+			Msg("Error processing machine routes")
+	}
+
 	// update ACLRules with peer informations (to update server tags if necessary)
 	if h.aclPolicy != nil {
 		err := h.UpdateACLRules()
@@ -44,7 +53,15 @@ func (h *Headscale) handlePollCommon(
 		}
 
 		// update routes with peer information
-		h.EnableAutoApprovedRoutes(machine)
+		err = h.EnableAutoApprovedRoutes(machine)
+		if err != nil {
+			log.Error().
+				Caller().
+				Bool("noise", isNoise).
+				Str("machine", machine.Hostname).
+				Err(err).
+				Msg("Error running auto approved routes")
+		}
 	}
 
 	// From Tailscale client:
