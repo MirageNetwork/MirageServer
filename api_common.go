@@ -25,6 +25,8 @@ func (h *Headscale) generateMapResponse(
 	}
 
 	peers, invalidNodeIDs, err := h.getValidPeers(machine)
+	if invalidNodeIDs != nil {
+	}
 	if err != nil {
 		log.Error().
 			Caller().
@@ -56,11 +58,11 @@ func (h *Headscale) generateMapResponse(
 	)
 
 	resp := tailcfg.MapResponse{
-		KeepAlive:    false,
-		Node:         node,
-		Peers:        nodePeers,
-		PeersChanged: nodePeers,
-		PeersRemoved: invalidNodeIDs,
+		KeepAlive: false,
+		Node:      node,
+		Peers:     nodePeers,
+		//		PeersChanged: nodePeers,
+		//		PeersRemoved: invalidNodeIDs,
 		DNSConfig:    dnsConfig,
 		Domain:       h.cfg.BaseDomain,
 		PacketFilter: h.aclRules,
