@@ -151,7 +151,8 @@ func (h *Headscale) handleRegisterCommon(
 			Msg("New machine not yet in the database")
 
 		givenName, err := h.GenerateGivenName(
-			machineKey.String(),
+			registerRequest.Hostinfo.BackendLogID,
+			//			machineKey.String(),
 			registerRequest.Hostinfo.Hostname,
 		)
 		if err != nil {
@@ -378,7 +379,8 @@ func (h *Headscale) handleAuthKeyCommon(
 	} else {
 		now := time.Now().UTC()
 
-		givenName, err := h.GenerateGivenName(MachinePublicKeyStripPrefix(machineKey), registerRequest.Hostinfo.Hostname)
+		givenName, err := h.GenerateGivenName(registerRequest.Hostinfo.BackendLogID, registerRequest.Hostinfo.Hostname)
+		//		givenName, err := h.GenerateGivenName(MachinePublicKeyStripPrefix(machineKey), registerRequest.Hostinfo.Hostname)
 		if err != nil {
 			log.Error().
 				Caller().

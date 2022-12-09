@@ -1221,7 +1221,7 @@ func (h *Headscale) generateGivenName(suppliedName string, randomSuffix bool) (s
 	return normalizedHostname, nil
 }
 
-func (h *Headscale) GenerateGivenName(machineKey string, suppliedName string) (string, error) {
+func (h *Headscale) GenerateGivenName(backendLogID string, suppliedName string) (string, error) {
 	givenName, err := h.generateGivenName(suppliedName, false)
 	if err != nil {
 		return "", err
@@ -1234,7 +1234,8 @@ func (h *Headscale) GenerateGivenName(machineKey string, suppliedName string) (s
 	}
 
 	for _, machine := range machines {
-		if machine.MachineKey != machineKey && machine.GivenName == givenName {
+		if machine.HostInfo.BackendLogID != backendLogID && machine.GivenName == givenName {
+			//		if machine.MachineKey != machineKey && machine.GivenName == givenName {
 			postfixedName, err := h.generateGivenName(suppliedName, true)
 			if err != nil {
 				return "", err
