@@ -229,7 +229,7 @@ func (h *Headscale) OIDCCallback(
 	}
 
 	// register the machine if it's new
-	log.Debug().Msg("Registering new machine after successful callback")
+	log.Debug().Msg("Registering new machine (or replace old one) after successful callback")
 
 	namespace, err := h.findOrCreateNewNamespaceForOIDCCallback(writer, namespaceName)
 	if err != nil {

@@ -175,6 +175,7 @@ func (h *Headscale) handleRegisterCommon(
 			NodeKey:    NodePublicKeyStripPrefix(registerRequest.NodeKey),
 			LastSeen:   &now,
 			Expiry:     &time.Time{},
+			HostInfo:   HostInfo(*registerRequest.Hostinfo.Clone()),
 		}
 
 		if !registerRequest.Expiry.IsZero() {

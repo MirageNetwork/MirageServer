@@ -352,6 +352,23 @@ func (h *Headscale) ListMachinesByGivenName(givenName string) ([]Machine, error)
 	return machines, nil
 }
 
+// cgao6
+// GetMachine finds a Machine by namespace and backendlogid and returns the Machine struct.
+func (h *Headscale) GetMachineNSBLID(namespace string, backendlogid string) (*Machine, error) {
+	machines, err := h.ListMachinesInNamespace(namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, m := range machines {
+		if m.HostInfo.BackendLogID == backendlogid {
+			return &m, nil
+		}
+	}
+
+	return nil, ErrMachineNotFound
+}
+
 // GetMachine finds a Machine by name and namespace and returns the Machine struct.
 func (h *Headscale) GetMachine(namespace string, name string) (*Machine, error) {
 	machines, err := h.ListMachinesInNamespace(namespace)
@@ -514,6 +531,25 @@ func (h *Headscale) RefreshMachine(machine *Machine, expiry time.Time) error {
 	h.setLastStateChangeToNow()
 
 	if err := h.db.Save(machine).Error; err != nil {
+		return fmt.Errorf(
+			"failed to refresh machine (update expiration) in the database: %w",
+			err,
+		)
+	}
+
+	return nil
+}
+
+// RestructMachine takes a Machine struct and sets its new keys.
+func (h *Headscale) RestructMachine(machine *Machine, expiry time.Time) error {
+	now := time.Now()
+
+	machine.LastSuccessfulUpdate = &now
+	machine.Expiry = &expiry
+
+	h.setLastStateChangeToNow()
+
+	if err := h.db.Updates(machine).Error; err != nil {
 		return fmt.Errorf(
 			"failed to refresh machine (update expiration) in the database: %w",
 			err,
@@ -871,18 +907,46 @@ func (h *Headscale) RegisterMachineFromAuthCallback(
 				return nil, ErrDifferentRegisteredNamespace
 			}
 
-			registrationMachine.NamespaceID = namespace.ID
-			registrationMachine.RegisterMethod = registrationMethod
+			oldmachine, _ := h.GetMachineNSBLID(namespaceName, registrationMachine.HostInfo.BackendLogID)
 
-			machine, err := h.RegisterMachine(
-				registrationMachine,
-			)
+			if oldmachine != nil {
+				log.Trace().
+					Caller().
+					Str("machine", oldmachine.Hostname).
+					Msg("machine already registered, reauthenticating")
 
-			if err == nil {
-				h.registrationCache.Delete(nodeKeyStr)
+				registrationMachine.ID = oldmachine.ID
+				registrationMachine.NamespaceID = namespace.ID
+				registrationMachine.IPAddresses = oldmachine.IPAddresses
+				registrationMachine.RegisterMethod = registrationMethod
+
+				err := h.RestructMachine(&registrationMachine, time.Time{})
+				if err != nil {
+					log.Error().
+						Caller().
+						Err(err).
+						Msg("Failed to restruct machine")
+
+					return nil, ErrCouldNotConvertMachineInterface
+				} else {
+					h.registrationCache.Delete(nodeKeyStr)
+				}
+
+				return &registrationMachine, err
+			} else {
+				registrationMachine.NamespaceID = namespace.ID
+				registrationMachine.RegisterMethod = registrationMethod
+
+				machine, err := h.RegisterMachine(
+					registrationMachine,
+				)
+				if err == nil {
+					h.registrationCache.Delete(nodeKeyStr)
+				}
+
+				return machine, err
 			}
 
-			return machine, err
 		} else {
 			return nil, ErrCouldNotConvertMachineInterface
 		}
