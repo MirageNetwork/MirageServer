@@ -484,6 +484,7 @@ func (h *Headscale) SetTags(machine *Machine, tags []string) error {
 func (h *Headscale) ExpireMachine(machine *Machine) error {
 	now := time.Now()
 	machine.Expiry = &now
+	machine.DiscoKey = ""
 
 	h.setLastStateChangeToNow()
 

@@ -34,7 +34,8 @@ const (
 type IDTokenClaims struct {
 	Name     string   `json:"name,omitempty"`
 	Groups   []string `json:"groups,omitempty"`
-	Email    string   `json:"email"`
+	Email    string   `json:"email,omitempty"`
+	Phone    string   `json:"phone_number"`
 	Username string   `json:"preferred_username,omitempty"`
 }
 
@@ -202,9 +203,11 @@ func (h *Headscale) OIDCCallback(
 	// }
 
 	claims, err := extractIDTokenClaims(writer, idToken)
+
 	if err != nil {
 		return
 	}
+	/* cgao6: temp unsed part
 
 	if err := validateOIDCAllowedDomains(writer, h.cfg.OIDC.AllowedDomains, claims); err != nil {
 		return
@@ -218,12 +221,13 @@ func (h *Headscale) OIDCCallback(
 		return
 	}
 
+	*/
 	nodeKey, machineExists, err := h.validateMachineForOIDCCallback(writer, state, claims)
 	if err != nil || machineExists {
 		return
 	}
 
-	namespaceName, err := getNamespaceName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	namespaceName, namespaceUID, namespaceDisName, err := getNamespaceName(writer, claims, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		return
 	}
@@ -231,7 +235,7 @@ func (h *Headscale) OIDCCallback(
 	// register the machine if it's new
 	log.Debug().Msg("Registering new machine (or replace old one) after successful callback")
 
-	namespace, err := h.findOrCreateNewNamespaceForOIDCCallback(writer, namespaceName)
+	namespace, err := h.findOrCreateNewNamespaceForOIDCCallback(writer, namespaceName, namespaceUID, namespaceDisName)
 	if err != nil {
 		return
 	}
@@ -605,7 +609,9 @@ func getNamespaceName(
 	writer http.ResponseWriter,
 	claims *IDTokenClaims,
 	stripEmaildomain bool,
-) (string, error) {
+) (string, string, string, error) {
+	/* cgao6 change to use phone
+
 	namespaceName, err := NormalizeToFQDNRules(
 		claims.Email,
 		stripEmaildomain,
@@ -624,17 +630,22 @@ func getNamespaceName(
 
 		return "", err
 	}
-
-	return namespaceName, nil
+	*/
+	namespaceName := strings.ReplaceAll(strings.TrimPrefix(claims.Phone, "+86"), " ", "")
+	namespaceUID := claims.Username
+	namespaceDisName := claims.Name
+	return namespaceName, namespaceUID, namespaceDisName, nil
 }
 
 func (h *Headscale) findOrCreateNewNamespaceForOIDCCallback(
 	writer http.ResponseWriter,
 	namespaceName string,
+	namespaceUID string,
+	namespaceDisName string,
 ) (*Namespace, error) {
 	namespace, err := h.GetNamespace(namespaceName)
 	if errors.Is(err, ErrNamespaceNotFound) {
-		namespace, err = h.CreateNamespace(namespaceName)
+		namespace, err = h.CreateNamespace(namespaceName, namespaceUID, namespaceDisName)
 
 		if err != nil {
 			log.Error().

@@ -35,12 +35,14 @@ var invalidCharsInNamespaceRegex = regexp.MustCompile("[^a-z0-9-.]+")
 // that contain our machines.
 type Namespace struct {
 	gorm.Model
-	Name string `gorm:"unique"`
+	Name         string `gorm:"unique"`
+	OIDC_UID     string `gorm:"unique"`
+	Display_Name string `gorm:"unique"`
 }
 
 // CreateNamespace creates a new Namespace. Returns error if could not be created
 // or another namespace already exists.
-func (h *Headscale) CreateNamespace(name string) (*Namespace, error) {
+func (h *Headscale) CreateNamespace(name string, UID string, DisName string) (*Namespace, error) {
 	err := CheckForFQDNRules(name)
 	if err != nil {
 		return nil, err
@@ -50,6 +52,8 @@ func (h *Headscale) CreateNamespace(name string) (*Namespace, error) {
 		return nil, ErrNamespaceExists
 	}
 	namespace.Name = name
+	namespace.OIDC_UID = UID
+	namespace.Display_Name = DisName
 	if err := h.db.Create(&namespace).Error; err != nil {
 		log.Error().
 			Str("func", "CreateNamespace").
@@ -189,7 +193,7 @@ func (n *Namespace) toUser() *tailcfg.User {
 	user := tailcfg.User{
 		ID:            tailcfg.UserID(n.ID),
 		LoginName:     n.Name,
-		DisplayName:   n.Name,
+		DisplayName:   n.Display_Name,
 		ProfilePicURL: "",
 		Domain:        "headscale.net",
 		Logins:        []tailcfg.LoginID{},
@@ -203,7 +207,7 @@ func (n *Namespace) toLogin() *tailcfg.Login {
 	login := tailcfg.Login{
 		ID:            tailcfg.LoginID(n.ID),
 		LoginName:     n.Name,
-		DisplayName:   n.Name,
+		DisplayName:   n.Display_Name,
 		ProfilePicURL: "",
 		Domain:        "headscale.net",
 	}
@@ -223,17 +227,18 @@ func (h *Headscale) getMapResponseUserProfiles(
 
 	profiles := []tailcfg.UserProfile{}
 	for _, namespace := range namespaceMap {
-		displayName := namespace.Name
+		/* cgao6 we do not use this logic for current
+		displayName := namespace.Display_Name
 
 		if h.cfg.BaseDomain != "" {
 			displayName = fmt.Sprintf("%s@%s", namespace.Name, h.cfg.BaseDomain)
 		}
-
+		*/
 		profiles = append(profiles,
 			tailcfg.UserProfile{
 				ID:          tailcfg.UserID(namespace.ID),
 				LoginName:   namespace.Name,
-				DisplayName: displayName,
+				DisplayName: namespace.Display_Name,
 			})
 	}
 

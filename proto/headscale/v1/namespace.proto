@@ -7,7 +7,9 @@ import "google/protobuf/timestamp.proto";
 message Namespace {
     string                    id         = 1;
     string                    name       = 2;
-    google.protobuf.Timestamp created_at = 3;
+    string                    uid        = 3;
+    string                    disname    = 4;
+    google.protobuf.Timestamp created_at = 5;
 }
 
 message GetNamespaceRequest {
@@ -20,6 +22,8 @@ message GetNamespaceResponse {
 
 message CreateNamespaceRequest {
     string name = 1;
+    string uid  = 2;
+    string disname = 3;
 }
 
 message CreateNamespaceResponse {

@@ -66,7 +66,7 @@ func (h *Headscale) AddUserForm(
 }
 
 type addUserDoneTemplateConfig struct {
-	Email  string
+	Name   string
 	Phone  string
 	UserID string
 }
@@ -76,7 +76,7 @@ var addUserDoneTemplate = template.Must(
 	<body>
 	<h1>创建用户成功！</h1>
 	<p>
-			恭喜你注册成功！ 邮箱：{{.Email}} 手机号：{{.Phone}} 用户ID：{{.UserID}} 。请安装客户端使用手机号登录！
+			恭喜你注册成功！ 姓名{{.Name}} 手机号：{{.Phone}} 用户ID：{{.UserID}} 。请安装客户端使用手机号登录！
 	</p>
 	</body>
 	</html>`),
@@ -104,19 +104,18 @@ func (h *Headscale) AddUserAction(
 		Authorization: &bearToken,
 	}
 	createUserRequest := &eiam_developerapi20220225.CreateUserRequest{
-		Username:                    &req.Form["email"][0],
+		Username:                    &req.Form["name"][0],
 		PhoneRegion:                 tea.String("86"),
 		PhoneNumber:                 &req.Form["mobile"][0],
 		PhoneNumberVerified:         &varTrue,
-		Email:                       &req.Form["email"][0],
-		EmailVerified:               &varTrue,
+		DisplayName:                 &req.Form["name"][0],
 		PrimaryOrganizationalUnitId: &h.cfg.ali_IDaaS.ali_org_id,
 	}
 	runtime = &util.RuntimeOptions{}
 	// 复制代码运行请自行打印 API 的返回值
 	createUserRes, _ := client.CreateUserWithOptions(&h.cfg.ali_IDaaS.ali_instance, &h.cfg.ali_IDaaS.ali_app_id, createUserRequest, createUserHeaders, runtime)
 
-	content, err := renderAddUserResult(writer, req.Form["email"][0], req.Form["mobile"][0], *createUserRes.Body.UserId)
+	content, err := renderAddUserResult(writer, req.Form["name"][0], req.Form["mobile"][0], *createUserRes.Body.UserId)
 	if err != nil {
 		return
 	}
@@ -133,11 +132,11 @@ func (h *Headscale) AddUserAction(
 
 func renderAddUserResult(
 	writer http.ResponseWriter,
-	email string, phone string, userID string,
+	name string, phone string, userID string,
 ) (*bytes.Buffer, error) {
 	var content bytes.Buffer
 	if err := addUserDoneTemplate.Execute(&content, addUserDoneTemplateConfig{
-		Email:  email,
+		Name:   name,
 		Phone:  phone,
 		UserID: userID,
 	}); err != nil {

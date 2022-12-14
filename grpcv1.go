@@ -51,7 +51,7 @@ func (api headscaleV1APIServer) CreateNamespace(
 	ctx context.Context,
 	request *v1.CreateNamespaceRequest,
 ) (*v1.CreateNamespaceResponse, error) {
-	namespace, err := api.h.CreateNamespace(request.GetName())
+	namespace, err := api.h.CreateNamespace(request.GetName(), request.GetUid(), request.GetDisname())
 	if err != nil {
 		return nil, err
 	}
