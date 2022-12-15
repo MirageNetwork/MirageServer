@@ -1166,6 +1166,9 @@
         },
         "givenName": {
           "type": "string"
+        },
+        "online": {
+          "type": "boolean"
         }
       }
     },
