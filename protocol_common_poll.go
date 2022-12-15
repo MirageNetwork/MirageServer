@@ -593,7 +593,12 @@ func (h *Headscale) pollNetMapStream(
 				return
 			}
 			now := time.Now().UTC()
-			machine.LastSeen = &now
+			//cgao6 we should note sth for the machine gone w/o byebye
+			back := now.Add(-time.Minute)
+			machine.LastSuccessfulUpdate = &now
+			machine.LastSeen = &back
+			//cgao6
+
 			err = h.TouchMachine(machine)
 			if err != nil {
 				log.Error().
@@ -604,6 +609,9 @@ func (h *Headscale) pollNetMapStream(
 					Err(err).
 					Msg("Cannot update machine LastSeen")
 			}
+			//cgao6 we should note sth for the machine gone w/o byebye
+			h.setLastStateChangeToNow()
+			//cgao6
 
 			// The connection has been closed, so we can stop polling.
 			return
