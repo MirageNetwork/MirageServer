@@ -892,6 +892,12 @@
       "properties": {
         "name": {
           "type": "string"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "disname": {
+          "type": "string"
         }
       }
     },
@@ -1178,6 +1184,12 @@
           "type": "string"
         },
         "name": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "disname": {
           "type": "string"
         },
         "createdAt": {
