@@ -215,6 +215,7 @@ func (h *Headscale) handlePrimarySubnetFailover() error {
 		log.Error().Err(err).Msg("error getting routes")
 	}
 
+	routesChanged := false
 	for pos, route := range routes {
 		if route.isExitRoute() {
 			continue
@@ -234,6 +235,8 @@ func (h *Headscale) handlePrimarySubnetFailover() error {
 
 					return err
 				}
+
+				routesChanged = true
 
 				continue
 			}
@@ -306,7 +309,13 @@ func (h *Headscale) handlePrimarySubnetFailover() error {
 
 				return err
 			}
+
+			routesChanged = true
 		}
+	}
+
+	if routesChanged {
+		h.setLastStateChangeToNow()
 	}
 
 	return nil

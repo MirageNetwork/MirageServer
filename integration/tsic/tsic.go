@@ -30,6 +30,7 @@ var (
 	errTailscaleWrongPeerCount         = errors.New("wrong peer count")
 	errTailscaleCannotUpWithoutAuthkey = errors.New("cannot up without authkey")
 	errTailscaleNotConnected           = errors.New("tailscale not connected")
+	errTailscaleNotLoggedOut           = errors.New("tailscale not logged out")
 )
 
 type TailscaleInContainer struct {
@@ -269,6 +270,15 @@ func (t *TailscaleInContainer) UpWithLoginURL(
 	return loginURL, nil
 }
 
+func (t *TailscaleInContainer) Logout() error {
+	_, _, err := t.Execute([]string{"tailscale", "logout"})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (t *TailscaleInContainer) IPs() ([]netip.Addr, error) {
 	if t.ips != nil && len(t.ips) != 0 {
 		return t.ips, nil
@@ -347,6 +357,21 @@ func (t *TailscaleInContainer) WaitForReady() error {
 		}
 
 		return errTailscaleNotConnected
+	})
+}
+
+func (t *TailscaleInContainer) WaitForLogout() error {
+	return t.pool.Retry(func() error {
+		status, err := t.Status()
+		if err != nil {
+			return fmt.Errorf("failed to fetch tailscale status: %w", err)
+		}
+
+		if status.CurrentTailnet == nil {
+			return nil
+		}
+
+		return errTailscaleNotLoggedOut
 	})
 }
 
