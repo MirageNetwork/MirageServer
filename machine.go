@@ -41,7 +41,7 @@ const (
 // Machine is a Headscale client.
 type Machine struct {
 	ID          uint64 `gorm:"primary_key"`
-	MachineKey  string `gorm:"type:varchar(64);unique_index"`
+	MachineKey  string `gorm:"type:varchar(64);"`
 	NodeKey     string
 	DiscoKey    string
 	IPAddresses MachineAddresses

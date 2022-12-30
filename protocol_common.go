@@ -102,7 +102,8 @@ func (h *Headscale) handleRegisterCommon(
 	isNoise bool,
 ) {
 	now := time.Now().UTC()
-	machine, err := h.GetMachineByAnyKey(machineKey, registerRequest.NodeKey, registerRequest.OldNodeKey)
+	//machine, err := h.GetMachineByAnyKey(machineKey, registerRequest.NodeKey, registerRequest.OldNodeKey)
+	machine, err := h.GetMachineByAnyKey(key.MachinePublic{}, registerRequest.NodeKey, registerRequest.OldNodeKey)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// If the machine has AuthKey set, handle registration via PreAuthKeys
 		if registerRequest.Auth.AuthKey != "" {
@@ -283,7 +284,6 @@ func (h *Headscale) handleRegisterCommon(
 			*machine,
 			registerCacheExpiration,
 		)
-
 		return
 	}
 }
@@ -373,7 +373,8 @@ func (h *Headscale) handleAuthKeyCommon(
 	// The error is not important, because if it does not
 	// exist, then this is a new machine and we will move
 	// on to registration.
-	machine, _ := h.GetMachineByAnyKey(machineKey, registerRequest.NodeKey, registerRequest.OldNodeKey)
+	//machine, _ := h.GetMachineByAnyKey(machineKey, registerRequest.NodeKey, registerRequest.OldNodeKey)
+	machine, _ := h.GetMachineByAnyKey(key.MachinePublic{}, registerRequest.NodeKey, registerRequest.OldNodeKey)
 	if machine != nil {
 		log.Trace().
 			Caller().
