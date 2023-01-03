@@ -417,7 +417,7 @@ func GetDNSConfig() (*tailcfg.DNSConfig, string) {
 		}
 
 		if viper.IsSet("dns_config.restricted_nameservers") {
-			if len(dnsConfig.Nameservers) > 0 {
+			if len(dnsConfig.Resolvers) > 0 {
 				dnsConfig.Routes = make(map[string][]*dnstype.Resolver)
 				restrictedDNS := viper.GetStringMapStringSlice(
 					"dns_config.restricted_nameservers",
@@ -449,12 +449,26 @@ func GetDNSConfig() (*tailcfg.DNSConfig, string) {
 
 		if viper.IsSet("dns_config.domains") {
 			domains := viper.GetStringSlice("dns_config.domains")
-			if len(dnsConfig.Nameservers) > 0 {
+			if len(dnsConfig.Resolvers) > 0 {
 				dnsConfig.Domains = domains
 			} else if domains != nil {
 				log.Warn().
 					Msg("Warning: dns_config.domains is set, but no nameservers are configured. Ignoring domains.")
 			}
+		}
+
+		if viper.IsSet("dns_config.extra_records") {
+			var extraRecords []tailcfg.DNSRecord
+
+			err := viper.UnmarshalKey("dns_config.extra_records", &extraRecords)
+			if err != nil {
+				log.Error().
+					Str("func", "getDNSConfig").
+					Err(err).
+					Msgf("Could not parse dns_config.extra_records")
+			}
+
+			dnsConfig.ExtraRecords = extraRecords
 		}
 
 		if viper.IsSet("dns_config.magic_dns") {
