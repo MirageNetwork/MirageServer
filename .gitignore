@@ -34,3 +34,5 @@ result
 .direnv/
 
 integration_test/etc/config.dump.yaml
+
+/admin/node_modules/

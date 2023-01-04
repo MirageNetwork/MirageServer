@@ -24,22 +24,20 @@ func CreateClient() (_result *eiam_developerapi20220225.Client, _err error) {
 	return _result, _err
 }
 
-//go:embed templates/addUserForm.html
-var addUserForm string
+//go:embed admin/addUser.html
+var addUserHTML string
 
-// AddUserForm offer a page for individual register new accounta.
 func (h *Headscale) AddUserForm(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	addUserTemplate := template.Must(template.New("addUser").Parse(addUserForm))
-
+	addUserT := template.Must(template.New("addUser").Parse(addUserHTML))
 	var payload bytes.Buffer
-	if err := addUserTemplate.Execute(&payload, nil); err != nil {
+	if err := addUserT.Execute(&payload, nil); err != nil {
 		log.Error().
-			Str("handler", "addUserForm").
+			Str("handler", "addUserHTML").
 			Err(err).
-			Msg("Could not render addUser template")
+			Msg("Could not render addUser HTML")
 
 		writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		writer.WriteHeader(http.StatusInternalServerError)
@@ -76,7 +74,8 @@ var addUserDoneTemplate = template.Must(
 	<body>
 	<h1>创建用户成功！</h1>
 	<p>
-			恭喜你注册成功！ 姓名{{.Name}} 手机号：{{.Phone}} 用户ID：{{.UserID}} 。请安装客户端使用手机号登录！
+			恭喜你注册成功！ 姓名：{{.Name}} 手机号：{{.Phone}} 用户ID：{{.UserID}} 。
+			请安装客户端使用手机号登录！
 	</p>
 	</body>
 	</html>`),
@@ -104,7 +103,7 @@ func (h *Headscale) AddUserAction(
 		Authorization: &bearToken,
 	}
 	createUserRequest := &eiam_developerapi20220225.CreateUserRequest{
-		Username:                    &req.Form["name"][0],
+		Username:                    &req.Form["mobile"][0],
 		PhoneRegion:                 tea.String("86"),
 		PhoneNumber:                 &req.Form["mobile"][0],
 		PhoneNumberVerified:         &varTrue,
@@ -113,10 +112,15 @@ func (h *Headscale) AddUserAction(
 	}
 	runtime = &util.RuntimeOptions{}
 	// 复制代码运行请自行打印 API 的返回值
-	createUserRes, _ := client.CreateUserWithOptions(&h.cfg.ali_IDaaS.ali_instance, &h.cfg.ali_IDaaS.ali_app_id, createUserRequest, createUserHeaders, runtime)
+	createUserRes, err1 := client.CreateUserWithOptions(&h.cfg.ali_IDaaS.ali_instance, &h.cfg.ali_IDaaS.ali_app_id, createUserRequest, createUserHeaders, runtime)
 
-	content, err := renderAddUserResult(writer, req.Form["name"][0], req.Form["mobile"][0], *createUserRes.Body.UserId)
-	if err != nil {
+	if err1 != nil {
+		log.Error().Msg(err1.Error())
+		return
+	}
+
+	content, err2 := renderAddUserResult(writer, req.Form["name"][0], req.Form["mobile"][0], *createUserRes.Body.UserId)
+	if err2 != nil {
 		return
 	}
 

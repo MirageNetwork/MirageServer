@@ -3,9 +3,11 @@ package headscale
 import (
 	"context"
 	"crypto/tls"
+	"embed"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -433,8 +435,25 @@ func (h *Headscale) ensureUnixSocketIsAbsent() error {
 	return os.Remove(h.cfg.UnixSocket)
 }
 
+//go:embed admin/css
+var cssFS embed.FS
+
+//go:embed admin/img
+var imgFS embed.FS
+
 func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	router := mux.NewRouter()
+
+	cssDir, err := fs.Sub(cssFS, "admin/css")
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+	}
+	router.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.FS(cssDir))))
+	imgDir, err := fs.Sub(imgFS, "admin/img")
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+	}
+	router.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(http.FS(imgDir))))
 
 	router.HandleFunc(ts2021UpgradePath, h.NoiseUpgradeHandler).Methods(http.MethodPost)
 

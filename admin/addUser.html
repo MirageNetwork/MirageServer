@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="css/tw.css" rel="stylesheet">
+  <title>用户注册--测试</title>
+</head>
+<body>
+  <div class="relative flex min-h-screen flex-col justify-center bg-gray-200">
+    <div class="md:w-2/3 self-center card lg:card-side bg-base-100 shadow-xl">
+      <figure><img src="img/logo.png" alt="Logo"/></figure>
+      <div class="card-body mx-auto lg:flex-shrink-0 w-96">
+        <h1 class="card-title">用户注册</h1>
+        <p>目前仅供测试使用</p>
+        <Form action="/addUser" method="post" class="form-control w-full h-full">
+          <label class="label">
+            <span class="label-text">用户名：</span>
+          </label>
+          <input type="text" name="name" placeholder="请输入您的姓名" class="input input-bordered w-full max-w-xs" />
+          <label class="label">
+            <span class="label-text">手机号：</span>
+          </label>
+          <input type="text" name="mobile" placeholder="请输入您的手机号" class="input input-bordered w-full max-w-xs" />
+          <p></p>
+          <div class="card-actions justify-end pt-4">
+            <button type="submit" class="btn btn-primary">创建用户</button>
+          </div>
+        </Form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
