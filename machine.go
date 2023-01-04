@@ -894,6 +894,7 @@ func getTags(
 func (h *Headscale) RegisterMachineFromAuthCallback(
 	nodeKeyStr string,
 	namespaceName string,
+	machineExpiry *time.Time,
 	registrationMethod string,
 ) (*Machine, error) {
 	nodeKey := key.NodePublic{}
@@ -937,6 +938,10 @@ func (h *Headscale) RegisterMachineFromAuthCallback(
 				registrationMachine.IPAddresses = oldmachine.IPAddresses
 				registrationMachine.RegisterMethod = registrationMethod
 
+				if machineExpiry != nil {
+					registrationMachine.Expiry = machineExpiry
+				}
+
 				err := h.RestructMachine(&registrationMachine, time.Time{})
 				if err != nil {
 					log.Error().
@@ -951,19 +956,24 @@ func (h *Headscale) RegisterMachineFromAuthCallback(
 
 				return &registrationMachine, err
 			} else {
+
 				registrationMachine.NamespaceID = namespace.ID
 				registrationMachine.RegisterMethod = registrationMethod
+
+				if machineExpiry != nil {
+					registrationMachine.Expiry = machineExpiry
+				}
 
 				machine, err := h.RegisterMachine(
 					registrationMachine,
 				)
+
 				if err == nil {
 					h.registrationCache.Delete(nodeKeyStr)
 				}
 
 				return machine, err
 			}
-
 		} else {
 			return nil, ErrCouldNotConvertMachineInterface
 		}
