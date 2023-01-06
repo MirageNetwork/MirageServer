@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="css/tw.css" rel="stylesheet">
+  <title>蜃境</title>
+</head>
+
+<body>
+  <div class="relative flex min-h-screen flex-col justify-center bg-gray-200">
+    <div
+      class="absolute inset-0 bg-[url(/img/grid.svg)] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]">
+    </div>
+    <div class="md:w-2/3 self-center card  bg-base-100 shadow-xl">
+      <div class="card-body mx-auto lg:flex-shrink-0 w-full">
+        {{if .ERROR}}
+        <h1 class="card-title">出错啦！</h1>
+        {{else}}
+        <h1 class="card-title">完成！</h1>
+        {{end}}
+
+        <div class="divider"></div>
+        {{if .ERROR}}
+        <div class="alert alert-error shadow-lg">
+          {{else}}
+          <div class="alert alert-success shadow-lg">
+            {{end}}
+            <div>
+              {{if .ERROR}}
+              <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{else}}
+              <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{end}}
+              <span class="whitespace-normal">{{.Msg}}</span>
+            </div>
+          </div>
+
+          <div class="card-actions justify-end pt-4">
+            <a href="{{.Next}}">
+              <button class="btn btn-primary">{{.NextMsg}}</button>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+</body>
+
+</html>

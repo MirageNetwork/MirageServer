@@ -185,7 +185,7 @@ func (h *Headscale) OIDCCallback(
 		return
 	}
 
-	rawIDToken, err := h.getIDTokenForOIDCCallback(req.Context(), writer, code, state)
+	rawIDToken, _, err := h.getIDTokenForOIDCCallback(req.Context(), writer, code, state)
 	if err != nil {
 		return
 	}
@@ -287,7 +287,7 @@ func (h *Headscale) getIDTokenForOIDCCallback(
 	ctx context.Context,
 	writer http.ResponseWriter,
 	code, state string,
-) (string, error) {
+) (string, string, error) {
 	oauth2Token, err := h.oauth2Config.Exchange(ctx, code)
 	if err != nil {
 		log.Error().
@@ -304,7 +304,7 @@ func (h *Headscale) getIDTokenForOIDCCallback(
 				Msg("Failed to write response")
 		}
 
-		return "", err
+		return "", "", err
 	}
 
 	log.Trace().
@@ -325,10 +325,25 @@ func (h *Headscale) getIDTokenForOIDCCallback(
 				Msg("Failed to write response")
 		}
 
-		return "", errNoOIDCIDToken
+		return "", "", errNoOIDCIDToken
 	}
 
-	return rawIDToken, nil
+	accessToken, acessTokenOK := oauth2Token.Extra("access_token").(string)
+	if !acessTokenOK {
+		writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		writer.WriteHeader(http.StatusBadRequest)
+		_, err := writer.Write([]byte("Could not extract Access Token"))
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to write response")
+		}
+
+		return "", "", errNoOIDCIDToken
+	}
+
+	return rawIDToken, accessToken, nil
 }
 
 func (h *Headscale) verifyIDTokenForOIDCCallback(

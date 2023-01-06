@@ -68,6 +68,9 @@ const (
 	registerCacheExpiration = time.Minute * 15
 	registerCacheCleanup    = time.Minute * 20
 
+	smsCacheExpiration = time.Minute * 5
+	smsCacheCleanup    = time.Minute * 5
+
 	DisabledClientAuth = "disabled"
 	RelaxedClientAuth  = "relaxed"
 	EnforcedClientAuth = "enforced"
@@ -162,8 +165,8 @@ func NewHeadscale(cfg *Config) (*Headscale, error) {
 		registerCacheCleanup,
 	)
 	smsCodeCache := cache.New(
-		registerCacheExpiration,
-		registerCacheCleanup,
+		smsCacheExpiration,
+		smsCacheCleanup,
 	)
 
 	app := Headscale{
@@ -545,9 +548,8 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	router.HandleFunc("/apple/{platform}", h.ApplePlatformConfig).
 		Methods(http.MethodGet)
 
-	router.HandleFunc("/addUser", h.AddUserForm).Methods(http.MethodGet)
+	router.HandleFunc("/addUser", h.AddUserPage).Methods(http.MethodGet)
 	router.HandleFunc("/addUser", h.AddUserAction).Methods(http.MethodPost)
-	router.HandleFunc("/addUser/sendSMS", h.SendSMS).Methods(http.MethodPost)
 
 	router.HandleFunc("/windows", h.WindowsConfigMessage).Methods(http.MethodGet)
 	router.HandleFunc("/windows/tailscale.reg", h.WindowsRegConfig).

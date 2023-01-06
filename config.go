@@ -75,11 +75,15 @@ type Config struct {
 	ali_IDaaS ALIConfig
 }
 type ALIConfig struct {
-	ali_app_id   string
-	ali_cli_id   string
-	ali_cli_key  string
-	ali_instance string
-	ali_org_id   string
+	ali_app_id       string
+	ali_cli_id       string
+	ali_cli_key      string
+	ali_instance     string
+	ali_org_id       string
+	ali_access_id    string
+	ali_access_key   string
+	ali_sms_sign     string
+	ali_sms_template string
 }
 
 type TLSConfig struct {
@@ -101,6 +105,8 @@ type OIDCConfig struct {
 	Issuer                     string
 	ClientID                   string
 	ClientSecret               string
+	RevokeURL                  string
+	LogoutURL                  string
 	Scope                      []string
 	ExtraParams                map[string]string
 	AllowedDomains             []string
@@ -590,6 +596,8 @@ func GetHeadscaleConfig() (*Config, error) {
 			Issuer:           viper.GetString("oidc.issuer"),
 			ClientID:         viper.GetString("oidc.client_id"),
 			ClientSecret:     viper.GetString("oidc.client_secret"),
+			LogoutURL:        viper.GetString("oidc.logout_url"),
+			RevokeURL:        viper.GetString("oidc.revoke_url"),
 			Scope:            viper.GetStringSlice("oidc.scope"),
 			ExtraParams:      viper.GetStringMapString("oidc.extra_params"),
 			AllowedDomains:   viper.GetStringSlice("oidc.allowed_domains"),
@@ -612,11 +620,15 @@ func GetHeadscaleConfig() (*Config, error) {
 
 		Log: GetLogConfig(),
 		ali_IDaaS: ALIConfig{
-			ali_app_id:   viper.GetString("ali_app_id"),
-			ali_cli_id:   viper.GetString("ali_cli_id"),
-			ali_cli_key:  viper.GetString("ali_cli_key"),
-			ali_instance: viper.GetString("ali_instance"),
-			ali_org_id:   viper.GetString("ali_org_id"),
+			ali_app_id:       viper.GetString("ali_app_id"),
+			ali_cli_id:       viper.GetString("ali_cli_id"),
+			ali_cli_key:      viper.GetString("ali_cli_key"),
+			ali_instance:     viper.GetString("ali_instance"),
+			ali_org_id:       viper.GetString("ali_org_id"),
+			ali_access_id:    viper.GetString("ali_access_id"),
+			ali_access_key:   viper.GetString("ali_access_key"),
+			ali_sms_sign:     viper.GetString("ali_sms_sign"),
+			ali_sms_template: viper.GetString("ali_sms_template"),
 		},
 	}, nil
 }
