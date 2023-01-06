@@ -153,6 +153,12 @@ func (machine *Machine) isOnline() bool {
 	return machine.LastSeen.After(time.Now().Add(-keepAliveInterval))
 }
 
+// isEphemeral returns if the machine is registered as an Ephemeral node.
+// https://tailscale.com/kb/1111/ephemeral-nodes/
+func (machine *Machine) isEphemeral() bool {
+	return machine.AuthKey != nil && machine.AuthKey.Ephemeral
+}
+
 func containsAddresses(inputs []string, addrs []string) bool {
 	for _, addr := range addrs {
 		if containsStr(inputs, addr) {
@@ -408,7 +414,7 @@ func (h *Headscale) GetMachineByGivenName(namespace string, givenName string) (*
 // GetMachineByID finds a Machine by ID and returns the Machine struct.
 func (h *Headscale) GetMachineByID(id uint64) (*Machine, error) {
 	m := Machine{}
-	if result := h.db.Preload("Namespace").Find(&Machine{ID: id}).First(&m); result.Error != nil {
+	if result := h.db.Preload("AuthKey").Preload("Namespace").Find(&Machine{ID: id}).First(&m); result.Error != nil {
 		return nil, result.Error
 	}
 
@@ -420,7 +426,7 @@ func (h *Headscale) GetMachineByMachineKey(
 	machineKey key.MachinePublic,
 ) (*Machine, error) {
 	m := Machine{}
-	if result := h.db.Preload("Namespace").First(&m, "machine_key = ?", MachinePublicKeyStripPrefix(machineKey)); result.Error != nil {
+	if result := h.db.Preload("AuthKey").Preload("Namespace").First(&m, "machine_key = ?", MachinePublicKeyStripPrefix(machineKey)); result.Error != nil {
 		return nil, result.Error
 	}
 
@@ -432,7 +438,7 @@ func (h *Headscale) GetMachineByNodeKey(
 	nodeKey key.NodePublic,
 ) (*Machine, error) {
 	machine := Machine{}
-	if result := h.db.Preload("Namespace").First(&machine, "node_key = ?",
+	if result := h.db.Preload("AuthKey").Preload("Namespace").First(&machine, "node_key = ?",
 		NodePublicKeyStripPrefix(nodeKey)); result.Error != nil {
 		return nil, result.Error
 	}
@@ -445,7 +451,7 @@ func (h *Headscale) GetMachineByAnyKey(
 	machineKey key.MachinePublic, nodeKey key.NodePublic, oldNodeKey key.NodePublic,
 ) (*Machine, error) {
 	machine := Machine{}
-	if result := h.db.Preload("Namespace").First(&machine, "machine_key = ? OR node_key = ? OR node_key = ?",
+	if result := h.db.Preload("AuthKey").Preload("Namespace").First(&machine, "machine_key = ? OR node_key = ? OR node_key = ?",
 		MachinePublicKeyStripPrefix(machineKey),
 		NodePublicKeyStripPrefix(nodeKey),
 		NodePublicKeyStripPrefix(oldNodeKey)); result.Error != nil {
