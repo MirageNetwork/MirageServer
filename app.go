@@ -95,6 +95,9 @@ type Headscale struct {
 	oidcProvider *oidc.Provider
 	oauth2Config *oauth2.Config
 
+	loginCache   *cache.Cache
+	smsCodeCache *cache.Cache
+
 	registrationCache *cache.Cache
 
 	ipAllocationMutex sync.Mutex
@@ -154,6 +157,14 @@ func NewHeadscale(cfg *Config) (*Headscale, error) {
 		registerCacheExpiration,
 		registerCacheCleanup,
 	)
+	loginCache := cache.New(
+		registerCacheExpiration,
+		registerCacheCleanup,
+	)
+	smsCodeCache := cache.New(
+		registerCacheExpiration,
+		registerCacheCleanup,
+	)
 
 	app := Headscale{
 		cfg:                cfg,
@@ -162,6 +173,8 @@ func NewHeadscale(cfg *Config) (*Headscale, error) {
 		privateKey:         privateKey,
 		noisePrivateKey:    noisePrivateKey,
 		aclRules:           tailcfg.FilterAllowAll, // default allowall
+		loginCache:         loginCache,
+		smsCodeCache:       smsCodeCache,
 		registrationCache:  registrationCache,
 		pollNetMapStreamWG: sync.WaitGroup{},
 	}
@@ -500,6 +513,15 @@ var imgFS embed.FS
 func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	router := mux.NewRouter()
 
+	console_router := router.PathPrefix("/admin").Subrouter()
+	console_router.Use(h.ConsoleAuth)
+	console_router.HandleFunc("", h.ConsolePanel).Methods(http.MethodGet)
+	console_router.HandleFunc("/logout", h.ConsoleLogout).Methods(http.MethodGet)
+
+	router.HandleFunc("/login/callback", h.ConsoleLogin).Methods(http.MethodGet)
+	router.HandleFunc("/logout/callback", h.ConsoleLogoutCallback).Methods(http.MethodGet)
+	router.HandleFunc("/", h.ConsoleWelcome).Methods(http.MethodGet)
+
 	cssDir, err := fs.Sub(cssFS, "admin/css")
 	if err != nil {
 		log.Fatal().Msg(err.Error())
@@ -523,8 +545,10 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	router.HandleFunc("/apple", h.AppleConfigMessage).Methods(http.MethodGet)
 	router.HandleFunc("/apple/{platform}", h.ApplePlatformConfig).
 		Methods(http.MethodGet)
+
 	router.HandleFunc("/addUser", h.AddUserForm).Methods(http.MethodGet)
 	router.HandleFunc("/addUser", h.AddUserAction).Methods(http.MethodPost)
+	router.HandleFunc("/addUser/sendSMS", h.SendSMS).Methods(http.MethodPost)
 
 	router.HandleFunc("/windows", h.WindowsConfigMessage).Methods(http.MethodGet)
 	router.HandleFunc("/windows/tailscale.reg", h.WindowsRegConfig).
