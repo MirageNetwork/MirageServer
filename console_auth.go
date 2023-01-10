@@ -55,6 +55,7 @@ func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 					Caller().
 					Msg("could not verifyIDTokenForOIDCCallback")
 				h.GoOIDCLogin(w, r)
+				return
 			}
 			var claims IDTokenClaims
 			err = idToken.Claims(&claims)
@@ -63,6 +64,7 @@ func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 					Caller().
 					Msg("could not Extra Claims")
 				http.Error(w, "OIDC Token解析Claim错误！", http.StatusInternalServerError)
+				renderResult(w, true, "OIDC Token解析Claim错误！", "回到首页", "/")
 			}
 			log.Info().Msg(claims.Username + "Token认证成功！")
 			next.ServeHTTP(w, r)
