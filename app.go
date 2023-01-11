@@ -180,6 +180,7 @@ func NewHeadscale(cfg *Config) (*Headscale, error) {
 		smsCodeCache:       smsCodeCache,
 		registrationCache:  registrationCache,
 		pollNetMapStreamWG: sync.WaitGroup{},
+		lastStateChange:    xsync.NewMapOf[time.Time](),
 	}
 
 	err = app.initDB()
