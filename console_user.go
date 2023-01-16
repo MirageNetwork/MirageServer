@@ -29,7 +29,7 @@ func CreateIDaaSClient() (_result *eiam_developerapi20220225.Client, _err error)
 	config := &openapi.Config{}
 	// 访问的域名
 	config.Endpoint = tea.String("eiam-developerapi.cn-hangzhou.aliyuncs.com")
-	_result = &eiam_developerapi20220225.Client{}
+	//_result = &eiam_developerapi20220225.Client{}
 	_result, _err = eiam_developerapi20220225.NewClient(config)
 	return _result, _err
 }

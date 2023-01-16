@@ -1,28 +1,214 @@
 <!doctype html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="css/tw.css" rel="stylesheet">
+
+  <script type="module">
+    import { createApp } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js'
+    import MyComponent from '/js/my.js'
+
+    createApp(MyComponent).mount('#app')
+  </script>
+
   <title>蜃境 - 控制台</title>
 </head>
+
 <body>
-  <div class="relative flex min-h-screen flex-col justify-center bg-gray-200">
-    <div class="absolute inset-0 bg-[url(/img/grid.svg)] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
-    <div class="md:w-2/3 self-center card lg:card-side bg-base-100 shadow-xl">
-      <figure><img src="img/logo.png" alt="Logo"/></figure>
-      <div class="card-body mx-auto lg:flex-shrink-0 w-96 indicator">
-        <h1 class="card-title">控制面板</h1>
-        <span class="indicator-item indicator-top indicator-end badge badge-secondary">仅供测试</span>
-        <div class="divider"></div> 
-        
-        <div class="card-actions justify-end pt-4">
-          <a href="/admin/logout">
-          <button class="btn btn-primary">退出登录</button>
+
+  <div id="app-root" class="relative z-0">
+    <div class="bg-gray-100 border-b border-gray-200 pt-4 mb-6">
+      <div class="container mx-auto mb-4 md:mb-6">
+        <header class="flex justify-between items-center px-2 md:px-0"><a href="/admin" class="flex items-center"
+            style="max-width: 80%;">
+            <img width="18" height="18" src="/img/mlogo.png"></img>
+            <div role="banner" class="text-lg font-semibold ml-3 truncate">{{.UserAccount}}.{{.Basedomain}}</div>
+            <span class="badge badge-secondary">仅供测试</span>
           </a>
-        </div>
+
+          <nav class="flex items-center" aria-label="External links"><a
+              class="hidden text-gray-600 hover:text-gray-800 sm:inline-block px-2 py-1"
+              href="https://github.com/gps949/tailscale/releases" target="_blank" rel="noopener noreferrer">下载客户端</a>
+            <div class="dropdown dropdown-end">
+              <div tabindex="0" class="avatar placeholder">
+                <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
+                  <span class="text-xs">{{.UserNameHead}}</span>
+                </div>
+              </div>
+              <div tabindex="0" class="menu dropdown-content p-2 shadow bg-base-100 rounded-box w-52 mt-4 ">
+                <div class="p-2"><strong>{{.UserName}}</strong> <br>
+                  {{.UserAccount}}</div>
+                <div class="divider"></div>
+                <ul>
+                  <li><a href="/admin/logout">登出</a></li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- <div class="ml-2 heart-wrapper"><button class="relative rounded-full" aria-label="User menu…" type="button"
+                id="radix-:r0:" aria-haspopup="menu" aria-expanded="false" data-state="closed">
+                <div class="relative shrink-0 rounded-full overflow-hidden w-8 h-8">
+                  <div class="w-full h-full bg-cover bg-center" style="background-image: url( '/img/user.svg' );">
+                  </div>
+                  <div class="absolute inset-0 w-full h-full rounded-full"></div>
+                </div>
+              </button></div>
+            -->
+          </nav>
+        </header>
+      </div>
+      <div class="relative overflow-hidden" style="top: 1px;">
+        <nav id="nav"
+          class="navigation flex items-center overflow-auto left-1 relative md:container md:mx-auto md:px-0 md:-left-3">
+          <a class="whitespace-nowrap py-2 group relative" permission="devices" href="/admin">
+            <div
+              class="px-3 py-2 flex items-center rounded-md group-hover:bg-gray-200 after:absolute after:bottom-0 after:right-3 after:left-3 after:h-0.5 after:bg-blue-600 text-blue-600 after:visible">
+              <svg xmlns="http://www.w3.org/2000/svg" width="1.125em" height="1.125em" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                class="mr-2 hidden sm:inline-block">
+                <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                <line x1="6" y1="18" x2="6.01" y2="18"></line>
+              </svg>
+              <div data-content="Machines" class="navigation-link navigation-linkActive">设备</div>
+            </div>
+          </a>
+        </nav>
       </div>
     </div>
+    <main class="container mx-auto pb-20 md:pb-24">
+      <section class="mb-24">
+        <header class="mb-8">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center">
+              <h1 class="text-3xl font-semibold tracking-tight leading-tight mb-2" tabindex="-1">设备</h1>
+            </div>
+          </div>
+        </header>
+
+        <div
+          class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-full px-2 py-1 leading-none text-sm mb-8">
+          {{len .MList}} 个设备</div>
+        <div class="overflow-x-auto">
+          <table class="table w-full">
+            <thead>
+              <tr>
+                <th class="text-ellipsis">设备</th>
+                <th>IP</th>
+                <th>系统</th>
+                <th>状态</th>
+                <th><span class="sr-only">设备操作菜单</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range $id,$m := .MList}}
+              <tr id="{{$id}}" class="hover">
+                <td>
+                  <div class="relative">
+                    <div class="items-center text-gray-900">
+                      <p class="font-semibold hover:text-blue-500"><span
+                          class="inline-block w-2 h-2 rounded-full bg-green-300 relative -top-px lg:hidden mr-2"></span><a
+                          href="/admin/machines/{{$m.MIPv4}}" class="stretched-link"
+                          aria-label="{{$m.GiveName}}的详情">{{$m.GiveName}}</a></p>
+                    </div>
+                    <div>
+                      <div class="flex items-center text-gray-600 text-sm"><span
+                          data-state="closed">{{$m.UserAccount}}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="my-1">
+                    <div>
+                      {{if $m.IsSharedOut}}
+                      <span data-state="closed">
+                        <div
+                          class="inline-flex items-center align-middle justify-center font-medium border border-orange-50 bg-orange-50 text-orange-600 rounded-sm px-1 text-xs mr-1">
+                          Shared out +1</div>
+                      </span>
+                      {{end}}
+                      {{if $m.IsExpiryDisabled}}
+                      <span data-state="closed">
+                        <div
+                          class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-sm px-1 text-xs mr-1">
+                          Expiry disabled</div>
+                      </span>
+                      {{end}}
+                      {{if $m.IsExitNode}}
+                      <span data-state="closed">
+                        <div
+                          class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
+                          Subnets</div>
+                      </span>
+                      {{end}}
+                      {{if $m.IsSubnet}}
+                      <span data-state="closed">
+                        <div
+                          class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
+                          Exit Node</div>
+                      </span>
+                      {{end}}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <ul>
+                    <li class="font-medium pr-6">
+                      <div class="flex relative min-w-0">
+                        <div class="truncate"><span>{{$m.MIPv4}}</span></div>
+                      </div>
+                    </li>
+                    {{range $mSubid,$mSub := $m.MSubnetList}}
+                    <li><span>{{$mSub}}</span></li>
+                    {{end}}
+                  </ul>
+                </td>
+                <td>
+                  <div class="flex items-center relative">
+                    <div>{{$m.OS}}</div>
+                  </div>
+                  <div class="text-sm text-gray-600">{{$m.Version}}</div>
+                </td>
+                <td><span>
+                    <div class="inline-flex items-center cursor-default">
+                      {{if $m.IfOnline}}
+                      <span class="inline-block w-2 h-2 rounded-full bg-green-300 mr-2"></span><span
+                        class="text-sm text-gray-600  tooltip tooltip-top"
+                        data-tip="最近在线于 {{$m.LastSeen}}">Connected</span>
+                      {{else}}
+                      <span class="inline-block w-2 h-2 rounded-full bg-gray-300 mr-2"></span><span
+                        class="text-sm text-gray-600  tooltip tooltip-top"
+                        data-tip="最近在线于 {{$m.LastSeen}}">{{$m.LastSeen}}</span>
+                      {{end}}
+                    </div>
+                  </span>
+                </td>
+                <td>
+                  <div class="-mt-0.5 relative"><button type="button" id="radix-:r2v:" aria-haspopup="menu"
+                      aria-expanded="false" data-state="closed" class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0
+          group-hover:border-gray-300/100 hover:border-gray-300/100 group-hover:bg-white hover:!bg-gray-0
+          group-hover:shadow-md hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow
+          duration-100 ease-in-out z-50"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" aria-label="Actions for debianlab" class="text-gray-500">
+                        <circle cx="12" cy="12" r="1"></circle>
+                        <circle cx="19" cy="12" r="1"></circle>
+                        <circle cx="5" cy="12" r="1"></circle>
+                      </svg></button></div>
+                </td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
   </div>
+
+  
+  <div id="app"></div>
 </body>
+
 </html>

@@ -69,10 +69,13 @@ func (h *Headscale) ConsoleLogout(
 	rToken, _ := r.Cookie("OIDC_Token")
 	idtoken := rToken.Value
 	delCookie := &http.Cookie{
-		Name:    "OIDC_Token",
-		Domain:  strings.Split(h.cfg.ServerURL, "://")[1],
-		Expires: time.Now().Add(time.Minute),
-		MaxAge:  -1,
+		Name:     "OIDC_Token",
+		Domain:   strings.Split(h.cfg.ServerURL, "://")[1],
+		Expires:  time.Now().Add(time.Minute * 5),
+		MaxAge:   -1,
+		Secure:   true,
+		HttpOnly: true,
+		Path:     "/",
 	}
 
 	http.SetCookie(w, delCookie)
@@ -83,6 +86,19 @@ func (h *Headscale) ConsoleLogoutCallback(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	/*
+		delCookie := &http.Cookie{
+			Name:     "OIDC_Token",
+			Domain:   strings.Split(h.cfg.ServerURL, "://")[1],
+			Expires:  time.Now().Add(time.Minute * 5),
+			MaxAge:   -1,
+			Secure:   true,
+			HttpOnly: true,
+			Path:     "/",
+		}
+
+		http.SetCookie(w, delCookie)
+	*/
 	renderResult(w, false, "您已经成功登出！", "/", "返回首页")
 }
 

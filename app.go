@@ -513,13 +513,31 @@ var cssFS embed.FS
 //go:embed admin/img
 var imgFS embed.FS
 
+//go:embed admin/js
+var jsFS embed.FS
+
+//go:embed console
+var consoleFS embed.FS
+
 func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	router := mux.NewRouter()
 
+	consoleDir, err := fs.Sub(consoleFS, "console")
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+	}
+
 	console_router := router.PathPrefix("/admin").Subrouter()
 	console_router.Use(h.ConsoleAuth)
-	console_router.HandleFunc("", h.ConsolePanel).Methods(http.MethodGet)
+
+	console_router.HandleFunc("/api/self", h.ConsoleSelfAPI).Methods(http.MethodGet)
+	console_router.HandleFunc("/api/machines", h.ConsoleMachinesAPI).Methods(http.MethodGet)
+
 	console_router.HandleFunc("/logout", h.ConsoleLogout).Methods(http.MethodGet)
+
+	console_router.PathPrefix("").Handler(http.StripPrefix("/admin", http.FileServer(http.FS(consoleDir))))
+
+	//console_router.HandleFunc("", h.ConsolePanel).Methods(http.MethodGet)
 
 	router.HandleFunc("/login/callback", h.ConsoleLogin).Methods(http.MethodGet)
 	router.HandleFunc("/logout/callback", h.ConsoleLogoutCallback).Methods(http.MethodGet)
@@ -535,6 +553,11 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 		log.Fatal().Msg(err.Error())
 	}
 	router.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(http.FS(imgDir))))
+	jsDir, err := fs.Sub(jsFS, "admin/js")
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+	}
+	router.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.FS(jsDir))))
 
 	router.HandleFunc(ts2021UpgradePath, h.NoiseUpgradeHandler).Methods(http.MethodPost)
 
