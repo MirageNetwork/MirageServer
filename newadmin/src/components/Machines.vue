@@ -227,7 +227,7 @@ function closeOptionMenu(mID) {
                                     @blur="closeOptionMenu(id)" tabindex="-1" class="border button-outline bg-white shadow-md cursor-pointer divide-x divide-gray-200  active:shadow focus:outline-none focus:ring -mt-0.5 relative dropdown dropdown-open dropdown-end py-0.5 px-2 rounded-md border-gray-300/0
           group-hover:border-gray-300/100 hover:border-gray-300/100 group-hover:bg-white hover:!bg-gray-0
           group-hover:shadow-md hover:shadow-md hover:cursor-pointer active:border-gray-300/100 transition-shadow
-          duration-100 ease-in-out z-50 !border-y-0 ">
+          duration-100 ease-in-out z-50 !border-y-0">
 
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -237,8 +237,8 @@ function closeOptionMenu(mID) {
                                         <circle cx="5" cy="12" r="1"></circle>
                                     </svg>
                                     <div v-if="m.menuShow"
-                                        class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
-                                        <div dir="ltr" class="dropdown bg-white rounded-md py-1 z-50"
+                                        class="dropdown-content menu p-2 shadow bg-base-100 rounded-md w-52 px-0">
+                                        <div class="dropdown bg-white py-1 z-50"
                                             style="outline: none; --radix-dropdown-menu-content-transform-origin: var(--radix-popper-transform-origin); pointer-events: auto;">
                                             <div
                                                 class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
@@ -257,7 +257,7 @@ function closeOptionMenu(mID) {
                                                 编辑子网…
                                             </div>
                                             <div
-                                                class="block px-4 py-2 cursor-pointer hover:enabled:bg-gray-100 focus:outline-none focus:bg-gray-100">
+                                                class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
                                                 编辑标签…
                                             </div>
                                             <div class="my-1 border-b border-gray-200"></div>

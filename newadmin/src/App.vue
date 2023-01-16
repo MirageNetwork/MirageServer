@@ -62,8 +62,8 @@ onMounted(() => {
                 <span class="text-xs"> {{ UserNameHead }} </span>
               </div>
             </div>
-            <div v-if="userMenuOpen" class="menu dropdown-content py-1 shadow bg-base-100 rounded-box w-52 mt-4">
-              <div class="dropdown bg-white rounded-md py-1 z-50"
+            <div v-if="userMenuOpen" class="menu dropdown-content my-2 shadow bg-base-100 rounded-md w-52">
+              <div class="dropdown bg-white py-1 z-50"
                 style="outline: none; --radix-dropdown-menu-content-transform-origin: var(--radix-popper-transform-origin); pointer-events: auto;">
                 <div class="block px-4 py-2">
                   <strong> {{ UserName }} </strong> <br />
