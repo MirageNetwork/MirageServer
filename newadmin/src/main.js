@@ -7,14 +7,14 @@ import Machine from './components/Machine.vue'
 import Empty from './components/Empty.vue'
 
 const routes = [
-    { path: '/admin', component: Machines },
-    { path: '/admin/machines', component: Machines },
-    { path: '/admin/machines/:mip', component: Machine },
+    { path: '/', component: Machines },
+    { path: '/machines', component: Machines },
+    { path: '/machines/:mip', component: Machine },
 ]
 
 
 const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHashHistory(),
     routes,
 })
 

@@ -45,7 +45,7 @@ onMounted(() => {
   <div class="bg-gray-100 border-b border-gray-200 pt-4 mb-6">
     <div class="container mx-auto mb-4 md:mb-6">
       <header class="flex justify-between items-center px-2 md:px-0">
-        <a href="/admin" class="flex items-center" style="max-width: 80%">
+        <a href="/" class="flex items-center" style="max-width: 80%">
           <img width="18" height="18" src="/img/mlogo.png" />
           <div role="banner" class="text-lg font-semibold ml-3 truncate">
             {{ UserAccount }}.{{ Basedomain }}
@@ -83,7 +83,7 @@ onMounted(() => {
     <div class="relative overflow-hidden" style="top: 1px">
       <nav id="nav"
         class="navigation flex items-center overflow-auto left-1 relative md:container md:mx-auto md:px-0 md:-left-3">
-        <router-link class="whitespace-nowrap py-2 group relative" permission="devices" to="/admin/machines">
+        <router-link class="whitespace-nowrap py-2 group relative" to="/machines">
           <div
             class="px-3 py-2 flex items-center rounded-md group-hover:bg-gray-200 after:absolute after:bottom-0 after:right-3 after:left-3 after:h-0.5 after:bg-blue-600 text-blue-600 after:visible">
             <svg xmlns="http://www.w3.org/2000/svg" width="1.125em" height="1.125em" viewBox="0 0 24 24" fill="none"
@@ -94,7 +94,7 @@ onMounted(() => {
               <line x1="6" y1="6" x2="6.01" y2="6"></line>
               <line x1="6" y1="18" x2="6.01" y2="18"></line>
             </svg>
-            <div data-content="Machines" class="navigation-link navigation-linkActive">
+            <div class="navigation-link navigation-linkActive">
               设备
             </div>
           </div>

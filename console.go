@@ -104,6 +104,51 @@ func (h *Headscale) ConsoleSelfAPI(
 	}
 }
 
+func (h *Headscale) verifyTokenIDandGetNamespace(
+	writer http.ResponseWriter,
+	req *http.Request,
+) string {
+	tokenCookie, _ := req.Cookie("OIDC_Token")
+	rawToken := tokenCookie.Value
+	idToken, err := h.verifyIDTokenForOIDCCallback(req.Context(), writer, rawToken)
+	if err != nil {
+		errRes := adminTemplateConfig{ErrorMsg: "验证Token失败"}
+		err = json.NewEncoder(writer).Encode(&errRes)
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to write response")
+		}
+		return ""
+	}
+	claims, err := extractIDTokenClaims(writer, idToken)
+	if err != nil {
+		errRes := adminTemplateConfig{ErrorMsg: "解析用户信息失败"}
+		err = json.NewEncoder(writer).Encode(&errRes)
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to write response")
+		}
+		return ""
+	}
+	namespaceName, _ /*namespaceUID*/, _ /*namespaceDisName*/, err := getNamespaceName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	if err != nil {
+		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
+		err = json.NewEncoder(writer).Encode(&errRes)
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to write response")
+		}
+		return ""
+	}
+	return namespaceName
+}
+
 func (h *Headscale) ConsoleMachinesAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
@@ -183,7 +228,7 @@ func (h *Headscale) ConsoleMachinesAPI(
 			tmpMachine.MIPv6 = machine.IPAddresses[0].String()
 			tmpMachine.MIPv4 = machine.IPAddresses[1].String()
 		}
-		mlist["machine"+strconv.FormatUint(machine.ID, 10)] = tmpMachine
+		mlist[strconv.FormatUint(machine.ID, 10)] = tmpMachine
 	}
 
 	renderData := adminTemplateConfig{
@@ -193,6 +238,108 @@ func (h *Headscale) ConsoleMachinesAPI(
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	writer.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(writer).Encode(&renderData)
+	if err != nil {
+		log.Error().
+			Caller().
+			Err(err).
+			Msg("Failed to write response")
+	}
+}
+
+type removeMachineRes struct {
+	Status string `json:"status"`
+	ErrMsg string `json:"errmsg"`
+}
+
+func (h *Headscale) ConsoleRemoveMachineAPI(
+	writer http.ResponseWriter,
+	req *http.Request,
+) {
+	namespaceName := h.verifyTokenIDandGetNamespace(writer, req)
+	resData := removeMachineRes{}
+	if namespaceName == "" {
+		resData.Status = "Error"
+		resData.ErrMsg = "用户信息核对失败"
+		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		writer.WriteHeader(http.StatusOK)
+		err := json.NewEncoder(writer).Encode(&resData)
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to write response")
+		}
+		return
+	}
+	UserMachines, err := h.ListMachinesInNamespace(namespaceName)
+	if err != nil {
+		resData.Status = "Error"
+		resData.ErrMsg = "用户设备检索失败"
+		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		writer.WriteHeader(http.StatusOK)
+		err := json.NewEncoder(writer).Encode(&resData)
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to write response")
+		}
+		return
+	}
+	err = req.ParseForm()
+	if err != nil {
+		resData.Status = "Error"
+		resData.ErrMsg = "用户请求解析失败"
+		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		writer.WriteHeader(http.StatusOK)
+		err := json.NewEncoder(writer).Encode(&resData)
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to write response")
+		}
+		return
+	}
+	reqData := make(map[string]string)
+	json.NewDecoder(req.Body).Decode(&reqData)
+	wantRemoveID := reqData["mid"]
+	for _, machine := range UserMachines {
+		if strconv.FormatUint(machine.ID, 10) == wantRemoveID {
+			err = h.HardDeleteMachine(&machine)
+			if err != nil {
+				resData.Status = "Error"
+				resData.ErrMsg = "用户设备删除失败"
+				writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+				writer.WriteHeader(http.StatusOK)
+				err := json.NewEncoder(writer).Encode(&resData)
+				if err != nil {
+					log.Error().
+						Caller().
+						Err(err).
+						Msg("Failed to write response")
+				}
+				return
+			}
+			resData.Status = "OK"
+			resData.ErrMsg = "用户设备成功删除"
+			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+			writer.WriteHeader(http.StatusOK)
+			err := json.NewEncoder(writer).Encode(&resData)
+			if err != nil {
+				log.Error().
+					Caller().
+					Err(err).
+					Msg("Failed to write response")
+			}
+			return
+		}
+	}
+	resData.Status = "Error"
+	resData.ErrMsg = "未找到目标设备"
+	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+	writer.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(writer).Encode(&resData)
 	if err != nil {
 		log.Error().
 			Caller().
