@@ -23,6 +23,7 @@ onMounted(() => {
             if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
                 for (var k in response.data["mlist"]) {
                     MList.value[k] = response.data["mlist"][k]
+                    MList.value[k]["show"]=true
                     MList.value[k]["mipShow"] = false
                     MList.value[k]["menuShow"] = false
                     MList.value[k]["menuBtnShow"] = false
@@ -49,10 +50,9 @@ function removeMachine(id) {
         .then(function (response) {
             if (response.data["status"] == "OK") {
                 delConfirmShow.value = false
-                MList.value[id] = nil
-                rmRow = document.getElementById(id)
-                rmRow.parentNode.removeChild(rmRow)
-                alert("成功删除！")
+                toastMsg.value = MList.value[id]["givename"]+"已从您的蜃境网络移除！"
+                toastShow.value = true
+                delete MList.value[id]
             } else {
                 alert("失败：" + response.data["errmsg"])
             }
@@ -244,7 +244,8 @@ function showDelConfirm(id) {
                             </td>
                             <td
                                 class="table-cell justify-end ml-auto md:ml-0 relative w-12 justify-items-end items-center md:items-start">
-                                <div v-if="!m.menuBtnShow && !m.menuShow"  @click="openOptionMenu(id)" class="flex-none w-12 -mt-0.5 relative">
+                                <div v-if="!m.menuBtnShow && !m.menuShow" @click="openOptionMenu(id)"
+                                    class="flex-none w-12 -mt-0.5 relative">
                                     <button class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0
           group-hover:border-gray-300/100 hover:border-gray-300/100 group-hover:bg-white hover:!bg-gray-0
           group-hover:shadow-md hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow
@@ -264,14 +265,15 @@ function showDelConfirm(id) {
           group-hover:shadow-md hover:shadow-md hover:cursor-pointer active:border-gray-300/100 transition-shadow
           duration-100 ease-in-out z-50 !border-y-0">
 
-                                    <svg @click="openOptionMenu(id)" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round" class="text-gray-500">
+                                    <svg @click="openOptionMenu(id)" xmlns="http://www.w3.org/2000/svg" width="24"
+                                        height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        class="text-gray-500">
                                         <circle cx="12" cy="12" r="1"></circle>
                                         <circle cx="19" cy="12" r="1"></circle>
                                         <circle cx="5" cy="12" r="1"></circle>
                                     </svg>
-                                    <div v-if="m.menuShow" 
+                                    <div v-if="m.menuShow"
                                         class="dropdown-content menu p-2 shadow bg-base-100 rounded-md w-52 px-0">
                                         <div class=" bg-white py-1 z-50"
                                             style="outline: none; --radix-dropdown-menu-content-transform-origin: var(--radix-popper-transform-origin); pointer-events: auto;">
