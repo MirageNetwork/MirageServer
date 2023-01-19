@@ -365,7 +365,7 @@ func (h *Headscale) ListMachinesByGivenName(givenName string) ([]Machine, error)
 }
 
 // cgao6
-// GetMachine finds a Machine by namespace and backendlogid and returns the Machine struct.
+// GetMachine finds a Machine by user and backendlogid and returns the Machine struct.
 func (h *Headscale) GetMachineNSBLID(user string, backendlogid string) (*Machine, error) {
 	machines, err := h.ListMachinesByUser(user)
 	if err != nil {

@@ -9,8 +9,8 @@ import (
 )
 
 func init() {
-	//	rootCmd.AddCommand(namespaceCmd)
-	//	namespaceCmd.AddCommand(listNamespacesCmd)
+	//	rootCmd.AddCommand(userCmd)
+	//	userCmd.AddCommand(listUsersCmd)
 	rootCmd.AddCommand(aclCmd)
 	aclCmd.AddCommand(aclPingPongCmd)
 }

@@ -33,6 +33,8 @@ type machineItem struct {
 	IsExpiryDisabled bool `json:"isexpirydisabled"`
 	IsExitNode       bool `json:"isexitnode"`
 	IsSubnet         bool `json:"issubnet"`
+
+	ExpiryDesc string `json:"expirydesc"`
 }
 type adminTemplateConfig struct {
 	ErrorMsg     string                 `json:"errormsg"`
@@ -43,6 +45,7 @@ type adminTemplateConfig struct {
 	MList        map[string]machineItem `json:"mlist"`
 }
 
+// 提供获取用户信息的API
 func (h *Headscale) ConsoleSelfAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
@@ -73,7 +76,7 @@ func (h *Headscale) ConsoleSelfAPI(
 		}
 		return
 	}
-	namespaceName, _ /*namespaceUID*/, namespaceDisName, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	userName, _ /*UID*/, userDisName, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -85,13 +88,13 @@ func (h *Headscale) ConsoleSelfAPI(
 		}
 		return
 	}
-	userNameHead := string([]rune(namespaceDisName)[0])
+	userNameHead := string([]rune(userDisName)[0])
 
 	renderData := adminTemplateConfig{
 		Basedomain:   h.cfg.BaseDomain,
 		UserNameHead: userNameHead,
-		UserName:     namespaceDisName,
-		UserAccount:  namespaceName,
+		UserName:     userDisName,
+		UserAccount:  userName,
 	}
 
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -105,7 +108,8 @@ func (h *Headscale) ConsoleSelfAPI(
 	}
 }
 
-func (h *Headscale) verifyTokenIDandGetNamespace(
+// 验证Token并获取用户信息
+func (h *Headscale) verifyTokenIDandGetUser(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) string {
@@ -135,7 +139,7 @@ func (h *Headscale) verifyTokenIDandGetNamespace(
 		}
 		return ""
 	}
-	namespaceName, _ /*namespaceUID*/, _ /*namespaceDisName*/, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	userName, _ /*UID*/, _ /*userDisName*/, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -147,9 +151,10 @@ func (h *Headscale) verifyTokenIDandGetNamespace(
 		}
 		return ""
 	}
-	return namespaceName
+	return userName
 }
 
+// 控制台获取机器信息列表的API
 func (h *Headscale) ConsoleMachinesAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
@@ -180,7 +185,7 @@ func (h *Headscale) ConsoleMachinesAPI(
 		}
 		return
 	}
-	namespaceName, _ /*namespaceUID*/, _ /*namespaceDisName*/, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	userName, _ /*UID*/, _ /*userDisName*/, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -193,7 +198,7 @@ func (h *Headscale) ConsoleMachinesAPI(
 		return
 	}
 
-	UserMachines, err := h.ListMachinesByUser(namespaceName)
+	UserMachines, err := h.ListMachinesByUser(userName)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "查询用户节点列表失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -213,15 +218,35 @@ func (h *Headscale) ConsoleMachinesAPI(
 			IPNver = strings.Split(machine.HostInfo.IPNVersion, "-")[0]
 		}
 		tz, _ := time.LoadLocation("Asia/Shanghai")
+
 		tmpMachine := machineItem{
-			GiveName:     machine.GivenName,
-			UserAccount:  machine.User.Name,
-			UserNameHead: string([]rune(machine.User.Display_Name)[0]),
-			OS:           machine.HostInfo.OS,
-			Version:      IPNver,
-			LastSeen:     machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
-			IfOnline:     machine.isOnline(),
-			MSubnetList:  make([]string, 0),
+			GiveName:         machine.GivenName,
+			UserAccount:      machine.User.Name,
+			UserNameHead:     string([]rune(machine.User.Display_Name)[0]),
+			OS:               machine.HostInfo.OS,
+			Version:          IPNver,
+			LastSeen:         machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
+			IfOnline:         machine.isOnline(),
+			MSubnetList:      make([]string, 0),
+			IsExpiryDisabled: *machine.Expiry == time.Time{},
+		}
+		if !tmpMachine.IsExpiryDisabled {
+			ExpiryDuration := machine.Expiry.Sub(time.Now())
+			if ExpiryDuration.Seconds() <= 0 {
+				tmpMachine.ExpiryDesc = "已过期"
+			} else if ExpiryDuration.Hours()/24/365 > 0 {
+				tmpMachine.ExpiryDesc = "还剩一年以上有效期"
+			} else if ExpiryDuration.Hours()/24/30 >= 1 {
+				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Hours()/24/30), 10) + "个月"
+			} else if ExpiryDuration.Hours()/24 >= 1 {
+				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Hours()/24), 10) + "天"
+			} else if ExpiryDuration.Hours() >= 1 {
+				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Hours()), 10) + "小时"
+			} else if ExpiryDuration.Minutes() >= 1 {
+				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Minutes()), 10) + "分钟"
+			} else {
+				tmpMachine.ExpiryDesc = "马上就要过期"
+			}
 		}
 		if machine.IPAddresses[0].Is4() {
 			tmpMachine.MIPv4 = machine.IPAddresses[0].String()
@@ -257,9 +282,9 @@ func (h *Headscale) ConsoleRemoveMachineAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	namespaceName := h.verifyTokenIDandGetNamespace(writer, req)
+	userName := h.verifyTokenIDandGetUser(writer, req)
 	resData := removeMachineRes{}
-	if namespaceName == "" {
+	if userName == "" {
 		resData.Status = "Error"
 		resData.ErrMsg = "用户信息核对失败"
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -273,7 +298,7 @@ func (h *Headscale) ConsoleRemoveMachineAPI(
 		}
 		return
 	}
-	UserMachines, err := h.ListMachinesByUser(namespaceName)
+	UserMachines, err := h.ListMachinesByUser(userName)
 	if err != nil {
 		resData.Status = "Error"
 		resData.ErrMsg = "用户设备检索失败"
@@ -342,103 +367,6 @@ func (h *Headscale) ConsoleRemoveMachineAPI(
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	writer.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(writer).Encode(&resData)
-	if err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Failed to write response")
-	}
-}
-
-func (h *Headscale) ConsolePanel(
-	writer http.ResponseWriter,
-	req *http.Request,
-) {
-	adminT := template.Must(template.New("admin").Parse(adminHTML))
-
-	tokenCookie, _ := req.Cookie("OIDC_Token")
-	rawToken := tokenCookie.Value
-	idToken, err := h.verifyIDTokenForOIDCCallback(req.Context(), writer, rawToken)
-	if err != nil {
-		renderResult(writer, true, "验证Token失败", "/", "返回首页")
-		return
-	}
-	claims, err := extractIDTokenClaims(writer, idToken)
-	if err != nil {
-		renderResult(writer, true, "解析用户信息失败", "/", "返回首页")
-		return
-	}
-	namespaceName, _ /*namespaceUID*/, namespaceDisName, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
-	if err != nil {
-		renderResult(writer, true, "提取用户信息失败", "/", "返回首页")
-		return
-	}
-	userNameHead := string([]rune(namespaceDisName)[0])
-
-	UserMachines, err := h.ListMachinesByUser(namespaceName)
-	if err != nil {
-		renderResult(writer, true, "查询用户节点列表失败", "/", "返回首页")
-		return
-	}
-
-	mlist := make(map[string]machineItem)
-	for _, machine := range UserMachines {
-		IPNver := machine.HostInfo.IPNVersion
-		if strings.Contains(IPNver, "-") {
-			IPNver = strings.Split(machine.HostInfo.IPNVersion, "-")[0]
-		}
-		tz, _ := time.LoadLocation("Asia/Shanghai")
-		tmpMachine := machineItem{
-			GiveName:     machine.GivenName,
-			UserAccount:  machine.User.Name,
-			UserNameHead: string([]rune(machine.User.Display_Name)[0]),
-			OS:           machine.HostInfo.OS,
-			Version:      IPNver,
-			LastSeen:     machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
-			IfOnline:     machine.isOnline(),
-			MSubnetList:  make([]string, 0),
-		}
-		if machine.IPAddresses[0].Is4() {
-			tmpMachine.MIPv4 = machine.IPAddresses[0].String()
-			tmpMachine.MIPv6 = machine.IPAddresses[1].String()
-		} else if machine.IPAddresses[1].Is4() {
-			tmpMachine.MIPv6 = machine.IPAddresses[0].String()
-			tmpMachine.MIPv4 = machine.IPAddresses[1].String()
-		}
-		mlist["machine"+strconv.FormatUint(machine.ID, 10)] = tmpMachine
-	}
-
-	renderData := adminTemplateConfig{
-		Basedomain:   h.cfg.BaseDomain,
-		UserNameHead: userNameHead,
-		UserName:     namespaceDisName,
-		UserAccount:  namespaceName,
-		MList:        mlist,
-	}
-
-	var payload bytes.Buffer
-	if err := adminT.Execute(&payload, renderData); err != nil {
-		log.Error().
-			Str("handler", "adminHTML").
-			Err(err).
-			Msg("Could not render admin HTML")
-
-		writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		writer.WriteHeader(http.StatusInternalServerError)
-		_, err := writer.Write([]byte("Could not render admin index template"))
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
-
-		return
-	}
-
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-	_, err = writer.Write(payload.Bytes())
 	if err != nil {
 		log.Error().
 			Caller().

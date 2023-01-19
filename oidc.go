@@ -572,7 +572,7 @@ func (h *Headscale) validateMachineForOIDCCallback(
 
 		var content bytes.Buffer
 		if err := oidcCallbackTemplate.Execute(&content, oidcCallbackTemplateConfig{
-			User: claims.Email,
+			User: claims.Name,
 			Verb: "已重认证",
 		}); err != nil {
 			log.Error().
@@ -729,7 +729,7 @@ func renderOIDCCallbackTemplate(
 ) (*bytes.Buffer, error) {
 	var content bytes.Buffer
 	if err := oidcCallbackTemplate.Execute(&content, oidcCallbackTemplateConfig{
-		User: claims.Email,
+		User: claims.Name,
 		Verb: "已认证",
 	}); err != nil {
 		log.Error().

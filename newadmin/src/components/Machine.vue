@@ -36,8 +36,8 @@ onMounted(() => {
         <section class="mb-24">
             <header class="pb-4 mb-8">
                 <div class="font-medium space-x-2 mb-5 truncate flex"><router-link to="/machines"
-                        class="link">全部设备</router-link><span class="text-gray-400">/</span><span>{{
-                            currentMachine.mip
+                        class="text-blue-500">全部设备</router-link><span class="text-gray-400">/</span><span>{{
+                            currentMachine.mipv4
                         }}</span></div>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h1 class="text-2xl font-semibold tracking-tight leading-tight truncate flex-shrink-0 max-w-full"

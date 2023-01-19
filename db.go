@@ -187,7 +187,7 @@ func (h *Headscale) initDB() error {
 		return err
 	}
 
-	_ = db.Migrator().RenameTable("Namespace", "User")
+	_ = db.Migrator().RenameTable("namespaces", "users")
 
 	err = db.AutoMigrate(&User{})
 	if err != nil {
