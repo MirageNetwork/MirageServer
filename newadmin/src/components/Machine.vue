@@ -71,25 +71,23 @@ onMounted(() => {
                     </div>
                     <div class="max-w-sm border-l border-gray-200 ml-4 pl-4">
                         <p class="text-gray-500 mb-2">状态</p>
-                        <div><span data-state="closed">
+                        <div>
+                            <span v-if="currentMachine.isexpirydisabled">
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-sm px-1 text-xs mr-1">
-                                    Expiry disabled</div>
-                            </span><span data-state="closed">
+                                    永不过期</div>
+                            </span>
+                            <span>
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
-                                    Subnets<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
-                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.35"
-                                        stroke-linecap="round" stroke-linejoin="round" class="ml-1">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                    </svg></div>
-                            </span><span data-state="closed">
+                                    Subnets</div>
+                            </span>
+                            <span>
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
                                     Exit Node</div>
-                            </span></div>
+                            </span>
+                        </div>
                     </div>
                 </div>
             </header>
