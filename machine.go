@@ -951,7 +951,8 @@ func (h *Headscale) RegisterMachineFromAuthCallback(
 					registrationMachine.Expiry = machineExpiry
 				}
 
-				err := h.RestructMachine(&registrationMachine, time.Time{})
+				ExpiryDuration, _ := time.ParseDuration(strconv.FormatUint(uint64(user.ExpiryDuration)*24, 10) + "h")
+				err := h.RestructMachine(&registrationMachine, time.Now().Add(ExpiryDuration))
 				if err != nil {
 					log.Error().
 						Caller().
@@ -971,6 +972,10 @@ func (h *Headscale) RegisterMachineFromAuthCallback(
 
 				if machineExpiry != nil {
 					registrationMachine.Expiry = machineExpiry
+				} else {
+					ExpiryDuration, _ := time.ParseDuration(strconv.FormatUint(uint64(user.ExpiryDuration)*24, 10) + "h")
+					tmpExpiry := time.Now().Add(ExpiryDuration)
+					registrationMachine.Expiry = &tmpExpiry
 				}
 
 				machine, err := h.RegisterMachine(

@@ -35,9 +35,10 @@ var invalidCharsInUserRegex = regexp.MustCompile("[^a-z0-9-.]+")
 // that contain our machines.
 type User struct {
 	gorm.Model
-	Name         string `gorm:"unique"`
-	OIDC_UID     string `gorm:"unique"`
-	Display_Name string `gorm:"unique"`
+	Name           string `gorm:"unique"`
+	OIDC_UID       string `gorm:"unique"`
+	Display_Name   string `gorm:"unique"`
+	ExpiryDuration uint
 }
 
 // CreateUser creates a new User. Returns error if could not be created
@@ -53,6 +54,7 @@ func (h *Headscale) CreateUser(name string, UID string, DisName string) (*User, 
 	}
 	user.Name = name
 	user.OIDC_UID = UID
+	user.ExpiryDuration = 180
 	user.Display_Name = DisName
 	if err := h.db.Create(&user).Error; err != nil {
 		log.Error().

@@ -5,6 +5,11 @@ import { useRouter, useRoute } from 'vue-router';
 const router = useRouter()
 const route = useRoute()
 
+//界面控制部分
+const hasSpecialStatus = computed(() => {
+    return currentMachine.value["issharedin"] || currentMachine.value["issharedout"] || currentMachine.value["expirydesc"] == '已过期' || currentMachine.value["isexpirydisabled"] || currentMachine.value["soonexpiry"] || currentMachine.value["isexitnode"] || currentMachine.value["issubnet"]
+})
+
 //数据填充控制部分
 const currentMachine = ref({});
 onMounted(() => {
@@ -16,6 +21,17 @@ onMounted(() => {
                 for (var k in response.data["mlist"]) {
                     if (response.data["mlist"][k]["mipv4"] === route.params.mip) {
                         currentMachine.value = response.data["mlist"][k]
+                        let tailtwo = currentMachine.value["expirydesc"].slice(-2);
+                        if (
+                            currentMachine.value["expirydesc"] == "马上就要过期" ||
+                            tailtwo == "分钟" ||
+                            tailtwo == "小时" ||
+                            tailtwo == "1天"
+                        ) {
+                            currentMachine.value["soonexpiry"] = true;
+                        } else {
+                            currentMachine.value["soonexpiry"] = false;
+                        }
                         break
                     }
                 }
@@ -69,23 +85,48 @@ onMounted(() => {
                             </div>
                         </div>
                     </div>
-                    <div class="max-w-sm border-l border-gray-200 ml-4 pl-4">
+                    <div v-if="hasSpecialStatus" class="max-w-sm border-l border-gray-200 ml-4 pl-4">
                         <p class="text-gray-500 mb-2">状态</p>
                         <div>
+                            <span v-if="currentMachine.issharedin">
+                                <div
+                                    class="inline-flex items-center align-middle justify-center font-medium border border-orange-50 bg-orange-50 text-orange-600 rounded-sm px-1 text-xs mr-1">
+                                    外部共享
+                                </div>
+                            </span>
+                            <span v-if="currentMachine.issharedout">
+                                <div
+                                    class="inline-flex items-center align-middle justify-center font-medium border border-orange-50 bg-orange-50 text-orange-600 rounded-sm px-1 text-xs mr-1">
+                                    对外共享+1
+                                </div>
+                            </span>
+                            <span v-if="currentMachine.expirydesc == '已过期'">
+                                <div
+                                    class="inline-flex items-center align-middle justify-center font-medium border border-red-50 bg-red-50 text-red-600 rounded-sm px-1 text-xs mr-1">
+                                    已过期
+                                </div>
+                            </span>
                             <span v-if="currentMachine.isexpirydisabled">
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-sm px-1 text-xs mr-1">
                                     永不过期</div>
                             </span>
-                            <span>
+
+                            <span v-if="currentMachine.soonexpiry">
                                 <div
-                                    class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
-                                    Subnets</div>
+                                    class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-sm px-1 text-xs mr-1">
+                                    {{ currentMachine.expirydesc }}
+                                </div>
                             </span>
-                            <span>
+                            <span v-if="currentMachine.isexitnode">
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
-                                    Exit Node</div>
+                                    子网转发</div>
+                            </span>
+                            <span v-if="currentMachine.issubnet">
+                                <div
+                                    class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
+                                    出口节点</div>
                             </span>
                         </div>
                     </div>

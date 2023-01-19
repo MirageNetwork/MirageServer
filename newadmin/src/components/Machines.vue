@@ -191,7 +191,7 @@ function showDelConfirm(id) {
                         外部共享
                       </div>
                     </span>
-                    <span v-if="m.issharedin">
+                    <span v-if="m.issharedout">
                       <div
                         class="inline-flex items-center align-middle justify-center font-medium border border-orange-50 bg-orange-50 text-orange-600 rounded-sm px-1 text-xs mr-1">
                         对外共享+1
@@ -317,7 +317,7 @@ function showDelConfirm(id) {
                         outline: none;
                         --radix-dropdown-menu-content-transform-origin: var(
                           --radix-popper-transform-origin
-                        );
+                        ); 
                         pointer-events: auto;
                       ">
                       <div

@@ -271,8 +271,10 @@ func (h *Headscale) handleRegisterCommon(
 		// The machine has expired or it is logged out
 		h.handleMachineExpiredOrLoggedOutCommon(writer, registerRequest, *machine, machineKey, isNoise)
 
+		ExpiryDuration, _ := time.ParseDuration(strconv.FormatUint(uint64(machine.User.ExpiryDuration)*24, 10) + "h")
+		tmpExpiry := time.Now().Add(ExpiryDuration)
 		// TODO(juan): RegisterRequest includes an Expiry time, that we could optionally use
-		machine.Expiry = &time.Time{}
+		machine.Expiry = &tmpExpiry //&time.Time{}
 
 		// If we are here it means the client needs to be reauthorized,
 		// we need to make sure the NodeKey matches the one in the request
