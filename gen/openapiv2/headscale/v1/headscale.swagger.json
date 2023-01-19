@@ -186,7 +186,7 @@
         },
         "parameters": [
           {
-            "name": "namespace",
+            "name": "user",
             "in": "query",
             "required": false,
             "type": "string"
@@ -216,7 +216,7 @@
         },
         "parameters": [
           {
-            "name": "namespace",
+            "name": "user",
             "in": "query",
             "required": false,
             "type": "string"
@@ -317,43 +317,6 @@
             "required": true,
             "type": "string",
             "format": "uint64"
-          }
-        ],
-        "tags": [
-          "HeadscaleService"
-        ]
-      }
-    },
-    "/api/v1/machine/{machineId}/namespace": {
-      "post": {
-        "operationId": "HeadscaleService_MoveMachine",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1MoveMachineResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "machineId",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "format": "uint64"
-          },
-          {
-            "name": "namespace",
-            "in": "query",
-            "required": false,
-            "type": "string"
           }
         ],
         "tags": [
@@ -476,34 +439,14 @@
         ]
       }
     },
-    "/api/v1/namespace": {
-      "get": {
-        "operationId": "HeadscaleService_ListNamespaces",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListNamespacesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "HeadscaleService"
-        ]
-      },
+    "/api/v1/machine/{machineId}/user": {
       "post": {
-        "operationId": "HeadscaleService_CreateNamespace",
+        "operationId": "HeadscaleService_MoveMachine",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1CreateNamespaceResponse"
+              "$ref": "#/definitions/v1MoveMachineResponse"
             }
           },
           "default": {
@@ -515,106 +458,16 @@
         },
         "parameters": [
           {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CreateNamespaceRequest"
-            }
-          }
-        ],
-        "tags": [
-          "HeadscaleService"
-        ]
-      }
-    },
-    "/api/v1/namespace/{name}": {
-      "get": {
-        "summary": "--- Namespace start ---",
-        "operationId": "HeadscaleService_GetNamespace",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetNamespaceResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
+            "name": "machineId",
             "in": "path",
             "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "HeadscaleService"
-        ]
-      },
-      "delete": {
-        "operationId": "HeadscaleService_DeleteNamespace",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteNamespaceResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "HeadscaleService"
-        ]
-      }
-    },
-    "/api/v1/namespace/{oldName}/rename/{newName}": {
-      "post": {
-        "operationId": "HeadscaleService_RenameNamespace",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RenameNamespaceResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "oldName",
-            "in": "path",
-            "required": true,
-            "type": "string"
+            "type": "string",
+            "format": "uint64"
           },
           {
-            "name": "newName",
-            "in": "path",
-            "required": true,
+            "name": "user",
+            "in": "query",
+            "required": false,
             "type": "string"
           }
         ],
@@ -642,7 +495,7 @@
         },
         "parameters": [
           {
-            "name": "namespace",
+            "name": "user",
             "in": "query",
             "required": false,
             "type": "string"
@@ -800,6 +653,153 @@
           "HeadscaleService"
         ]
       }
+    },
+    "/api/v1/user": {
+      "get": {
+        "operationId": "HeadscaleService_ListUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListUsersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "HeadscaleService"
+        ]
+      },
+      "post": {
+        "operationId": "HeadscaleService_CreateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "HeadscaleService"
+        ]
+      }
+    },
+    "/api/v1/user/{name}": {
+      "get": {
+        "summary": "--- User start ---",
+        "operationId": "HeadscaleService_GetUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HeadscaleService"
+        ]
+      },
+      "delete": {
+        "operationId": "HeadscaleService_DeleteUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HeadscaleService"
+        ]
+      }
+    },
+    "/api/v1/user/{oldName}/rename/{newName}": {
+      "post": {
+        "operationId": "HeadscaleService_RenameUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RenameUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "oldName",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "newName",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HeadscaleService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -887,32 +887,10 @@
         }
       }
     },
-    "v1CreateNamespaceRequest": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "uid": {
-          "type": "string"
-        },
-        "disname": {
-          "type": "string"
-        }
-      }
-    },
-    "v1CreateNamespaceResponse": {
-      "type": "object",
-      "properties": {
-        "namespace": {
-          "$ref": "#/definitions/v1Namespace"
-        }
-      }
-    },
     "v1CreatePreAuthKeyRequest": {
       "type": "object",
       "properties": {
-        "namespace": {
+        "user": {
           "type": "string"
         },
         "reusable": {
@@ -941,10 +919,32 @@
         }
       }
     },
+    "v1CreateUserRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "disname": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        }
+      }
+    },
     "v1DebugCreateMachineRequest": {
       "type": "object",
       "properties": {
-        "namespace": {
+        "user": {
           "type": "string"
         },
         "key": {
@@ -972,7 +972,7 @@
     "v1DeleteMachineResponse": {
       "type": "object"
     },
-    "v1DeleteNamespaceResponse": {
+    "v1DeleteUserResponse": {
       "type": "object"
     },
     "v1DisableRouteResponse": {
@@ -1003,7 +1003,7 @@
     "v1ExpirePreAuthKeyRequest": {
       "type": "object",
       "properties": {
-        "namespace": {
+        "user": {
           "type": "string"
         },
         "key": {
@@ -1033,14 +1033,6 @@
         }
       }
     },
-    "v1GetNamespaceResponse": {
-      "type": "object",
-      "properties": {
-        "namespace": {
-          "$ref": "#/definitions/v1Namespace"
-        }
-      }
-    },
     "v1GetRoutesResponse": {
       "type": "object",
       "properties": {
@@ -1049,6 +1041,14 @@
           "items": {
             "$ref": "#/definitions/v1Route"
           }
+        }
+      }
+    },
+    "v1GetUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
         }
       }
     },
@@ -1074,17 +1074,6 @@
         }
       }
     },
-    "v1ListNamespacesResponse": {
-      "type": "object",
-      "properties": {
-        "namespaces": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/v1Namespace"
-          }
-        }
-      }
-    },
     "v1ListPreAuthKeysResponse": {
       "type": "object",
       "properties": {
@@ -1092,6 +1081,17 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1PreAuthKey"
+          }
+        }
+      }
+    },
+    "v1ListUsersResponse": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1User"
           }
         }
       }
@@ -1121,8 +1121,8 @@
         "name": {
           "type": "string"
         },
-        "namespace": {
-          "$ref": "#/definitions/v1Namespace"
+        "user": {
+          "$ref": "#/definitions/v1User"
         },
         "lastSeen": {
           "type": "string",
@@ -1180,31 +1180,10 @@
         }
       }
     },
-    "v1Namespace": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "uid": {
-          "type": "string"
-        },
-        "disname": {
-          "type": "string"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      }
-    },
     "v1PreAuthKey": {
       "type": "object",
       "properties": {
-        "namespace": {
+        "user": {
           "type": "string"
         },
         "id": {
@@ -1264,11 +1243,11 @@
         }
       }
     },
-    "v1RenameNamespaceResponse": {
+    "v1RenameUserResponse": {
       "type": "object",
       "properties": {
-        "namespace": {
-          "$ref": "#/definitions/v1Namespace"
+        "user": {
+          "$ref": "#/definitions/v1User"
         }
       }
     },
@@ -1313,6 +1292,27 @@
       "properties": {
         "machine": {
           "$ref": "#/definitions/v1Machine"
+        }
+      }
+    },
+    "v1User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "disname": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     }

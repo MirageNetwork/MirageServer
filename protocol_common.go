@@ -327,7 +327,7 @@ func (h *Headscale) handleAuthKeyCommon(
 				Err(err).
 				Msg("Cannot encode message")
 			http.Error(writer, "Internal server error", http.StatusInternalServerError)
-			machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", pak.Namespace.Name).
+			machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", pak.User.Name).
 				Inc()
 
 			return
@@ -352,7 +352,7 @@ func (h *Headscale) handleAuthKeyCommon(
 			Msg("Failed authentication via AuthKey")
 
 		if pak != nil {
-			machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", pak.Namespace.Name).
+			machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", pak.User.Name).
 				Inc()
 		} else {
 			machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", "unknown").Inc()
@@ -432,7 +432,7 @@ func (h *Headscale) handleAuthKeyCommon(
 		machineToRegister := Machine{
 			Hostname:       registerRequest.Hostinfo.Hostname,
 			GivenName:      givenName,
-			NamespaceID:    pak.Namespace.ID,
+			UserID:         pak.User.ID,
 			MachineKey:     MachinePublicKeyStripPrefix(machineKey),
 			RegisterMethod: RegisterMethodAuthKey,
 			Expiry:         &registerRequest.Expiry,
@@ -451,7 +451,7 @@ func (h *Headscale) handleAuthKeyCommon(
 				Bool("noise", isNoise).
 				Err(err).
 				Msg("could not register machine")
-			machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", pak.Namespace.Name).
+			machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", pak.User.Name).
 				Inc()
 			http.Error(writer, "Internal server error", http.StatusInternalServerError)
 
@@ -466,7 +466,7 @@ func (h *Headscale) handleAuthKeyCommon(
 			Bool("noise", isNoise).
 			Err(err).
 			Msg("Failed to use pre-auth key")
-		machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", pak.Namespace.Name).
+		machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", pak.User.Name).
 			Inc()
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
 
@@ -474,10 +474,10 @@ func (h *Headscale) handleAuthKeyCommon(
 	}
 
 	resp.MachineAuthorized = true
-	resp.User = *pak.Namespace.toUser()
+	resp.User = *pak.User.toTailscaleUser()
 	// Provide LoginName when registering with pre-auth key
 	// Otherwise it will need to exec `tailscale up` twice to fetch the *LoginName*
-	resp.Login = *pak.Namespace.toLogin()
+	resp.Login = *pak.User.toTailscaleLogin()
 
 	respBody, err := h.marshalResponse(resp, machineKey, isNoise)
 	if err != nil {
@@ -488,13 +488,13 @@ func (h *Headscale) handleAuthKeyCommon(
 			Str("machine", registerRequest.Hostinfo.Hostname).
 			Err(err).
 			Msg("Cannot encode message")
-		machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", pak.Namespace.Name).
+		machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "error", pak.User.Name).
 			Inc()
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
 
 		return
 	}
-	machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "success", pak.Namespace.Name).
+	machineRegistrations.WithLabelValues("new", RegisterMethodAuthKey, "success", pak.User.Name).
 		Inc()
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	writer.WriteHeader(http.StatusOK)
@@ -604,7 +604,7 @@ func (h *Headscale) handleMachineLogOutCommon(
 	resp.AuthURL = ""
 	resp.MachineAuthorized = false
 	resp.NodeKeyExpired = true
-	resp.User = *machine.Namespace.toUser()
+	resp.User = *machine.User.toTailscaleUser()
 	respBody, err := h.marshalResponse(resp, machineKey, isNoise)
 	if err != nil {
 		log.Error().
@@ -666,8 +666,8 @@ func (h *Headscale) handleMachineValidRegistrationCommon(
 
 	resp.AuthURL = ""
 	resp.MachineAuthorized = true
-	resp.User = *machine.Namespace.toUser()
-	resp.Login = *machine.Namespace.toLogin()
+	resp.User = *machine.User.toTailscaleUser()
+	resp.Login = *machine.User.toTailscaleLogin()
 
 	respBody, err := h.marshalResponse(resp, machineKey, isNoise)
 	if err != nil {
@@ -676,13 +676,13 @@ func (h *Headscale) handleMachineValidRegistrationCommon(
 			Bool("noise", isNoise).
 			Err(err).
 			Msg("Cannot encode message")
-		machineRegistrations.WithLabelValues("update", "web", "error", machine.Namespace.Name).
+		machineRegistrations.WithLabelValues("update", "web", "error", machine.User.Name).
 			Inc()
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
 
 		return
 	}
-	machineRegistrations.WithLabelValues("update", "web", "success", machine.Namespace.Name).
+	machineRegistrations.WithLabelValues("update", "web", "success", machine.User.Name).
 		Inc()
 
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -730,7 +730,7 @@ func (h *Headscale) handleMachineRefreshKeyCommon(
 	}
 
 	resp.AuthURL = ""
-	resp.User = *machine.Namespace.toUser()
+	resp.User = *machine.User.toTailscaleUser()
 	respBody, err := h.marshalResponse(resp, machineKey, isNoise)
 	if err != nil {
 		log.Error().
@@ -805,13 +805,13 @@ func (h *Headscale) handleMachineExpiredOrLoggedOutCommon(
 			Bool("noise", isNoise).
 			Err(err).
 			Msg("Cannot encode message")
-		machineRegistrations.WithLabelValues("reauth", "web", "error", machine.Namespace.Name).
+		machineRegistrations.WithLabelValues("reauth", "web", "error", machine.User.Name).
 			Inc()
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
 
 		return
 	}
-	machineRegistrations.WithLabelValues("reauth", "web", "success", machine.Namespace.Name).
+	machineRegistrations.WithLabelValues("reauth", "web", "success", machine.User.Name).
 		Inc()
 
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")

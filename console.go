@@ -17,15 +17,16 @@ import (
 var adminHTML string
 
 type machineItem struct {
-	GiveName    string   `json:"givename"`
-	UserAccount string   `json:"useraccount"`
-	MIPv4       string   `json:"mipv4"`
-	MIPv6       string   `json:"mipv6"`
-	MSubnetList []string `json:"msubnetlist"`
-	OS          string   `json:"os"`
-	Version     string   `json:"version"`
-	IfOnline    bool     `json:"ifonline"`
-	LastSeen    string   `json:"lastseen"`
+	GiveName     string   `json:"givename"`
+	UserAccount  string   `json:"useraccount"`
+	UserNameHead string   `json:"usernamehead"`
+	MIPv4        string   `json:"mipv4"`
+	MIPv6        string   `json:"mipv6"`
+	MSubnetList  []string `json:"msubnetlist"`
+	OS           string   `json:"os"`
+	Version      string   `json:"version"`
+	IfOnline     bool     `json:"ifonline"`
+	LastSeen     string   `json:"lastseen"`
 
 	IsSharedIn       bool `json:"issharedin"`
 	IsSharedOut      bool `json:"issharedout"`
@@ -72,7 +73,7 @@ func (h *Headscale) ConsoleSelfAPI(
 		}
 		return
 	}
-	namespaceName, _ /*namespaceUID*/, namespaceDisName, err := getNamespaceName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	namespaceName, _ /*namespaceUID*/, namespaceDisName, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -134,7 +135,7 @@ func (h *Headscale) verifyTokenIDandGetNamespace(
 		}
 		return ""
 	}
-	namespaceName, _ /*namespaceUID*/, _ /*namespaceDisName*/, err := getNamespaceName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	namespaceName, _ /*namespaceUID*/, _ /*namespaceDisName*/, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -179,7 +180,7 @@ func (h *Headscale) ConsoleMachinesAPI(
 		}
 		return
 	}
-	namespaceName, _ /*namespaceUID*/, _ /*namespaceDisName*/, err := getNamespaceName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	namespaceName, _ /*namespaceUID*/, _ /*namespaceDisName*/, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -192,7 +193,7 @@ func (h *Headscale) ConsoleMachinesAPI(
 		return
 	}
 
-	UserMachines, err := h.ListMachinesInNamespace(namespaceName)
+	UserMachines, err := h.ListMachinesByUser(namespaceName)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "查询用户节点列表失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -213,13 +214,14 @@ func (h *Headscale) ConsoleMachinesAPI(
 		}
 		tz, _ := time.LoadLocation("Asia/Shanghai")
 		tmpMachine := machineItem{
-			GiveName:    machine.GivenName,
-			UserAccount: machine.Namespace.Name,
-			OS:          machine.HostInfo.OS,
-			Version:     IPNver,
-			LastSeen:    machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
-			IfOnline:    machine.isOnline(),
-			MSubnetList: make([]string, 0),
+			GiveName:     machine.GivenName,
+			UserAccount:  machine.User.Name,
+			UserNameHead: string([]rune(machine.User.Display_Name)[0]),
+			OS:           machine.HostInfo.OS,
+			Version:      IPNver,
+			LastSeen:     machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
+			IfOnline:     machine.isOnline(),
+			MSubnetList:  make([]string, 0),
 		}
 		if machine.IPAddresses[0].Is4() {
 			tmpMachine.MIPv4 = machine.IPAddresses[0].String()
@@ -271,7 +273,7 @@ func (h *Headscale) ConsoleRemoveMachineAPI(
 		}
 		return
 	}
-	UserMachines, err := h.ListMachinesInNamespace(namespaceName)
+	UserMachines, err := h.ListMachinesByUser(namespaceName)
 	if err != nil {
 		resData.Status = "Error"
 		resData.ErrMsg = "用户设备检索失败"
@@ -366,14 +368,14 @@ func (h *Headscale) ConsolePanel(
 		renderResult(writer, true, "解析用户信息失败", "/", "返回首页")
 		return
 	}
-	namespaceName, _ /*namespaceUID*/, namespaceDisName, err := getNamespaceName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	namespaceName, _ /*namespaceUID*/, namespaceDisName, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		renderResult(writer, true, "提取用户信息失败", "/", "返回首页")
 		return
 	}
 	userNameHead := string([]rune(namespaceDisName)[0])
 
-	UserMachines, err := h.ListMachinesInNamespace(namespaceName)
+	UserMachines, err := h.ListMachinesByUser(namespaceName)
 	if err != nil {
 		renderResult(writer, true, "查询用户节点列表失败", "/", "返回首页")
 		return
@@ -387,13 +389,14 @@ func (h *Headscale) ConsolePanel(
 		}
 		tz, _ := time.LoadLocation("Asia/Shanghai")
 		tmpMachine := machineItem{
-			GiveName:    machine.GivenName,
-			UserAccount: machine.Namespace.Name,
-			OS:          machine.HostInfo.OS,
-			Version:     IPNver,
-			LastSeen:    machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
-			IfOnline:    machine.isOnline(),
-			MSubnetList: make([]string, 0),
+			GiveName:     machine.GivenName,
+			UserAccount:  machine.User.Name,
+			UserNameHead: string([]rune(machine.User.Display_Name)[0]),
+			OS:           machine.HostInfo.OS,
+			Version:      IPNver,
+			LastSeen:     machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
+			IfOnline:     machine.isOnline(),
+			MSubnetList:  make([]string, 0),
 		}
 		if machine.IPAddresses[0].Is4() {
 			tmpMachine.MIPv4 = machine.IPAddresses[0].String()

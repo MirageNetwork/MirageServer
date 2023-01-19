@@ -325,7 +325,7 @@ function showDelConfirm(id) {
 
 
     <div v-if="delConfirmShow" @click.self="delConfirmShow = false"
-        class="fixed overflow-y-auto inset-0 py-8 z-10 bg-gray-900 bg-opacity-[0.07]" style="pointer-events: auto;">
+        class="fixed overflow-y-auto inset-0 py-8 z-100 bg-gray-900 bg-opacity-[0.07]" style="pointer-events: auto;">
         <div class="bg-white rounded-lg relative p-4 md:p-6 text-gray-700 max-w-lg min-w-[19rem] my-8 mx-auto w-[97%] shadow-dialog"
             tabindex="-1" style="pointer-events: auto;">
             <header class="flex items-center justify-between space-x-4 mb-5 mr-8">

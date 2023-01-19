@@ -110,7 +110,10 @@ func (h *Headscale) initDB() error {
 					continue
 				}
 
-				err = db.Preload("Machine").Where("machine_id = ? AND prefix = ?", machine.ID, IPPrefix(prefix)).First(&Route{}).Error
+				err = db.Preload("Machine").
+					Where("machine_id = ? AND prefix = ?", machine.ID, IPPrefix(prefix)).
+					First(&Route{}).
+					Error
 				if err == nil {
 					log.Info().
 						Str("enabled_route", prefix.String()).
@@ -184,7 +187,9 @@ func (h *Headscale) initDB() error {
 		return err
 	}
 
-	err = db.AutoMigrate(&Namespace{})
+	_ = db.Migrator().RenameTable("Namespace", "User")
+
+	err = db.AutoMigrate(&User{})
 	if err != nil {
 		return err
 	}

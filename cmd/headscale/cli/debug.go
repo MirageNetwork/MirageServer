@@ -27,8 +27,8 @@ func init() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	createNodeCmd.Flags().StringP("namespace", "n", "", "Namespace")
-	err = createNodeCmd.MarkFlagRequired("namespace")
+	createNodeCmd.Flags().StringP("user", "n", "", "User")
+	err = createNodeCmd.MarkFlagRequired("user")
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
@@ -55,9 +55,9 @@ var createNodeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		output, _ := cmd.Flags().GetString("output")
 
-		namespace, err := cmd.Flags().GetString("namespace")
+		user, err := cmd.Flags().GetString("user")
 		if err != nil {
-			ErrorOutput(err, fmt.Sprintf("Error getting namespace: %s", err), output)
+			ErrorOutput(err, fmt.Sprintf("Error getting user: %s", err), output)
 
 			return
 		}
@@ -110,10 +110,10 @@ var createNodeCmd = &cobra.Command{
 		}
 
 		request := &v1.DebugCreateMachineRequest{
-			Key:       machineKey,
-			Name:      name,
-			Namespace: namespace,
-			Routes:    routes,
+			Key:    machineKey,
+			Name:   name,
+			User:   user,
+			Routes: routes,
 		}
 
 		response, err := client.DebugCreateMachine(ctx, request)
