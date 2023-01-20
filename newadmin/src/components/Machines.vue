@@ -1,12 +1,18 @@
 <script setup>
-import { ref, computed, nextTick, onMounted } from "vue";
+import { ref, computed, nextTick, onMounted, watch } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
+import Toast from "./Toast.vue"
 
 //与框架交互部分
 
 //界面控制部分
 const toastShow = ref(false);
 const toastMsg = ref("");
+watch(toastShow, () => {
+  if (toastShow.value) {
+    setTimeout(function () { toastShow.value = false }, 5000)
+  }
+})
 
 const delConfirmShow = ref(false);
 const delMID = ref("1");
@@ -362,15 +368,10 @@ function showDelConfirm(id) {
     </section>
   </main>
 
-  <div v-if="toastShow" class="toast">
-    <div class="alert shadow-lg bg-neutral text-neutral-content">
-      <span>{{ toastMsg }}</span>
-      <svg @click="toastShow = false" cursor="pointer" xmlns="http://www.w3.org/2000/svg"
-        class="h-6 w-6 justify-self-end" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </div>
-  </div>
+<!-- 提示框显示 -->
+  <Teleport to=".toast-container">
+    <Toast :show="toastShow" :msg="toastMsg" @close="toastShow = false"></Toast>
+  </Teleport>
 
   <div v-if="delConfirmShow" @click.self="delConfirmShow = false"
     class="fixed overflow-y-auto inset-0 py-8 z-100 bg-gray-900 bg-opacity-[0.07]" style="pointer-events: auto">

@@ -6,6 +6,7 @@ import Machines from './components/Machines.vue'
 import Machine from './components/Machine.vue'
 import Empty from './components/Empty.vue'
 
+
 const routes = [
     { path: '/', redirect: '/machines' },
     { path: '/machines', component: Machines },

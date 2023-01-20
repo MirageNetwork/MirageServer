@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.toast-container {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 99;
+    transition: bottom .4s ease, -webkit-transform .4s ease;
+    transition: transform .4s ease, bottom .4s ease;
+    transition: transform .4s ease, bottom .4s ease, -webkit-transform .4s ease;
+}

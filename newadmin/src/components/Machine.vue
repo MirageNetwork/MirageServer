@@ -1,15 +1,24 @@
 <script setup>
 import { ref, computed, nextTick, onMounted } from "vue";
-import { useRouter, useRoute } from 'vue-router';
+import { useRouter, useRoute } from "vue-router";
 
-const router = useRouter()
-const route = useRoute()
+const router = useRouter();
+const route = useRoute();
 
 //界面控制部分
-const devmode=ref(false)
+const devmode = ref(false);
 const hasSpecialStatus = computed(() => {
-    return currentMachine.value["issharedin"] || currentMachine.value["issharedout"] || currentMachine.value["expirydesc"] == '已过期' || currentMachine.value["isexpirydisabled"] || currentMachine.value["soonexpiry"] || currentMachine.value["isexitnode"] || currentMachine.value["issubnet"]
-})
+    return (
+        currentMachine.value["issharedin"] ||
+        currentMachine.value["issharedout"] ||
+        currentMachine.value["expirydesc"] == "已过期" ||
+        currentMachine.value["isexpirydisabled"] ||
+        currentMachine.value["soonexpiry"] ||
+        currentMachine.value["isexitnode"] ||
+        currentMachine.value["issubnet"]
+    );
+});
+const optionMenuShow = ref(false);
 
 //数据填充控制部分
 const currentMachine = ref({});
@@ -19,18 +28,21 @@ onMounted(() => {
     axios
         .get("/admin/api/machines")
         .then(function (response) {
-            if (response.data["needreauth"] != undefined || response.data["needreauth"] == true) {
+            if (
+                response.data["needreauth"] != undefined ||
+                response.data["needreauth"] == true
+            ) {
                 toastMsg.value = response.data["needreauthreason"] + "，登录状态失效，请重新登录";
                 toastShow.value = true;
-                reject()
+                reject();
             }
             // 处理成功情况
             if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
-                basedomain.value=response.data["basedomain"]
+                basedomain.value = response.data["basedomain"];
                 for (var k in response.data["mlist"]) {
                     if (response.data["mlist"][k]["mipv4"] === route.params.mip) {
-                        currentMachine.value = response.data["mlist"][k]
-                        currentMID.value = k
+                        currentMachine.value = response.data["mlist"][k];
+                        currentMID.value = k;
                         let tailtwo = currentMachine.value["expirydesc"].slice(-2);
                         if (
                             currentMachine.value["expirydesc"] == "马上就要过期" ||
@@ -42,7 +54,7 @@ onMounted(() => {
                         } else {
                             currentMachine.value["soonexpiry"] = false;
                         }
-                        break
+                        break;
                     }
                 }
             }
@@ -61,25 +73,31 @@ onMounted(() => {
     <main class="container mx-auto pb-20 md:pb-24">
         <section class="mb-24">
             <header class="pb-4 mb-8">
-                <div class="font-medium space-x-2 mb-5 truncate flex"><router-link to="/machines"
-                        class="text-blue-500">全部设备</router-link><span class="text-gray-400">/</span><span>{{
-                            currentMachine.mipv4
-                        }}</span></div>
+                <div class="font-medium space-x-2 mb-5 truncate flex">
+                    <router-link to="/machines" class="text-blue-500">全部设备</router-link><span
+                        class="text-gray-400">/</span><span>{{ currentMachine.mipv4 }}</span>
+                </div>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h1 class="text-2xl font-semibold tracking-tight leading-tight truncate flex-shrink-0 max-w-full"
-                        tabindex="-1">{{ currentMachine.givename }}</h1>
+                        tabindex="-1">
+                        {{ currentMachine.givename }}
+                    </h1>
                     <div class="flex">
-                        <div class="flex gap-2 flex-wrap"><button
+                        <div class="flex gap-2 flex-wrap">
+                            <button @click="optionMenuShow = true"
                                 class="btn btn-outline bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 min-w-0">
-                                <div class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16"
-                                        height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                                <div class="flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" class="mr-2">
                                         <circle cx="12" cy="12" r="3"></circle>
                                         <path
                                             d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
                                         </path>
-                                    </svg>设备设置</div>
-                            </button></div>
+                                    </svg>设备设置
+                                </div>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="flex border-t border-gray-200 text-sm mt-4 pt-4">
@@ -89,9 +107,11 @@ onMounted(() => {
                             <div class="flex items-center text-gray-600 text-sm">
                                 <div class="relative shrink-0 rounded-full overflow-hidden w-5 h-5 text-xs mr-2">
                                     <div class="flex items-center justify-center text-center capitalize text-white font-medium pointer-events-none w-5 h-5 text-xs"
-                                        style="background-color: rgb(161, 56, 33);">{{ currentMachine.usernamehead }}
+                                        style="background-color: rgb(161, 56, 33)">
+                                        {{ currentMachine.usernamehead }}
                                     </div>
-                                </div><span data-state="closed">{{ currentMachine.useraccount }}</span>
+                                </div>
+                                <span data-state="closed">{{ currentMachine.useraccount }}</span>
                             </div>
                         </div>
                     </div>
@@ -119,7 +139,8 @@ onMounted(() => {
                             <span v-if="currentMachine.isexpirydisabled">
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-sm px-1 text-xs mr-1">
-                                    永不过期</div>
+                                    永不过期
+                                </div>
                             </span>
 
                             <span v-if="currentMachine.soonexpiry">
@@ -131,12 +152,14 @@ onMounted(() => {
                             <span v-if="currentMachine.isexitnode">
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
-                                    子网转发</div>
+                                    子网转发
+                                </div>
                             </span>
                             <span v-if="currentMachine.issubnet">
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
-                                    出口节点</div>
+                                    出口节点
+                                </div>
                             </span>
                         </div>
                     </div>
@@ -146,36 +169,50 @@ onMounted(() => {
                 <header class="flex justify-between mb-4">
                     <div class="max-w-xl">
                         <h3 class="text-xl font-semibold tracking-tight mb-2">子网转发</h3>
-                        <p class="text-gray-600">“子网转发”允许你暴露设备可访问物理网络路由给您的蜃境网络</p>
+                        <p class="text-gray-600">
+                            “子网转发”允许你暴露设备可访问物理网络路由给您的蜃境网络
+                        </p>
                     </div>
-                    <div v-if="currentMachine.issubnet"><button
-                            class="btn btn-outline bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 mt-2">配置</button>
+                    <div v-if="currentMachine.issubnet">
+                        <button
+                            class="btn btn-outline bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 mt-2">
+                            配置
+                        </button>
                     </div>
                 </header>
                 <div v-if="currentMachine.issubnet" class="p-4 md:p-6 border border-gray-200 rounded-md">
                     <ul class="leading-normal">
                         <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
-                            192.168.0.0/24</li>
+                            192.168.0.0/24
+                        </li>
                         <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
-                            192.168.1.0/24</li>
+                            192.168.1.0/24
+                        </li>
                         <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
-                            192.168.166.0/24</li>
+                            192.168.166.0/24
+                        </li>
                         <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
-                            192.168.168.0/24</li>
+                            192.168.168.0/24
+                        </li>
                         <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
-                            198.18.0.0/16</li>
+                            198.18.0.0/16
+                        </li>
                     </ul>
                 </div>
                 <div v-if="!currentMachine.issubnet && !currentMachine.issharedin"
                     class="p-4 md:p-6 border border-gray-200 rounded-md flex items-center justify-center text-gray-500 text-center">
                     <div class="flex justify-center">
-                        <div class="w-full text-center max-w-xl text-gray-500">该设备未暴露任何子网可供转发</div>
+                        <div class="w-full text-center max-w-xl text-gray-500">
+                            该设备未暴露任何子网可供转发
+                        </div>
                     </div>
                 </div>
                 <div v-if="currentMachine.issharedin"
                     class="p-4 md:p-6 border border-gray-200 rounded-md flex items-center justify-center text-gray-500 text-center">
                     <div class="flex justify-center">
-                        <div class="w-full text-center max-w-xl text-gray-500">该设备来自外部共享，不能暴露子网转发给你</div>
+                        <div class="w-full text-center max-w-xl text-gray-500">
+                            该设备来自外部共享，不能暴露子网转发给你
+                        </div>
                     </div>
                 </div>
             </section>
@@ -204,7 +241,11 @@ onMounted(() => {
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">域名</dt>
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
-                                    <div class="truncate">{{ currentMachine.givename }}.{{ currentMachine.useraccount }}.{{ basedomain }}</div>
+                                    <div class="truncate">
+                                        {{ currentMachine.givename }}.{{ currentMachine.useraccount }}.{{
+                                            basedomain
+                                        }}
+                                    </div>
                                     <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
                                 </div>
                             </dd>
@@ -227,7 +268,9 @@ onMounted(() => {
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">蜃境网络 IPv4</dt>
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
-                                    <div class="truncate"><span>{{ currentMachine.mipv4 }}</span></div>
+                                    <div class="truncate">
+                                        <span>{{ currentMachine.mipv4 }}</span>
+                                    </div>
                                     <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
                                 </div>
                             </dd>
@@ -236,11 +279,12 @@ onMounted(() => {
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">蜃境网络 IPv6</dt>
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
-                                    <div class="truncate"><span
-                                            class="inline-flex justify-start min-w-0 max-w-full"><span
+                                    <div class="truncate">
+                                        <span class="inline-flex justify-start min-w-0 max-w-full"><span
                                                 class="truncate w-fit flex-shrink">{{
                                                     currentMachine.mipv6
-                                                }}</span></span></div>
+                                                }}</span></span>
+                                    </div>
                                     <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
                                 </div>
                             </dd>
@@ -253,12 +297,24 @@ onMounted(() => {
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">设备端点信息</dt>
                             <dd class="min-w-0 truncate">
                                 <ul class="pl-3 -indent-3">
-                                    <li class="select-all"><span>61.48.214.79</span><wbr>:<span>20332</span></li>
-                                    <li class="select-all"><span>172.17.0.1</span><wbr>:<span>41641</span></li>
-                                    <li class="select-all"><span>172.30.32.1</span><wbr>:<span>41641</span></li>
-                                    <li class="select-all"><span>192.168.1.3</span><wbr>:<span>41641</span></li>
-                                    <li class="select-all"><span>192.168.166.66</span><wbr>:<span>41641</span></li>
-                                    <li class="select-all"><span>192.168.168.66</span><wbr>:<span>41641</span></li>
+                                    <li class="select-all">
+                                        <span>61.48.214.79</span><wbr />:<span>20332</span>
+                                    </li>
+                                    <li class="select-all">
+                                        <span>172.17.0.1</span><wbr />:<span>41641</span>
+                                    </li>
+                                    <li class="select-all">
+                                        <span>172.30.32.1</span><wbr />:<span>41641</span>
+                                    </li>
+                                    <li class="select-all">
+                                        <span>192.168.1.3</span><wbr />:<span>41641</span>
+                                    </li>
+                                    <li class="select-all">
+                                        <span>192.168.166.66</span><wbr />:<span>41641</span>
+                                    </li>
+                                    <li class="select-all">
+                                        <span>192.168.168.66</span><wbr />:<span>41641</span>
+                                    </li>
                                 </ul>
                             </dd>
                         </dl>
@@ -266,13 +322,15 @@ onMounted(() => {
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">中继器</dt>
                             <dd class="min-w-0 truncate">
                                 <ul>
-                                    <li><strong class="font-medium">Relay #948</strong>: 160.70&nbsp;ms<svg
+                                    <li>
+                                        <strong class="font-medium">Relay #948</strong>: 160.70&nbsp;ms<svg
                                             xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                             stroke-linecap="round" stroke-linejoin="round"
                                             class="relative inline-block ml-1 -top-px">
                                             <polyline points="20 6 9 17 4 12"></polyline>
-                                        </svg></li>
+                                        </svg>
+                                    </li>
                                     <li><strong class="font-medium">Relay #951</strong>: 210.49&nbsp;ms</li>
                                 </ul>
                             </dd>
@@ -289,18 +347,24 @@ onMounted(() => {
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">密钥过期</dt>
-                            <dd v-if="currentMachine.isexpirydisabled" class="min-w-0 truncate">永不过期</dd>
-                            <dd v-if="!currentMachine.isexpirydisabled" class="min-w-0 truncate">{{
-                                currentMachine.expirydesc
-                            }}</dd>
+                            <dd v-if="currentMachine.isexpirydisabled" class="min-w-0 truncate">
+                                永不过期
+                            </dd>
+                            <dd v-if="!currentMachine.isexpirydisabled" class="min-w-0 truncate">
+                                {{ currentMachine.expirydesc }}
+                            </dd>
                         </dl>
-                        <h2 class="pt-2 text-xs uppercase font-semibold text-gray-500 tracking-wide">客户端连通性</h2>
+                        <h2 class="pt-2 text-xs uppercase font-semibold text-gray-500 tracking-wide">
+                            客户端连通性
+                        </h2>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">复杂网络 Varies</dt>
                             <dd class="min-w-0 truncate">No</dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">需发夹机制 Hairpinning</dt>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">
+                                需发夹机制 Hairpinning
+                            </dt>
                             <dd class="min-w-0 truncate">No</dd>
                         </dl>
                         <dl class="flex text-sm">
@@ -337,6 +401,41 @@ onMounted(() => {
             </svg>
         </div>
     </div>
+
+    <Teleport to="body">
+        <div v-if="optionMenuShow" class="menu p-2 shadow bg-base-100 rounded-md w-52 px-0"
+            style="position: fixed; left: 0px; top: 0px; transform: translate3d(1123px, 110px, 0px); min-width: max-content; z-index: 50; --radix-popper-transform-origin: 0% 0px;">
+            <div class="bg-white py-1 z-50" style="
+          outline: none;
+          --radix-dropdown-menu-content-transform-origin: var(
+            --radix-popper-transform-origin
+          );
+          pointer-events: auto;
+        ">
+                <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
+                    编辑机器名称…
+                </div>
+                <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
+                    分享…
+                </div>
+                <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
+                    启用密钥过期
+                </div>
+                <div class="my-1 border-b border-gray-200"></div>
+                <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
+                    编辑子网…
+                </div>
+                <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
+                    编辑标签…
+                </div>
+                <div class="my-1 border-b border-gray-200"></div>
+                <div @click="optionMenuShow = false"
+                    class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100 text-red-400">
+                    移除…
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>
 
 <style scoped>
