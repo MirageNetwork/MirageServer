@@ -23,6 +23,11 @@ function getMachines() {
     axios
       .get("/admin/api/machines")
       .then(function (response) {
+        if (response.data["needreauth"] != undefined || response.data["needreauth"] == true) {
+          toastMsg.value = response.data["needreauthreason"] + "，登录状态失效，请重新登录";
+          toastShow.value = true;
+          reject()
+        }
         // 处理成功情况
         if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
           for (var k in response.data["mlist"]) {

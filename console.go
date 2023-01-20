@@ -13,9 +13,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:embed admin/console.html
-var adminHTML string
-
 type machineItem struct {
 	GiveName     string   `json:"givename"`
 	UserAccount  string   `json:"useraccount"`
@@ -24,9 +21,11 @@ type machineItem struct {
 	MIPv6        string   `json:"mipv6"`
 	MSubnetList  []string `json:"msubnetlist"`
 	OS           string   `json:"os"`
+	OSHostName   string   `json:"oshostname"`
 	Version      string   `json:"version"`
 	IfOnline     bool     `json:"ifonline"`
 	LastSeen     string   `json:"lastseen"`
+	CreateAt     string   `json:"createat"`
 
 	IsSharedIn       bool `json:"issharedin"`
 	IsSharedOut      bool `json:"issharedout"`
@@ -224,7 +223,9 @@ func (h *Headscale) ConsoleMachinesAPI(
 			UserAccount:      machine.User.Name,
 			UserNameHead:     string([]rune(machine.User.Display_Name)[0]),
 			OS:               machine.HostInfo.OS,
+			OSHostName:       machine.HostInfo.Hostname,
 			Version:          IPNver,
+			CreateAt:         machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
 			LastSeen:         machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
 			IfOnline:         machine.isOnline(),
 			MSubnetList:      make([]string, 0),
@@ -234,10 +235,10 @@ func (h *Headscale) ConsoleMachinesAPI(
 			ExpiryDuration := machine.Expiry.Sub(time.Now())
 			if ExpiryDuration.Seconds() <= 0 {
 				tmpMachine.ExpiryDesc = "已过期"
-			} else if ExpiryDuration.Hours()/24/365 > 0 {
+			} else if ExpiryDuration.Hours()/24/365 >= 1 {
 				tmpMachine.ExpiryDesc = "还剩一年以上有效期"
 			} else if ExpiryDuration.Hours()/24/30 >= 1 {
-				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Hours()/24/30), 10) + "个月"
+				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Hours()/24/30), 10) + "个月" + strconv.FormatInt(int64(ExpiryDuration.Hours()/24)-int64(ExpiryDuration.Hours()/24/30)*30, 10) + "天"
 			} else if ExpiryDuration.Hours()/24 >= 1 {
 				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Hours()/24), 10) + "天"
 			} else if ExpiryDuration.Hours() >= 1 {
@@ -259,7 +260,8 @@ func (h *Headscale) ConsoleMachinesAPI(
 	}
 
 	renderData := adminTemplateConfig{
-		MList: mlist,
+		Basedomain: h.cfg.BaseDomain,
+		MList:      mlist,
 	}
 
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")

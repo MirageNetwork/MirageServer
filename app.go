@@ -528,6 +528,7 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	}
 
 	console_router := router.PathPrefix("/admin").Subrouter()
+	console_router.PathPrefix("/api").Subrouter().Use(h.APIAuth)
 	console_router.Use(h.ConsoleAuth)
 
 	console_router.HandleFunc("/api/self", h.ConsoleSelfAPI).Methods(http.MethodGet)

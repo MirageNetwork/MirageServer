@@ -6,21 +6,31 @@ const router = useRouter()
 const route = useRoute()
 
 //界面控制部分
+const devmode=ref(false)
 const hasSpecialStatus = computed(() => {
     return currentMachine.value["issharedin"] || currentMachine.value["issharedout"] || currentMachine.value["expirydesc"] == '已过期' || currentMachine.value["isexpirydisabled"] || currentMachine.value["soonexpiry"] || currentMachine.value["isexitnode"] || currentMachine.value["issubnet"]
 })
 
 //数据填充控制部分
 const currentMachine = ref({});
+const currentMID = ref("");
+const basedomain = ref("");
 onMounted(() => {
     axios
         .get("/admin/api/machines")
         .then(function (response) {
+            if (response.data["needreauth"] != undefined || response.data["needreauth"] == true) {
+                toastMsg.value = response.data["needreauthreason"] + "，登录状态失效，请重新登录";
+                toastShow.value = true;
+                reject()
+            }
             // 处理成功情况
             if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
+                basedomain.value=response.data["basedomain"]
                 for (var k in response.data["mlist"]) {
                     if (response.data["mlist"][k]["mipv4"] === route.params.mip) {
                         currentMachine.value = response.data["mlist"][k]
+                        currentMID.value = k
                         let tailtwo = currentMachine.value["expirydesc"].slice(-2);
                         if (
                             currentMachine.value["expirydesc"] == "马上就要过期" ||
@@ -59,8 +69,8 @@ onMounted(() => {
                     <h1 class="text-2xl font-semibold tracking-tight leading-tight truncate flex-shrink-0 max-w-full"
                         tabindex="-1">{{ currentMachine.givename }}</h1>
                     <div class="flex">
-                        <div class="flex gap-2 flex-wrap"><button class="button button-outline min-w-0" type="button"
-                                id="radix-:r5n:" aria-haspopup="menu" aria-expanded="false" data-state="closed">
+                        <div class="flex gap-2 flex-wrap"><button
+                                class="btn btn-outline bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 min-w-0">
                                 <div class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16"
                                         height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
@@ -135,15 +145,14 @@ onMounted(() => {
             <section class="mb-8">
                 <header class="flex justify-between mb-4">
                     <div class="max-w-xl">
-                        <h3 class="text-xl font-semibold tracking-tight mb-2">Subnets</h3>
-                        <p class="text-gray-600">Subnets let you expose physical network routes onto Tailscale. <a
-                                href="https://tailscale.com/kb/1019/subnets" target="_blank" rel="noopener noreferrer"
-                                class="link"
-                                aria-label="Read documentation about subnet routers">Learn&nbsp;more&nbsp;→</a></p>
+                        <h3 class="text-xl font-semibold tracking-tight mb-2">子网转发</h3>
+                        <p class="text-gray-600">“子网转发”允许你暴露设备可访问物理网络路由给您的蜃境网络</p>
                     </div>
-                    <div><button class="button button-outline mt-2">Review</button></div>
+                    <div v-if="currentMachine.issubnet"><button
+                            class="btn btn-outline bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 mt-2">配置</button>
+                    </div>
                 </header>
-                <div class="p-4 md:p-6 border border-gray-200 rounded-md">
+                <div v-if="currentMachine.issubnet" class="p-4 md:p-6 border border-gray-200 rounded-md">
                     <ul class="leading-normal">
                         <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
                             192.168.0.0/24</li>
@@ -157,119 +166,91 @@ onMounted(() => {
                             198.18.0.0/16</li>
                     </ul>
                 </div>
+                <div v-if="!currentMachine.issubnet && !currentMachine.issharedin"
+                    class="p-4 md:p-6 border border-gray-200 rounded-md flex items-center justify-center text-gray-500 text-center">
+                    <div class="flex justify-center">
+                        <div class="w-full text-center max-w-xl text-gray-500">该设备未暴露任何子网可供转发</div>
+                    </div>
+                </div>
+                <div v-if="currentMachine.issharedin"
+                    class="p-4 md:p-6 border border-gray-200 rounded-md flex items-center justify-center text-gray-500 text-center">
+                    <div class="flex justify-center">
+                        <div class="w-full text-center max-w-xl text-gray-500">该设备来自外部共享，不能暴露子网转发给你</div>
+                    </div>
+                </div>
             </section>
             <section class="mb-8">
                 <header class="max-w-xl mb-4">
-                    <h3 class="text-xl font-semibold tracking-tight mb-2">Machine Details</h3>
-                    <p class="text-gray-600">Information about this machine’s network. Used to debug connection issues.
-                    </p>
+                    <h3 class="text-xl font-semibold tracking-tight mb-2">设备信息</h3>
+                    <p class="text-gray-600">关于该设备网络的信息，用于调试连接问题</p>
                 </header>
                 <div
                     class="p-4 md:p-6 border border-gray-200 rounded-md grid grid-cols-1 md:grid-cols-2 gap-y-2 sm:gap-x-2">
                     <div class="space-y-2">
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Creator</dt>
-                            <dd class="min-w-0 truncate">gps949@nopkt.com</dd>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">创建者</dt>
+                            <dd class="min-w-0 truncate">{{ currentMachine.useraccount }}</dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Machine name</dt>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">设备名称</dt>
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
-                                    <div class="truncate">debian1520</div>
-                                    <div class="cursor-pointer text-blue-500 pl-2">Copy</div>
+                                    <div class="truncate">{{ currentMachine.givename }}</div>
+                                    <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
                                 </div>
                             </dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Domain<span data-state="closed"><svg
-                                        xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        class="relative -top-px text-gray-500 hover:text-gray-800 ml-1 cursor-default inline-flex">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                    </svg></span></dt>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">域名</dt>
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
-                                    <div class="truncate">debian1520.cow-sole.ts.net</div>
-                                    <div class="cursor-pointer text-blue-500 pl-2">Copy</div>
+                                    <div class="truncate">{{ currentMachine.givename }}.{{ currentMachine.useraccount }}.{{ basedomain }}</div>
+                                    <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
                                 </div>
                             </dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">OS hostname<span
-                                    data-state="closed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
-                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round"
-                                        class="relative -top-px text-gray-500 hover:text-gray-800 ml-1 cursor-default inline-flex">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                    </svg></span></dt>
-                            <dd class="min-w-0 truncate">debian1520</dd>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">系统主机名</dt>
+                            <dd class="min-w-0 truncate">{{ currentMachine.oshostname }}</dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">OS</dt>
-                            <dd class="min-w-0 truncate">Linux</dd>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">操作系统</dt>
+                            <dd class="min-w-0 truncate">{{ currentMachine.os }}</dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Tailscale version</dt>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">蜃境客户端版本</dt>
                             <dd class="min-w-0 truncate">
-                                <div class="flex items-center">1.34.2 </div>
+                                <div class="flex items-center">{{ currentMachine.version }}</div>
                             </dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Tailscale IPv4<span
-                                    data-state="closed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
-                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round"
-                                        class="relative -top-px text-gray-500 hover:text-gray-800 ml-1 cursor-default inline-flex">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                    </svg></span></dt>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">蜃境网络 IPv4</dt>
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
-                                    <div class="truncate"><span>100.90.174.53</span></div>
-                                    <div class="cursor-pointer text-blue-500 pl-2">Copy</div>
+                                    <div class="truncate"><span>{{ currentMachine.mipv4 }}</span></div>
+                                    <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
                                 </div>
                             </dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Tailscale IPv6<span
-                                    data-state="closed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
-                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round"
-                                        class="relative -top-px text-gray-500 hover:text-gray-800 ml-1 cursor-default inline-flex">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                    </svg></span></dt>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">蜃境网络 IPv6</dt>
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
                                     <div class="truncate"><span
                                             class="inline-flex justify-start min-w-0 max-w-full"><span
-                                                class="truncate w-fit flex-shrink">fd7a:115c:a1e0:ab12:4843</span><span
-                                                class="flex-grow-0 flex-shrink-0">:cd96:625a:ae35</span></span></div>
-                                    <div class="cursor-pointer text-blue-500 pl-2">Copy</div>
+                                                class="truncate w-fit flex-shrink">{{
+                                                    currentMachine.mipv6
+                                                }}</span></span></div>
+                                    <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
                                 </div>
                             </dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">ID<span data-state="closed"><svg
-                                        xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        class="relative -top-px text-gray-500 hover:text-gray-800 ml-1 cursor-default inline-flex">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                    </svg></span></dt>
-                            <dd class="min-w-0 truncate">n1kiTT3CNTRL</dd>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">设备ID</dt>
+                            <dd class="min-w-0 truncate">{{ currentMID }}</dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Endpoints</dt>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">设备端点信息</dt>
                             <dd class="min-w-0 truncate">
                                 <ul class="pl-3 -indent-3">
                                     <li class="select-all"><span>61.48.214.79</span><wbr>:<span>20332</span></li>
@@ -282,21 +263,13 @@ onMounted(() => {
                             </dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Relays<span data-state="closed"><svg
-                                        xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        class="relative -top-px text-gray-500 hover:text-gray-800 ml-1 cursor-default inline-flex">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                    </svg></span></dt>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">中继器</dt>
                             <dd class="min-w-0 truncate">
                                 <ul>
                                     <li><strong class="font-medium">Relay #948</strong>: 160.70&nbsp;ms<svg
                                             xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round" aria-label="Preferred Relay"
+                                            stroke-linecap="round" stroke-linejoin="round"
                                             class="relative inline-block ml-1 -top-px">
                                             <polyline points="20 6 9 17 4 12"></polyline>
                                         </svg></li>
@@ -307,41 +280,27 @@ onMounted(() => {
                     </div>
                     <div class="space-y-2">
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Created</dt>
-                            <dd class="min-w-0 truncate">Aug 25, 2022 at 8:59 AM GMT+8</dd>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">创建于</dt>
+                            <dd class="min-w-0 truncate">{{ currentMachine.createat }}</dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Last seen</dt>
-                            <dd class="min-w-0 truncate">8:27 PM GMT+8</dd>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">最近更新</dt>
+                            <dd class="min-w-0 truncate">{{ currentMachine.lastseen }}</dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Key expiry</dt>
-                            <dd class="min-w-0 truncate">No expiry</dd>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">密钥过期</dt>
+                            <dd v-if="currentMachine.isexpirydisabled" class="min-w-0 truncate">永不过期</dd>
+                            <dd v-if="!currentMachine.isexpirydisabled" class="min-w-0 truncate">{{
+                                currentMachine.expirydesc
+                            }}</dd>
                         </dl>
-                        <h3 class="pt-2 text-xs uppercase font-semibold text-gray-500 tracking-wide">Client connectivity
-                        </h3>
+                        <h2 class="pt-2 text-xs uppercase font-semibold text-gray-500 tracking-wide">客户端连通性</h2>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Varies<span data-state="closed"><svg
-                                        xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        class="relative -top-px text-gray-500 hover:text-gray-800 ml-1 cursor-default inline-flex">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                    </svg></span></dt>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">复杂网络 Varies</dt>
                             <dd class="min-w-0 truncate">No</dd>
                         </dl>
                         <dl class="flex text-sm">
-                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">Hairpinning<span
-                                    data-state="closed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
-                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round"
-                                        class="relative -top-px text-gray-500 hover:text-gray-800 ml-1 cursor-default inline-flex">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                    </svg></span></dt>
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">需发夹机制 Hairpinning</dt>
                             <dd class="min-w-0 truncate">No</dd>
                         </dl>
                         <dl class="flex text-sm">

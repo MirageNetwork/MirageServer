@@ -3,6 +3,7 @@ package headscale
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -44,6 +45,8 @@ func (h *Headscale) GoOIDCLogin(w http.ResponseWriter, r *http.Request) {
 	log.Debug().Msgf("Redirecting to %s for authentication", authURL)
 	http.Redirect(w, r, authURL, http.StatusFound)
 }
+
+// WebUI控制台鉴权中间件
 func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		oidc_token, _ := r.Cookie("OIDC_Token")
@@ -71,6 +74,63 @@ func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 		} else {
 			log.Error().Msg("未能从Cookie读取到OIDC Token！")
 			h.GoOIDCLogin(w, r)
+		}
+	})
+}
+
+// API鉴权结果响应
+type APICheckRes struct {
+	NeedReauth bool   `json:"needreauth"`
+	Reason     string `json:"needreauthreason"`
+}
+
+// API鉴权中间件
+func (h *Headscale) APIAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		oidc_token, _ := r.Cookie("OIDC_Token")
+		if oidc_token != nil {
+			log.Info().Msg(oidc_token.Value)
+			idToken, err := h.verifyIDTokenForOIDCCallback(r.Context(), w, oidc_token.Value)
+			if err != nil {
+				log.Error().
+					Caller().
+					Msg("could not verifyIDTokenForOIDCCallback")
+				renderData := APICheckRes{
+					NeedReauth: true,
+					Reason:     "IDaaS无法校验",
+				}
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(&renderData)
+				return
+			}
+			var claims IDTokenClaims
+			err = idToken.Claims(&claims)
+			if err != nil {
+				log.Error().
+					Caller().
+					Msg("could not Extra Claims")
+				http.Error(w, "OIDC Token解析Claim错误！", http.StatusInternalServerError)
+				renderData := APICheckRes{
+					NeedReauth: true,
+					Reason:     "Token解析Claim错误",
+				}
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(&renderData)
+				return
+			}
+			next.ServeHTTP(w, r)
+		} else {
+			log.Error().Msg("未能从Cookie读取到OIDC Token！")
+			renderData := APICheckRes{
+				NeedReauth: true,
+				Reason:     "未读取到Token",
+			}
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(&renderData)
+			return
 		}
 	})
 }
