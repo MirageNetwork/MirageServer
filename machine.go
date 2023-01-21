@@ -947,9 +947,10 @@ func (h *Headscale) RegisterMachineFromAuthCallback(
 				registrationMachine.IPAddresses = oldmachine.IPAddresses
 				registrationMachine.RegisterMethod = registrationMethod
 
-				if machineExpiry != nil {
-					registrationMachine.Expiry = machineExpiry
-				}
+				//cgao6: we'd like to set the expiry from admin console better than due to idtoken
+				//				if machineExpiry != nil {
+				//					registrationMachine.Expiry = machineExpiry
+				//				}
 
 				ExpiryDuration, _ := time.ParseDuration(strconv.FormatUint(uint64(user.ExpiryDuration)*24, 10) + "h")
 				err := h.RestructMachine(&registrationMachine, time.Now().Add(ExpiryDuration))
@@ -970,13 +971,14 @@ func (h *Headscale) RegisterMachineFromAuthCallback(
 				registrationMachine.UserID = user.ID
 				registrationMachine.RegisterMethod = registrationMethod
 
-				if machineExpiry != nil {
-					registrationMachine.Expiry = machineExpiry
-				} else {
-					ExpiryDuration, _ := time.ParseDuration(strconv.FormatUint(uint64(user.ExpiryDuration)*24, 10) + "h")
-					tmpExpiry := time.Now().Add(ExpiryDuration)
-					registrationMachine.Expiry = &tmpExpiry
-				}
+				//cgao6: we'd like to set the expiry from admin console better than due to idtoken
+				//				if machineExpiry != nil {
+				//					registrationMachine.Expiry = machineExpiry
+				//				} else {
+				ExpiryDuration, _ := time.ParseDuration(strconv.FormatUint(uint64(user.ExpiryDuration)*24, 10) + "h")
+				tmpExpiry := time.Now().Add(ExpiryDuration)
+				registrationMachine.Expiry = &tmpExpiry
+				//				}
 
 				machine, err := h.RegisterMachine(
 					registrationMachine,

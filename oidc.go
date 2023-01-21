@@ -551,6 +551,7 @@ func (h *Headscale) validateMachineForOIDCCallback(
 			Str("machine", machine.Hostname).
 			Msg("machine already registered, reauthenticating")
 
+		/* cgao6: we'd like to set the expiry from admin console better than due to idtoken
 		err := h.RefreshMachine(machine, expiry)
 		if err != nil {
 			log.Error().
@@ -569,6 +570,7 @@ func (h *Headscale) validateMachineForOIDCCallback(
 			Str("machine", machine.Hostname).
 			Str("expiresAt", fmt.Sprintf("%v", expiry)).
 			Msg("successfully refreshed machine")
+		*/
 
 		var content bytes.Buffer
 		if err := oidcCallbackTemplate.Execute(&content, oidcCallbackTemplateConfig{

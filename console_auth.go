@@ -51,7 +51,6 @@ func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		oidc_token, _ := r.Cookie("OIDC_Token")
 		if oidc_token != nil {
-			log.Info().Msg(oidc_token.Value)
 			idToken, err := h.verifyIDTokenForOIDCCallback(r.Context(), w, oidc_token.Value)
 			if err != nil {
 				log.Error().
@@ -69,7 +68,7 @@ func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 				http.Error(w, "OIDC Token解析Claim错误！", http.StatusInternalServerError)
 				renderResult(w, true, "OIDC Token解析Claim错误！", "回到首页", "/")
 			}
-			log.Info().Msg(claims.Username + "Token认证成功！")
+			//log.Info().Msg(claims.Username + "Token认证成功！")
 			next.ServeHTTP(w, r)
 		} else {
 			log.Error().Msg("未能从Cookie读取到OIDC Token！")
@@ -89,7 +88,6 @@ func (h *Headscale) APIAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		oidc_token, _ := r.Cookie("OIDC_Token")
 		if oidc_token != nil {
-			log.Info().Msg(oidc_token.Value)
 			idToken, err := h.verifyIDTokenForOIDCCallback(r.Context(), w, oidc_token.Value)
 			if err != nil {
 				log.Error().

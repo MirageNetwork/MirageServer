@@ -44,7 +44,6 @@ func (h *Headscale) ConsoleLogin(
 
 		return
 	}
-	log.Info().Msg(idToken.Expiry.String())
 
 	tokencookie := &http.Cookie{
 		Name:     "OIDC_Token",

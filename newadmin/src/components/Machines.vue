@@ -2,6 +2,7 @@
 import { ref, computed, nextTick, onMounted, watch, watchEffect } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
 import MachineMenu from "./MachineMenu.vue";
+import RemoveMachine from "./RemoveMachine.vue";
 import Toast from "./Toast.vue";
 
 //与框架交互部分
@@ -31,7 +32,6 @@ watch(toastShow, () => {
     setTimeout(function () { toastShow.value = false }, 5000)
   }
 })
-
 
 const delConfirmShow = ref(false);
 const delMID = ref("1");
@@ -337,7 +337,6 @@ function showDelConfirm(id) {
                     <MachineMenu v-if="ViewCtrl[id].menuShow" :toleft="btnLeft" :totop="btnTop"
                       @close="closeOptionMenu(id)" @showdialog-remove="showDelConfirm(id)"></MachineMenu>
                   </Teleport>
-
                 </div>
               </td>
             </tr>
@@ -352,6 +351,13 @@ function showDelConfirm(id) {
     <Toast :show="toastShow" :msg="toastMsg" @close="toastShow = false"></Toast>
   </Teleport>
 
+  <!-- 删除设备提示框显示 -->
+  <Teleport to="body">
+    <RemoveMachine v-if="delConfirmShow" :machine-name="MList[delMID].givename" @close="delConfirmShow = false"
+      @confirm="removeMachine(delMID)"></RemoveMachine>
+  </Teleport>
+
+  <!--
   <div v-if="delConfirmShow" @click.self="delConfirmShow = false"
     class="fixed overflow-y-auto inset-0 py-8 z-100 bg-gray-900 bg-opacity-[0.07]" style="pointer-events: auto">
     <div
@@ -387,6 +393,7 @@ function showDelConfirm(id) {
       </button>
     </div>
   </div>
+  -->
 </template>
 
 <style scoped>
