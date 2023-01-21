@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, nextTick, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import MachineMenu from "./MachineMenu.vue";
+import RemoveMachine from "./RemoveMachine.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -18,13 +20,55 @@ const hasSpecialStatus = computed(() => {
         currentMachine.value["issubnet"]
     );
 });
-const optionMenuShow = ref(false);
+
+const activeBtn = ref(null)
+const btnLeft = ref(0)
+const btnTop = ref(0)
+const machineMenuShow = ref(false)
+function watchWindowChange() {
+    if (activeBtn.value != null) {
+        btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 78
+        btnTop.value = activeBtn.value?.getBoundingClientRect().top + 20
+    }
+    window.onresize = () => {
+        if (activeBtn.value != null) {
+            btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 78
+            btnTop.value = activeBtn.value?.getBoundingClientRect().top + 20
+        }
+    }
+    window.onscroll = () => {
+        if (activeBtn.value != null) {
+            btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 78
+            btnTop.value = activeBtn.value?.getBoundingClientRect().top + 20
+        }
+    }
+}
+function openMachineMenu(event) {
+    activeBtn.value = event.target
+    while (activeBtn.value?.tagName != "BUTTON" && activeBtn.value?.tagName != "button") {
+        activeBtn.value = activeBtn.value?.parentNode
+    }
+    btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 78
+    btnTop.value = activeBtn.value?.getBoundingClientRect().top + 20
+    machineMenuShow.value = true;
+}
+function closeMachineMenu() {
+    activeBtn.value = null
+    machineMenuShow.value = false;
+}
+
+const delConfirmShow = ref(false);
+function showDelConfirm() {
+    closeMachineMenu(currentMID.value);
+    delConfirmShow.value = true;
+}
 
 //数据填充控制部分
 const currentMachine = ref({});
 const currentMID = ref("");
 const basedomain = ref("");
 onMounted(() => {
+    watchWindowChange()
     axios
         .get("/admin/api/machines")
         .then(function (response) {
@@ -67,6 +111,26 @@ onMounted(() => {
             // 总是会执行
         });
 });
+//服务端请求
+function removeMachine(id) {
+    axios
+        .post("/admin/api/machine/remove", {
+            mid: id,
+        })
+        .then(function (response) {
+            if (response.data["status"] == "OK") {
+                delConfirmShow.value = false;
+                toastMsg.value = MList.value[id]["givename"] + "已从您的蜃境网络移除！";
+                toastShow.value = true;
+                delete MList.value[id];
+            } else {
+                alert("失败：" + response.data["errmsg"]);
+            }
+        })
+        .catch(function (error) {
+            console.log(error);
+        });
+}
 </script>
 
 <template>
@@ -84,7 +148,7 @@ onMounted(() => {
                     </h1>
                     <div class="flex">
                         <div class="flex gap-2 flex-wrap">
-                            <button @click="optionMenuShow = true"
+                            <button @click="openMachineMenu($event)"
                                 class="btn btn-outline bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 min-w-0">
                                 <div class="flex items-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -392,6 +456,7 @@ onMounted(() => {
             </section>
         </section>
     </main>
+
     <div v-if="toastShow" class="toast">
         <div class="alert shadow-lg bg-neutral text-neutral-content">
             <span>{{ toastMsg }}</span>
@@ -402,39 +467,16 @@ onMounted(() => {
         </div>
     </div>
 
+    <!--设备配置菜单显示-->
     <Teleport to="body">
-        <div v-if="optionMenuShow" class="menu p-2 shadow bg-base-100 rounded-md w-52 px-0"
-            style="position: fixed; left: 0px; top: 0px; transform: translate3d(1123px, 110px, 0px); min-width: max-content; z-index: 50; --radix-popper-transform-origin: 0% 0px;">
-            <div class="bg-white py-1 z-50" style="
-          outline: none;
-          --radix-dropdown-menu-content-transform-origin: var(
-            --radix-popper-transform-origin
-          );
-          pointer-events: auto;
-        ">
-                <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                    编辑机器名称…
-                </div>
-                <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                    分享…
-                </div>
-                <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                    启用密钥过期
-                </div>
-                <div class="my-1 border-b border-gray-200"></div>
-                <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                    编辑子网…
-                </div>
-                <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                    编辑标签…
-                </div>
-                <div class="my-1 border-b border-gray-200"></div>
-                <div @click="optionMenuShow = false"
-                    class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100 text-red-400">
-                    移除…
-                </div>
-            </div>
-        </div>
+        <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" @close="closeMachineMenu"
+            @showdialog-remove="showDelConfirm"></MachineMenu>
+    </Teleport>
+
+    <!-- 删除设备提示框显示 -->
+    <Teleport to="body">
+        <RemoveMachine v-if="delConfirmShow" :machine-name="currentMachine.givename" @close="delConfirmShow = false"
+            @confirm="removeMachine(currentMID)"></RemoveMachine>
     </Teleport>
 </template>
 

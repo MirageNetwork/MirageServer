@@ -8,21 +8,39 @@ import Toast from "./Toast.vue";
 //与框架交互部分
 
 //界面控制部分
+const activeBtn = ref(null)
 const btnLeft = ref(0)
 const btnTop = ref(0)
-
-function openMachineMenu(mID, event) {
-  currentMID.value = mID
-  if (event.target.tagName == "circle") {
-    btnLeft.value = event.target.parentNode.getBoundingClientRect().left
-    btnTop.value = event.target.parentNode.getBoundingClientRect().top
-  } else {
-    btnLeft.value = event.target.getBoundingClientRect().left
-    btnTop.value = event.target.getBoundingClientRect().top
+function watchWindowChange() {
+  if (activeBtn.value != null) {
+    btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 14
+    btnTop.value = activeBtn.value?.getBoundingClientRect().top
   }
+  window.onresize = () => {
+    if (activeBtn.value != null) {
+      btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 14
+      btnTop.value = activeBtn.value?.getBoundingClientRect().top
+    }
+  }
+  window.onscroll = () => {
+    if (activeBtn.value != null) {
+      btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 14
+      btnTop.value = activeBtn.value?.getBoundingClientRect().top
+    }
+  }
+}
+function openMachineMenu(mID, event) {
+  activeBtn.value = event.target
+  while (activeBtn.value?.tagName != "DIV" && activeBtn.value?.tagName != "div") {
+    activeBtn.value = activeBtn.value.parentNode
+  }
+  currentMID.value = mID
+  btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 14
+  btnTop.value = activeBtn.value?.getBoundingClientRect().top
   machineMenuShow.value = true;
 }
 function closeMachineMenu() {
+  activeBtn.value = null
   machineMenuShow.value = false;
 }
 
@@ -35,19 +53,24 @@ watch(toastShow, () => {
 })
 
 const currentMID = ref("-1");
-function mouseOnMachine(mid){
-  currentMID.value=mid
-  machineBtnShow.value=true
+function mouseOnMachine(mid) {
+  currentMID.value = mid
+  machineBtnShow.value = true
 }
-function mouseLeaveMachine(){
-  machineBtnShow.value=false
+function mouseLeaveMachine() {
+  machineBtnShow.value = false
 }
-const machineIPShow =ref(false);
+const machineIPShow = ref(false);
 const machineMenuShow = ref(false);
 const machineBtnShow = ref(false);
 
 const delConfirmShow = ref(false);
 
+function showDelConfirm() {
+  machineBtnShow.value = false;
+  closeMachineMenu(currentMID.value);
+  delConfirmShow.value = true;
+}
 
 //数据填充控制部分
 const MList = ref({});
@@ -100,6 +123,7 @@ function getMachines() {
   });
 }
 onMounted(() => {
+  watchWindowChange()
   getMachines().then().catch();
   getMIntID = setInterval(() => {
     getMachines().then().catch();
@@ -144,11 +168,7 @@ function copyMIPv6() {
   });
 }
 
-function showDelConfirm() {
-  machineBtnShow.value = false;
-  closeMachineMenu(currentMID.value);
-  delConfirmShow.value = true;
-}
+
 </script>
 
 <template>
@@ -184,8 +204,8 @@ function showDelConfirm() {
         </thead>
         <tbody>
           <template v-for="(m, id) in MList">
-            <tr :id="id" :v-if="MList[id] != nil" @mouseenter="mouseOnMachine(id)"
-              @mouseleave="mouseLeaveMachine(id)" class="w-full px-0.5 hover">
+            <tr :id="id" :v-if="MList[id] != nil" @mouseenter="mouseOnMachine(id)" @mouseleave="mouseLeaveMachine(id)"
+              class="w-full px-0.5 hover">
               <td class="md:w-1/4 flex-auto md:flex-initial md:shrink-0 w-0 text-ellipsis">
                 <router-link class="relative" :to="'/machines/' + m.mipv4">
                   <div class="items-center text-gray-900">
@@ -264,12 +284,11 @@ function showDelConfirm() {
                       <div class="truncate">
                         <span>{{ m.mipv4 }} </span>
                       </div>
-                      <div v-if="machineIPShow && currentMID==id"
+                      <div v-if="machineIPShow && currentMID == id"
                         class="absolute -mt-1 -ml-2 -top-px -left-px shadow-md cursor-pointer rounded-md active:shadow-sm transition-shadow duration-100 ease-in-out z-50"
                         style="visibility: visible; max-width: 934px">
                         <div class="flex border rounded-md button-outline bg-white">
-                          <div @click="copyMIPv4"
-                            class="flex min-w-0 py-1 px-2 hover:bg-gray-100 rounded-l-md">
+                          <div @click="copyMIPv4" class="flex min-w-0 py-1 px-2 hover:bg-gray-100 rounded-l-md">
                             <span class="inline-block select-none truncate"><span>
                                 {{ m.mipv4 }}
                               </span></span><span class="cursor-pointer text-blue-500 pl-2">复制</span>
@@ -313,8 +332,8 @@ function showDelConfirm() {
               </td>
               <td
                 class="table-cell justify-end ml-auto md:ml-0 relative w-12 justify-items-end items-center md:items-start">
-                <div v-if="!machineBtnShow && !machineMenuShow || currentMID != id"
-                  @click="openMachineMenu(id, $event)" class="flex-none w-12 -mt-0.5 relative">
+                <div v-if="!machineBtnShow && !machineMenuShow || currentMID != id" @click="openMachineMenu(id, $event)"
+                  class="flex-none w-12 -mt-0.5 relative">
                   <button
                     class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow duration-100 ease-in-out z-50">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -327,9 +346,8 @@ function showDelConfirm() {
                   </button>
                 </div>
                 <!---->
-                <div v-if="(machineBtnShow || machineMenuShow) && currentMID == id"
-                  @click="openMachineMenu(id, $event)"
-                  class="border button-outline bg-white shadow-md cursor-pointer focus:outline-none focus:ring -mt-0.5 relative py-0.5 px-2 rounded-md border-gray-300/100 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 transition-shadow duration-100 ease-in-out z-50 ">
+                <div v-if="(machineBtnShow || machineMenuShow) && currentMID == id" @click="openMachineMenu(id, $event)"
+                  class="flex-none w-12 border button-outline bg-white shadow-md cursor-pointer focus:outline-none focus:ring -mt-0.5 relative py-0.5 px-2 rounded-md border-gray-300/100 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 transition-shadow duration-100 ease-in-out z-50 ">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                     class="text-gray-500">

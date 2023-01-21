@@ -16,7 +16,7 @@ const menuTop = computed(() => {
     if (props.totop <= window.innerHeight / 2) {
         return String(props.totop + 36)
     } else {
-        return String(props.totop - 16 - machineMenu.value?.clientHeight)
+        return String(props.totop - 10 - machineMenu.value?.clientHeight)
     }
 })
 
@@ -24,6 +24,10 @@ const emit = defineEmits(['close'])
 const closeMe = (event) => {
     emit('close')
 }
+
+onMounted(()=>{
+    console.log("MachineMenu mounted!")
+})
 </script>
 
 <template>
