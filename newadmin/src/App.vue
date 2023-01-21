@@ -62,7 +62,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-gray-100 border-b border-gray-200 pt-4 mb-6">
+  <div class="bg-base-200 border-b border-base-300 pt-4 mb-6">
     <div class="container mx-auto mb-4 md:mb-6">
       <header class="flex justify-between items-center px-2 md:px-0">
         <a href="/" class="flex items-center" style="max-width: 80%">

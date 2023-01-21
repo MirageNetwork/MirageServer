@@ -26,7 +26,7 @@ const closeMe = (event) => {
 </script>
 
 <template>
-    <div ref="userMenu" class="shadow-lg border-b border-gray-200" v-click-away="closeMe"
+    <div ref="userMenu" class="shadow-lg border border-base-300 rounded-md" v-click-away="closeMe"
         :style="'position: fixed; left: ' + menuLeft + 'px; top: ' + menuTop + 'px; min-width: max-content; z-index: 50; --radix-popper-transform-origin: 100% 0px;'">
         <div class="dropdown bg-white rounded-md py-1 z-50"
             style="outline: none; --radix-dropdown-menu-content-transform-origin: var(--radix-popper-transform-origin); pointer-events: auto;">
