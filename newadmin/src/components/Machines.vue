@@ -11,7 +11,8 @@ import Toast from "./Toast.vue";
 const btnLeft = ref(0)
 const btnTop = ref(0)
 
-function openOptionMenu(mID, event) {
+function openMachineMenu(mID, event) {
+  currentMID.value = mID
   if (event.target.tagName == "circle") {
     btnLeft.value = event.target.parentNode.getBoundingClientRect().left
     btnTop.value = event.target.parentNode.getBoundingClientRect().top
@@ -19,10 +20,10 @@ function openOptionMenu(mID, event) {
     btnLeft.value = event.target.getBoundingClientRect().left
     btnTop.value = event.target.getBoundingClientRect().top
   }
-  ViewCtrl.value[mID]["menuShow"] = true;
+  machineMenuShow.value = true;
 }
-function closeOptionMenu(mID) {
-  ViewCtrl.value[mID]["menuShow"] = false;
+function closeMachineMenu() {
+  machineMenuShow.value = false;
 }
 
 const toastShow = ref(false);
@@ -33,12 +34,23 @@ watch(toastShow, () => {
   }
 })
 
+const currentMID = ref("-1");
+function mouseOnMachine(mid){
+  currentMID.value=mid
+  machineBtnShow.value=true
+}
+function mouseLeaveMachine(){
+  machineBtnShow.value=false
+}
+const machineIPShow =ref(false);
+const machineMenuShow = ref(false);
+const machineBtnShow = ref(false);
+
 const delConfirmShow = ref(false);
-const delMID = ref("1");
+
 
 //数据填充控制部分
 const MList = ref({});
-const ViewCtrl = ref({});
 const machinenumber = computed(() => {
   return Object.getOwnPropertyNames(MList.value).length;
 });
@@ -67,13 +79,6 @@ function getMachines() {
               MList.value[k]["soonexpiry"] = true;
             } else {
               MList.value[k]["soonexpiry"] = false;
-            }
-            if (ViewCtrl.value[k] == undefined) {
-              ViewCtrl.value[k] = {
-                "mipShow": false,
-                "menuShow": false,
-                "menuBtnShow": false
-              }
             }
           }
           resolve();
@@ -126,23 +131,22 @@ function removeMachine(id) {
 }
 
 //客户端操作动作部分
-function copyMIPv4(text) {
-  navigator.clipboard.writeText(text).then(function () {
+function copyMIPv4() {
+  navigator.clipboard.writeText(MList.value[currentMID.value]["mipv4"]).then(function () {
     toastMsg.value = "蜃境网络IPv4地址已复制到粘贴板！";
     toastShow.value = true;
   });
 }
-function copyMIPv6(text) {
-  navigator.clipboard.writeText(text).then(function () {
+function copyMIPv6() {
+  navigator.clipboard.writeText(MList.value[currentMID.value]["mipv6"]).then(function () {
     toastMsg.value = "蜃境网络IPv6地址已复制到粘贴板！";
     toastShow.value = true;
   });
 }
 
-function showDelConfirm(id) {
-  closeOptionMenu(id);
-  ViewCtrl.value[id]["menuBtnShow"] = false;
-  delMID.value = id;
+function showDelConfirm() {
+  machineBtnShow.value = false;
+  closeMachineMenu(currentMID.value);
   delConfirmShow.value = true;
 }
 </script>
@@ -180,8 +184,8 @@ function showDelConfirm(id) {
         </thead>
         <tbody>
           <template v-for="(m, id) in MList">
-            <tr :id="id" :v-if="MList[id] != nil" @mouseenter="ViewCtrl[id].menuBtnShow = true"
-              @mouseleave="ViewCtrl[id].menuBtnShow = false" class="w-full px-0.5 hover">
+            <tr :id="id" :v-if="MList[id] != nil" @mouseenter="mouseOnMachine(id)"
+              @mouseleave="mouseLeaveMachine(id)" class="w-full px-0.5 hover">
               <td class="md:w-1/4 flex-auto md:flex-initial md:shrink-0 w-0 text-ellipsis">
                 <router-link class="relative" :to="'/machines/' + m.mipv4">
                   <div class="items-center text-gray-900">
@@ -255,22 +259,22 @@ function showDelConfirm(id) {
               <td class="hidden md:table-cell md:w-1/4">
                 <ul>
                   <li class="font-medium pr-6">
-                    <div @mouseenter="ViewCtrl[id].mipShow = true" @mouseleave="ViewCtrl[id].mipShow = false"
+                    <div @mouseenter="machineIPShow = true" @mouseleave="machineIPShow = false"
                       class="flex relative min-w-0">
                       <div class="truncate">
                         <span>{{ m.mipv4 }} </span>
                       </div>
-                      <div v-if="ViewCtrl[id].mipShow"
+                      <div v-if="machineIPShow && currentMID==id"
                         class="absolute -mt-1 -ml-2 -top-px -left-px shadow-md cursor-pointer rounded-md active:shadow-sm transition-shadow duration-100 ease-in-out z-50"
                         style="visibility: visible; max-width: 934px">
                         <div class="flex border rounded-md button-outline bg-white">
-                          <div @click="copyMIPv4(m.mipv4)"
+                          <div @click="copyMIPv4"
                             class="flex min-w-0 py-1 px-2 hover:bg-gray-100 rounded-l-md">
                             <span class="inline-block select-none truncate"><span>
                                 {{ m.mipv4 }}
                               </span></span><span class="cursor-pointer text-blue-500 pl-2">复制</span>
                           </div>
-                          <div @click="copyMIPv6(m.mipv6)"
+                          <div @click="copyMIPv6"
                             class="text-blue-500 py-1 px-2 border-l hover:bg-gray-100 rounded-r-md">
                             IPv6
                           </div>
@@ -309,10 +313,10 @@ function showDelConfirm(id) {
               </td>
               <td
                 class="table-cell justify-end ml-auto md:ml-0 relative w-12 justify-items-end items-center md:items-start">
-                <div v-if="!ViewCtrl[id].menuBtnShow && !ViewCtrl[id].menuShow" @click="openOptionMenu(id, $event)"
-                  class="flex-none w-12 -mt-0.5 relative">
+                <div v-if="!machineBtnShow && !machineMenuShow || currentMID != id"
+                  @click="openMachineMenu(id, $event)" class="flex-none w-12 -mt-0.5 relative">
                   <button
-                    class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0 group-hover:border-gray-300/100 hover:border-gray-300/100 group-hover:bg-white hover:!bg-gray-0 group-hover:shadow-md hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow duration-100 ease-in-out z-50">
+                    class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow duration-100 ease-in-out z-50">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                       class="text-gray-500">
@@ -323,8 +327,9 @@ function showDelConfirm(id) {
                   </button>
                 </div>
                 <!---->
-                <div v-if="ViewCtrl[id].menuBtnShow || ViewCtrl[id].menuShow" @click="openOptionMenu(id, $event)"
-                  class="border button-outline bg-white shadow-md cursor-pointer divide-x divide-gray-200 active:shadow focus:outline-none focus:ring -mt-0.5 relative dropdown dropdown-end py-0.5 px-2 rounded-md border-gray-300/0 group-hover:border-gray-300/100 hover:border-gray-300/100 group-hover:bg-white hover:!bg-gray-0 group-hover:shadow-md hover:shadow-md hover:cursor-pointer active:border-gray-300/100 transition-shadow duration-100 ease-in-out z-50 !border-y-0">
+                <div v-if="(machineBtnShow || machineMenuShow) && currentMID == id"
+                  @click="openMachineMenu(id, $event)"
+                  class="border button-outline bg-white shadow-md cursor-pointer focus:outline-none focus:ring -mt-0.5 relative py-0.5 px-2 rounded-md border-gray-300/100 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 transition-shadow duration-100 ease-in-out z-50 ">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                     class="text-gray-500">
@@ -332,11 +337,6 @@ function showDelConfirm(id) {
                     <circle cx="19" cy="12" r="1"></circle>
                     <circle cx="5" cy="12" r="1"></circle>
                   </svg>
-                  <!--设备配置菜单显示-->
-                  <Teleport to="body">
-                    <MachineMenu v-if="ViewCtrl[id].menuShow" :toleft="btnLeft" :totop="btnTop"
-                      @close="closeOptionMenu(id)" @showdialog-remove="showDelConfirm(id)"></MachineMenu>
-                  </Teleport>
                 </div>
               </td>
             </tr>
@@ -351,49 +351,18 @@ function showDelConfirm(id) {
     <Toast :show="toastShow" :msg="toastMsg" @close="toastShow = false"></Toast>
   </Teleport>
 
-  <!-- 删除设备提示框显示 -->
+  <!--设备配置菜单显示-->
   <Teleport to="body">
-    <RemoveMachine v-if="delConfirmShow" :machine-name="MList[delMID].givename" @close="delConfirmShow = false"
-      @confirm="removeMachine(delMID)"></RemoveMachine>
+    <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" @close="closeMachineMenu"
+      @showdialog-remove="showDelConfirm"></MachineMenu>
   </Teleport>
 
-  <!--
-  <div v-if="delConfirmShow" @click.self="delConfirmShow = false"
-    class="fixed overflow-y-auto inset-0 py-8 z-100 bg-gray-900 bg-opacity-[0.07]" style="pointer-events: auto">
-    <div
-      class="bg-white rounded-lg relative p-4 md:p-6 text-gray-700 max-w-lg min-w-[19rem] my-8 mx-auto w-[97%] shadow-dialog"
-      tabindex="-1" style="pointer-events: auto">
-      <header class="flex items-center justify-between space-x-4 mb-5 mr-8">
-        <div class="font-semibold text-lg truncate">
-          删除 {{ MList[delMID].givename }}
-        </div>
-      </header>
-      <form @submit.prevent="removeMachine(delMID)">
-        <p class="text-gray-700 mb-4">
-          这个设备将从您的蜃境网络中永久删除！如需重新添加该设备，您将需要在该设备上重新进行授权
-        </p>
-        <footer class="flex mt-10 justify-end space-x-4">
-          <button class="btn bg-base-200 hover:bg-base-300 text-black hover:text-black border-0" type="button"
-            @click="delConfirmShow = false">
-            取消
-          </button>
-          <button class="btn bg-red-600 hover:bg-red-700 text-white border-0" type="submit">
-            删除设备
-          </button>
-        </footer>
-      </form>
-      <button
-        class="btn btn-square btn-ghost hover:bg-base-300 btn-sm absolute top-5 right-5 px-2 py-2 focus:bg-gray-100"
-        type="button" @click="delConfirmShow = false">
-        <svg xmlns="http://www.w3.org/2000/svg" width="1.25em" height="1.25em" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
-  </div>
-  -->
+  <!-- 删除设备提示框显示 -->
+  <Teleport to="body">
+    <RemoveMachine v-if="delConfirmShow" :machine-name="MList[currentMID].givename" @close="delConfirmShow = false"
+      @confirm="removeMachine(currentMID)"></RemoveMachine>
+  </Teleport>
+
 </template>
 
 <style scoped>
