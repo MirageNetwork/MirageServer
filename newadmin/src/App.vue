@@ -1,9 +1,27 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch, watchEffect, computed } from "vue";
+import { useRouter } from "vue-router";
+import UserMenu from "./components/UserMenu.vue";
 
+const router = useRouter();
 //界面控制部分
-const userMenuOpen = ref(false)
+const userAvatar = ref(null)
+const avatarLeft = ref(0)
+const avatarTop = ref(0)
+function watchWindowChange() {
+  avatarLeft.value = userAvatar.value?.getBoundingClientRect().left
+  avatarTop.value = userAvatar.value?.getBoundingClientRect().top
+  window.onresize = () => {
+    avatarLeft.value = userAvatar.value?.getBoundingClientRect().left
+    avatarTop.value = userAvatar.value?.getBoundingClientRect().top
+  }
+  window.onscroll = () => {
+    avatarLeft.value = userAvatar.value?.getBoundingClientRect().left
+    avatarTop.value = userAvatar.value?.getBoundingClientRect().top
+  }
+}
 
+const userMenuOpen = ref(false)
 function switchUserMenu() {
   userMenuOpen.value = !userMenuOpen.value
   if (userMenuOpen.value) {
@@ -19,6 +37,8 @@ const Basedomain = ref("");
 const UserName = ref("");
 const UserNameHead = ref("");
 onMounted(() => {
+  watchWindowChange()
+
   axios
     .get("/admin/api/self")
     .then(function (response) {
@@ -56,27 +76,30 @@ onMounted(() => {
         <nav class="flex items-center">
           <a class="hidden text-gray-600 hover:text-gray-800 sm:inline-block px-2 py-1"
             href="https://github.com/gps949/tailscale/releases" target="_blank" rel="noopener noreferrer">下载客户端</a>
-          <div @blur="switchUserMenu" class="dropdown dropdown-open dropdown-end" tabindex="-1">
-            <div @click="switchUserMenu" cursor="pointer" class="avatar placeholder">
-              <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
-                <span class="text-xs"> {{ UserNameHead }} </span>
+
+
+          <div ref="userAvatar" @click="switchUserMenu" class="heart-wrapper ml-2"><button
+              class="relative rounded-full">
+              <div class="relative shrink-0 rounded-full overflow-hidden w-8 h-8">
+                <div
+                  class="flex items-center justify-center text-center capitalize text-white font-medium pointer-events-none w-8 h-8"
+                  style="background-color: rgb(161, 56, 33);">{{ UserNameHead }} </div>
               </div>
-            </div>
-            <div v-if="userMenuOpen" class="menu dropdown-content my-2 shadow bg-base-100 rounded-md w-52">
-              <div class="dropdown bg-white py-1 z-50"
-                style="outline: none; --radix-dropdown-menu-content-transform-origin: var(--radix-popper-transform-origin); pointer-events: auto;">
-                <div class="block px-4 py-2">
-                  <strong> {{ UserName }} </strong> <br />
-                  {{ UserAccount }}
-                </div>
-                <div class="my-1 border-b border-gray-200"></div>
-                <div onclick="window.location.href='/admin/logout'"
-                  class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                  登出
-                </div>
-              </div>
+            </button></div>
+
+
+          <!--
+          <div  cursor="pointer" class="avatar placeholder">
+            <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
+              <span class="text-xs"> {{ UserNameHead }} </span>
             </div>
           </div>
+-->
+          <!--用户菜单部分-->
+          <Teleport to="body">
+            <UserMenu v-if="userMenuOpen" :toleft="avatarLeft" :totop="avatarTop" :user-account="UserAccount"
+              :user-name="UserName" @close="switchUserMenu"></UserMenu>
+          </Teleport>
         </nav>
       </header>
     </div>

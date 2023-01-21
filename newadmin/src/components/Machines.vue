@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, nextTick, onMounted, watch } from "vue";
+import { ref, computed, nextTick, onMounted, watch,watchEffect } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
 import Toast from "./Toast.vue"
 
@@ -13,6 +13,7 @@ watch(toastShow, () => {
     setTimeout(function () { toastShow.value = false }, 5000)
   }
 })
+
 
 const delConfirmShow = ref(false);
 const delMID = ref("1");
