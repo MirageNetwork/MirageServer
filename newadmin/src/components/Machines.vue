@@ -1,11 +1,29 @@
 <script setup>
-import { ref, computed, nextTick, onMounted, watch,watchEffect } from "vue";
+import { ref, computed, nextTick, onMounted, watch, watchEffect } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
-import Toast from "./Toast.vue"
+import MachineMenu from "./MachineMenu.vue";
+import Toast from "./Toast.vue";
 
 //与框架交互部分
 
 //界面控制部分
+const btnLeft = ref(0)
+const btnTop = ref(0)
+
+function openOptionMenu(mID, event) {
+  if (event.target.tagName == "circle") {
+    btnLeft.value = event.target.parentNode.getBoundingClientRect().left
+    btnTop.value = event.target.parentNode.getBoundingClientRect().top
+  } else {
+    btnLeft.value = event.target.getBoundingClientRect().left
+    btnTop.value = event.target.getBoundingClientRect().top
+  }
+  ViewCtrl.value[mID]["menuShow"] = true;
+}
+function closeOptionMenu(mID) {
+  ViewCtrl.value[mID]["menuShow"] = false;
+}
+
 const toastShow = ref(false);
 const toastMsg = ref("");
 watch(toastShow, () => {
@@ -119,14 +137,6 @@ function copyMIPv6(text) {
     toastMsg.value = "蜃境网络IPv6地址已复制到粘贴板！";
     toastShow.value = true;
   });
-}
-function openOptionMenu(mID) {
-  ViewCtrl.value[mID]["menuShow"] = true;
-  document.body.style.pointerEvents = "none";
-}
-function closeOptionMenu(mID) {
-  ViewCtrl.value[mID]["menuShow"] = false;
-  document.body.style.removeProperty("pointer-events");
 }
 
 function showDelConfirm(id) {
@@ -299,7 +309,7 @@ function showDelConfirm(id) {
               </td>
               <td
                 class="table-cell justify-end ml-auto md:ml-0 relative w-12 justify-items-end items-center md:items-start">
-                <div v-if="!ViewCtrl[id].menuBtnShow && !ViewCtrl[id].menuShow" @click="openOptionMenu(id)"
+                <div v-if="!ViewCtrl[id].menuBtnShow && !ViewCtrl[id].menuShow" @click="openOptionMenu(id, $event)"
                   class="flex-none w-12 -mt-0.5 relative">
                   <button
                     class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0 group-hover:border-gray-300/100 hover:border-gray-300/100 group-hover:bg-white hover:!bg-gray-0 group-hover:shadow-md hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow duration-100 ease-in-out z-50">
@@ -313,53 +323,21 @@ function showDelConfirm(id) {
                   </button>
                 </div>
                 <!---->
-                <div v-if="ViewCtrl[id].menuBtnShow || ViewCtrl[id].menuShow" @click.self="openOptionMenu(id)"
-                  @blur="closeOptionMenu(id)" tabindex="-1"
+                <div v-if="ViewCtrl[id].menuBtnShow || ViewCtrl[id].menuShow" @click="openOptionMenu(id, $event)"
                   class="border button-outline bg-white shadow-md cursor-pointer divide-x divide-gray-200 active:shadow focus:outline-none focus:ring -mt-0.5 relative dropdown dropdown-end py-0.5 px-2 rounded-md border-gray-300/0 group-hover:border-gray-300/100 hover:border-gray-300/100 group-hover:bg-white hover:!bg-gray-0 group-hover:shadow-md hover:shadow-md hover:cursor-pointer active:border-gray-300/100 transition-shadow duration-100 ease-in-out z-50 !border-y-0">
-                  <svg @click="openOptionMenu(id)" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" class="text-gray-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="text-gray-500">
                     <circle cx="12" cy="12" r="1"></circle>
                     <circle cx="19" cy="12" r="1"></circle>
                     <circle cx="5" cy="12" r="1"></circle>
                   </svg>
-                  <div v-if="ViewCtrl[id].menuShow"
-                    class="dropdown-content menu p-2 shadow bg-base-100 rounded-md w-52 px-0">
-                    <div class="bg-white py-1 z-50" style="
-                        outline: none;
-                        --radix-dropdown-menu-content-transform-origin: var(
-                          --radix-popper-transform-origin
-                        ); 
-                        pointer-events: auto;
-                      ">
-                      <div
-                        class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                        编辑机器名称…
-                      </div>
-                      <div
-                        class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                        分享…
-                      </div>
-                      <div
-                        class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                        启用密钥过期
-                      </div>
-                      <div class="my-1 border-b border-gray-200"></div>
-                      <div
-                        class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                        编辑子网…
-                      </div>
-                      <div
-                        class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
-                        编辑标签…
-                      </div>
-                      <div class="my-1 border-b border-gray-200"></div>
-                      <div @click="showDelConfirm(id)"
-                        class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100 text-red-400">
-                        移除…
-                      </div>
-                    </div>
-                  </div>
+                  <!--设备配置菜单显示-->
+                  <Teleport to="body">
+                    <MachineMenu v-if="ViewCtrl[id].menuShow" :toleft="btnLeft" :totop="btnTop"
+                      @close="closeOptionMenu(id)" @showdialog-remove="showDelConfirm(id)"></MachineMenu>
+                  </Teleport>
+
                 </div>
               </td>
             </tr>
@@ -369,7 +347,7 @@ function showDelConfirm(id) {
     </section>
   </main>
 
-<!-- 提示框显示 -->
+  <!-- 提示框显示 -->
   <Teleport to=".toast-container">
     <Toast :show="toastShow" :msg="toastMsg" @close="toastShow = false"></Toast>
   </Teleport>

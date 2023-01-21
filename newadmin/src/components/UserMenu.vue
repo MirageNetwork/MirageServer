@@ -34,9 +34,9 @@ const closeMe = (event) => {
                 <div><strong>{{ userName }} </strong></div>
                 <div class="opacity-75">{{ userAccount }}</div>
             </div>
-            <div class="my-1 border-b border-gray-200"></div>
+            <div class="my-1 border-b border-base-300"></div>
             <div
-                class="relative block px-4 py-2 cursor-pointer hover:enabled:bg-gray-100 focus:outline-none focus:bg-gray-100">
+                class="relative block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
                 <a class="stretched-link" href="/admin/logout">登出</a>
             </div>
         </div>
