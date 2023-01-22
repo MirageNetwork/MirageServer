@@ -33,7 +33,19 @@ type machineItem struct {
 	IsExitNode       bool `json:"isexitnode"`
 	IsSubnet         bool `json:"issubnet"`
 
+	Varies      bool `json:"varies"`
+	HairPinning bool `json:"hairpinning"`
+	CanIPv6     bool `json:"ipv6en"`
+	CanUDP      bool `json:"udpen"`
+	CanUPnP     bool `json:"upnpen"`
+	CanPCP      bool `json:"pcpen"`
+	CanPMP      bool `json:"pmpen"`
+
 	ExpiryDesc string `json:"expirydesc"`
+
+	Endpoints   []string       `json:"eps"`
+	DERPs       map[string]int `json:"derps"`
+	PrefferDERP string         `json:"usederp"`
 }
 type adminTemplateConfig struct {
 	ErrorMsg     string                 `json:"errormsg"`
@@ -230,6 +242,46 @@ func (h *Headscale) ConsoleMachinesAPI(
 			IfOnline:         machine.isOnline(),
 			MSubnetList:      make([]string, 0),
 			IsExpiryDisabled: *machine.Expiry == time.Time{},
+
+			Varies:      machine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
+			HairPinning: machine.HostInfo.NetInfo.HairPinning.EqualBool(true),
+			CanIPv6:     machine.HostInfo.NetInfo.WorkingIPv6.EqualBool(true),
+			CanUDP:      machine.HostInfo.NetInfo.WorkingUDP.EqualBool(true),
+			CanUPnP:     machine.HostInfo.NetInfo.UPnP.EqualBool(true),
+			CanPCP:      machine.HostInfo.NetInfo.PCP.EqualBool(true),
+			CanPMP:      machine.HostInfo.NetInfo.PMP.EqualBool(true),
+			Endpoints:   machine.Endpoints,
+		}
+
+		if machine.HostInfo.NetInfo.PreferredDERP != 0 {
+			tmpMachine.DERPs = make(map[string]int)
+			for derpname, latency := range machine.HostInfo.NetInfo.DERPLatency {
+				ipver := strings.Split(derpname, "-")[1]
+				derpname = strings.Split(derpname, "-")[0]
+				if ipver == "v4" {
+					if peerlatency, ok := machine.HostInfo.NetInfo.DERPLatency[derpname+"-v6"]; ok {
+						if latency < peerlatency {
+							tmpMachine.DERPs[derpname] = int(latency * 1000)
+						}
+					} else {
+						tmpMachine.DERPs[derpname] = int(latency * 1000)
+					}
+				} else if ipver == "v6" {
+					if peerlatency, ok := machine.HostInfo.NetInfo.DERPLatency[derpname+"-v4"]; ok {
+						if latency < peerlatency {
+							tmpMachine.DERPs[derpname] = int(latency * 1000)
+						}
+					} else {
+						tmpMachine.DERPs[derpname] = int(latency * 1000)
+					}
+				} else {
+					tmpMachine.DERPs[derpname] = int(latency * 1000)
+				}
+			}
+			tmpMachine.PrefferDERP = strconv.Itoa(machine.HostInfo.NetInfo.PreferredDERP)
+		} else {
+			tmpMachine.PrefferDERP = "x"
+			tmpMachine.DERPs = nil
 		}
 		if !tmpMachine.IsExpiryDisabled {
 			ExpiryDuration := machine.Expiry.Sub(time.Now())

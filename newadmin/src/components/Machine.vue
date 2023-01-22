@@ -361,33 +361,29 @@ function removeMachine(id) {
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">设备端点信息</dt>
                             <dd class="min-w-0 truncate">
                                 <ul class="pl-3 -indent-3">
-                                    <li class="select-all">
-                                        <span>61.48.214.79</span><wbr />:<span>20332</span>
+                                    <li v-for="ep in currentMachine.eps" class="select-all">
+                                        <span>{{ ep }}</span>
                                     </li>
+                                    <!--
                                     <li class="select-all">
                                         <span>172.17.0.1</span><wbr />:<span>41641</span>
                                     </li>
-                                    <li class="select-all">
-                                        <span>172.30.32.1</span><wbr />:<span>41641</span>
-                                    </li>
-                                    <li class="select-all">
-                                        <span>192.168.1.3</span><wbr />:<span>41641</span>
-                                    </li>
-                                    <li class="select-all">
-                                        <span>192.168.166.66</span><wbr />:<span>41641</span>
-                                    </li>
-                                    <li class="select-all">
-                                        <span>192.168.168.66</span><wbr />:<span>41641</span>
-                                    </li>
+                                    -->
                                 </ul>
                             </dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">中继器</dt>
                             <dd class="min-w-0 truncate">
-                                <ul>
+                                <ul v-if="currentMachine.usederp == 'x'">
                                     <li>
-                                        <strong class="font-medium">Relay #948</strong>: 160.70&nbsp;ms<svg
+                                        中继器未设定或出错
+                                    </li>
+                                </ul>
+                                <ul v-else>
+                                    <li v-for="(latency,derpname) in currentMachine.derps">
+                                        <strong class="font-medium">{{ derpname }} 号中继</strong>: {{ latency }}&nbsp;ms
+                                        <svg v-if="currentMachine.usederp == derpname"
                                             xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                             stroke-linecap="round" stroke-linejoin="round"
@@ -395,7 +391,6 @@ function removeMachine(id) {
                                             <polyline points="20 6 9 17 4 12"></polyline>
                                         </svg>
                                     </li>
-                                    <li><strong class="font-medium">Relay #951</strong>: 210.49&nbsp;ms</li>
                                 </ul>
                             </dd>
                         </dl>
@@ -423,33 +418,40 @@ function removeMachine(id) {
                         </h2>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">复杂网络 Varies</dt>
-                            <dd class="min-w-0 truncate">No</dd>
+                            <dd v-if="currentMachine.varies" class="min-w-0 truncate">是</dd>
+                            <dd v-else class="min-w-0 truncate">否</dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">
                                 需发夹机制 Hairpinning
                             </dt>
-                            <dd class="min-w-0 truncate">No</dd>
+                            <dd v-if="currentMachine.hairpinning" class="min-w-0 truncate">是</dd>
+                            <dd v-else class="min-w-0 truncate">否</dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">IPv6</dt>
-                            <dd class="min-w-0 truncate">No</dd>
+                            <dd v-if="currentMachine.ipv6en" class="min-w-0 truncate">是</dd>
+                            <dd v-else class="min-w-0 truncate">否</dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">UDP</dt>
-                            <dd class="min-w-0 truncate">Yes</dd>
+                            <dd v-if="currentMachine.udpen" class="min-w-0 truncate">是</dd>
+                            <dd v-else class="min-w-0 truncate">否</dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">UPnP</dt>
-                            <dd class="min-w-0 truncate">Yes</dd>
+                            <dd v-if="currentMachine.upnpen" class="min-w-0 truncate">是</dd>
+                            <dd v-else class="min-w-0 truncate">否</dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">PCP</dt>
-                            <dd class="min-w-0 truncate">Yes</dd>
+                            <dd v-if="currentMachine.pcpen" class="min-w-0 truncate">是</dd>
+                            <dd v-else class="min-w-0 truncate">否</dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">NAT-PMP</dt>
-                            <dd class="min-w-0 truncate">No</dd>
+                            <dd v-if="currentMachine.pmpen" class="min-w-0 truncate">是</dd>
+                            <dd v-else class="min-w-0 truncate">否</dd>
                         </dl>
                     </div>
                 </div>
