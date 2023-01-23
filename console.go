@@ -53,6 +53,7 @@ type adminTemplateConfig struct {
 	UserName     string                 `json:"username"`
 	UserNameHead string                 `json:"usernamehead"`
 	UserAccount  string                 `json:"useraccount"`
+	OrgName      string                 `json:"orgname"`
 	MList        map[string]machineItem `json:"mlist"`
 }
 
@@ -101,11 +102,17 @@ func (h *Headscale) ConsoleSelfAPI(
 	}
 	userNameHead := string([]rune(userDisName)[0])
 
+	userOrgName := userName
+	if h.cfg.org_name != "Personal" {
+		userOrgName = h.cfg.org_name
+	}
+
 	renderData := adminTemplateConfig{
 		Basedomain:   h.cfg.BaseDomain,
 		UserNameHead: userNameHead,
 		UserName:     userDisName,
 		UserAccount:  userName,
+		OrgName:      userOrgName,
 	}
 
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")

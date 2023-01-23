@@ -45,6 +45,7 @@ const UserAccount = ref("");
 const Basedomain = ref("");
 const UserName = ref("");
 const UserNameHead = ref("");
+const OrgName = ref("");
 onMounted(() => {
   watchWindowChange()
 
@@ -58,6 +59,7 @@ onMounted(() => {
         Basedomain.value = response.data["basedomain"];
         UserName.value = response.data["username"];
         UserNameHead.value = response.data["usernamehead"];
+        OrgName.value = response.data["orgname"];
       }
     })
     .catch(function (error) {
@@ -77,7 +79,7 @@ onMounted(() => {
         <a href="/" class="flex items-center" style="max-width: 80%">
           <img width="18" height="18" src="/img/mlogo.png" />
           <div role="banner" class="text-lg font-semibold ml-3 truncate">
-            {{ UserAccount }}.{{ Basedomain }}
+            {{ OrgName }}
           </div>
           <span class="badge badge-secondary">仅供测试</span>
         </a>

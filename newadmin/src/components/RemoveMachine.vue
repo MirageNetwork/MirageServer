@@ -23,7 +23,7 @@ const props = defineProps({
                     <button @click="$emit('close')"
                         class="btn border border-base-300 hover:border-base-300 bg-base-200 hover:bg-base-300 text-black h-9 min-h-fit"
                         type="button">取消</button>
-                    <button class="btn border-0 bg-red-600 hover:bg-red-700  text-white h-9 min-h-fit"
+                    <button class="btn border-0 bg-red-600 hover:bg-red-700 text-white h-9 min-h-fit"
                         type="submit">删除设备</button>
                 </footer>
             </form>

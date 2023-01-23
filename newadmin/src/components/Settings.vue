@@ -72,7 +72,7 @@ onMounted(() => {
               <h2 class="text-gray-500 font-medium">个人设置</h2>
               <router-link class="flex font-medium mt-4"
                 :class="{ 'text-blue-600': currentSetPart == 'keys', 'text-gray-700': currentSetPart != 'keys' }"
-                to="/settings/keys">Key管理</router-link>
+                to="/settings/keys">密钥管理</router-link>
             </div>
           </div>
         </div>
@@ -86,7 +86,7 @@ onMounted(() => {
               <option value="contact-preferences">敬请期待</option>
             </optgroup>
             <optgroup label="个人设置">
-              <option value="keys">Key管理</option>
+              <option value="keys">密钥管理</option>
             </optgroup>
           </select>
         </div>

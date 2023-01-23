@@ -13,10 +13,8 @@ const routes = [
     { path: '/machines', component: Machines },
     { path: '/machines/:mip', component: Machine },
     { path: '/settings', redirect: '/settings/general' },
-    {path: '/settings/:setpart', component: Settings },
+    { path: '/settings/:setpart', component: Settings },
 ]
-
-
 const router = createRouter({
     history: createWebHashHistory(),
     routes,

@@ -76,6 +76,8 @@ type Config struct {
 	ACL ACLConfig
 
 	ali_IDaaS ALIConfig
+
+	org_name string
 }
 type ALIConfig struct {
 	ali_app_id       string
@@ -646,6 +648,7 @@ func GetHeadscaleConfig() (*Config, error) {
 			ali_sms_sign:     viper.GetString("ali_sms_sign"),
 			ali_sms_template: viper.GetString("ali_sms_template"),
 		},
+		org_name: viper.GetString("org_name"),
 	}, nil
 }
 
