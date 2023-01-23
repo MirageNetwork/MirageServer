@@ -102,6 +102,21 @@ func (h *Headscale) DestroyUser(name string) error {
 	return nil
 }
 
+// Update User's node key expiry duration.
+func (h *Headscale) UpdateUserKeyExpiry(name string, newDuration uint) error {
+	var err error
+	user, err := h.GetUser(name)
+	if err != nil {
+		return err
+	}
+	user.ExpiryDuration = newDuration
+
+	if result := h.db.Save(&user); result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
 // RenameUser renames a User. Returns error if the User does
 // not exist or if another User exists with the new name.
 func (h *Headscale) RenameUser(oldName, newName string) error {

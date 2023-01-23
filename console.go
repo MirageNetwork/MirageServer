@@ -13,6 +13,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// 全部API响应报文框架
+type APIResponse struct {
+	Status string      `json:"status"`
+	Data   interface{} `json:"data"`
+}
+
 type machineItem struct {
 	GiveName     string   `json:"givename"`
 	UserAccount  string   `json:"useraccount"`
@@ -334,6 +340,77 @@ func (h *Headscale) ConsoleMachinesAPI(
 	}
 }
 
+// 网络设置响应Data体
+type NetSettingResData struct {
+	FileSharing        bool   `json:"fileSharing"`
+	ServicesCollection bool   `json:"servicesCollection"`
+	HttpsEnabled       bool   `json:"httpsEnabled"`
+	Provider           string `json:"provider"`
+	MachineAuthNeeded  bool   `json:"machineAuthNeeded"`
+	MaxKeyDurationDays int    `json:"maxKeyDurationDays"`
+	NetworkLockEnabled bool   `json:"networkLockEnabled"`
+}
+
+// 查询网络设置API
+func (h *Headscale) getNetSettingAPI(
+	writer http.ResponseWriter,
+	req *http.Request,
+) {
+	userName := h.verifyTokenIDandGetUser(writer, req)
+	if userName == "" {
+		doAPIResponse(writer, "用户信息核对失败", nil)
+		return
+	}
+	user, err := h.GetUser(userName)
+	if err != nil {
+		doAPIResponse(writer, "查询用户失败:"+err.Error(), nil)
+		return
+	}
+	netsettingData := NetSettingResData{
+		FileSharing:        false,         //未实现
+		ServicesCollection: false,         //未实现
+		HttpsEnabled:       false,         //未实现
+		Provider:           "Mirage SaaS", //在个人版尚未开启更多验证方式时暂时统一设置
+		MachineAuthNeeded:  false,         //未实现
+		MaxKeyDurationDays: 180,
+		NetworkLockEnabled: false, //未实现
+	}
+	netsettingData.MaxKeyDurationDays = int(user.ExpiryDuration)
+	doAPIResponse(writer, "", netsettingData)
+}
+
+// 更新用户网络密钥过期时长
+func (h *Headscale) ConsoleUpdateKeyExpiryAPI(
+	writer http.ResponseWriter,
+	req *http.Request,
+) {
+	userName := h.verifyTokenIDandGetUser(writer, req)
+	if userName == "" {
+		doAPIResponse(writer, "用户信息核对失败", nil)
+		return
+	}
+	err := req.ParseForm()
+	if err != nil {
+		doAPIResponse(writer, "用户请求解析失败:"+err.Error(), nil)
+		return
+	}
+	reqData := make(map[string]int)
+	json.NewDecoder(req.Body).Decode(&reqData)
+	newExpiryDuration := reqData["maxKeyDurationDays"]
+	//	newExpiryDuration, err := strconv.Atoi(newExpiryDurationStr)
+	if err != nil {
+		doAPIResponse(writer, "从请求获取新值失败:"+err.Error(), nil)
+		return
+	}
+	err = h.UpdateUserKeyExpiry(userName, uint(newExpiryDuration))
+	if err != nil {
+		doAPIResponse(writer, "更新密钥过期时长失败:"+err.Error(), nil)
+		return
+	}
+	doAPIResponse(writer, "", uint(newExpiryDuration))
+}
+
+// 删除设备API
 type removeMachineRes struct {
 	Status string `json:"status"`
 	ErrMsg string `json:"errmsg"`
@@ -486,4 +563,24 @@ func renderResult(
 			Msg("Failed to write response")
 	}
 	return nil
+}
+
+func doAPIResponse(writer http.ResponseWriter, msg string, data interface{}) {
+	res := APIResponse{}
+	if data != nil {
+		res.Status = "success"
+		res.Data = data
+	} else {
+		res.Status = "error-" + msg
+	}
+	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+	writer.WriteHeader(http.StatusOK)
+	err := json.NewEncoder(writer).Encode(&res)
+	if err != nil {
+		log.Error().
+			Caller().
+			Err(err).
+			Msg("Failed to write response")
+	}
+	return
 }

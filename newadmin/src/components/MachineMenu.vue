@@ -25,9 +25,6 @@ const closeMe = (event) => {
     emit('close')
 }
 
-onMounted(()=>{
-    console.log("MachineMenu mounted!")
-})
 </script>
 
 <template>

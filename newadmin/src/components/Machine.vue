@@ -286,7 +286,7 @@ function removeMachine(id) {
                     <p class="text-gray-600">关于该设备网络的信息，用于调试连接问题</p>
                 </header>
                 <div
-                    class="p-4 md:p-6 border border-gray-200 rounded-md grid grid-cols-1 md:grid-cols-2 gap-y-2 sm:gap-x-2">
+                    class="p-4 md:p-6 border border-gray-200 rounded-md grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-2">
                     <div class="space-y-2">
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">创建者</dt>
