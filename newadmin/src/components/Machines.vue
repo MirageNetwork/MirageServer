@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, nextTick, onMounted, watch, watchEffect } from "vue";
+import { ref, computed, nextTick, onMounted,onUnmounted, watch, watchEffect } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
 import MachineMenu from "./MachineMenu.vue";
 import RemoveMachine from "./RemoveMachine.vue";
@@ -11,22 +11,10 @@ import Toast from "./Toast.vue";
 const activeBtn = ref(null)
 const btnLeft = ref(0)
 const btnTop = ref(0)
-function watchWindowChange() {
+function refreshMachineMenuPos() {
   if (activeBtn.value != null) {
     btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 14
     btnTop.value = activeBtn.value?.getBoundingClientRect().top
-  }
-  window.onresize = () => {
-    if (activeBtn.value != null) {
-      btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 14
-      btnTop.value = activeBtn.value?.getBoundingClientRect().top
-    }
-  }
-  window.onscroll = () => {
-    if (activeBtn.value != null) {
-      btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 14
-      btnTop.value = activeBtn.value?.getBoundingClientRect().top
-    }
   }
 }
 function openMachineMenu(mID, event) {
@@ -123,12 +111,20 @@ function getMachines() {
   });
 }
 onMounted(() => {
-  watchWindowChange()
+  refreshMachineMenuPos()
+  window.addEventListener("resize",refreshMachineMenuPos)
+  window.addEventListener("scroll",refreshMachineMenuPos)
+
+
   getMachines().then().catch();
   getMIntID = setInterval(() => {
     getMachines().then().catch();
   }, 15000);
 });
+onUnmounted(()=>{
+window.removeEventListener("resize",refreshMachineMenuPos)
+window.removeEventListener("scroll",refreshMachineMenuPos)
+})
 onBeforeRouteLeave(() => {
   clearInterval(getMIntID);
 });

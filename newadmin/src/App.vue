@@ -10,17 +10,12 @@ const route = useRoute();
 const userAvatar = ref(null)
 const avatarLeft = ref(0)
 const avatarTop = ref(0)
-function watchWindowChange() {
+watch(() => userAvatar.value?.getBoundingClientRect().left, (newLeft) => {
+  console.log(newLeft)
+})
+function refreshUserMenuPos() {
   avatarLeft.value = userAvatar.value?.getBoundingClientRect().left
   avatarTop.value = userAvatar.value?.getBoundingClientRect().top
-  window.onresize = () => {
-    avatarLeft.value = userAvatar.value?.getBoundingClientRect().left
-    avatarTop.value = userAvatar.value?.getBoundingClientRect().top
-  }
-  window.onscroll = () => {
-    avatarLeft.value = userAvatar.value?.getBoundingClientRect().left
-    avatarTop.value = userAvatar.value?.getBoundingClientRect().top
-  }
 }
 
 const userMenuOpen = ref(false)
@@ -47,7 +42,9 @@ const UserName = ref("");
 const UserNameHead = ref("");
 const OrgName = ref("");
 onMounted(() => {
-  watchWindowChange()
+  refreshUserMenuPos()
+  window.addEventListener("resize",refreshUserMenuPos)
+  window.addEventListener("scroll",refreshUserMenuPos)
 
   axios
     .get("/admin/api/self")
