@@ -11,7 +11,7 @@ const props = defineProps({
         enter-active-class="transition ease-in-out duration-300"
         leave-active-class="transition ease-in-out duration-300">
         <div v-if="show" >
-            <div class="alert shadow-lg bg-neutral text-neutral-content rounded-md">
+            <div class="alert shadow-lg bg-neutral text-neutral-content rounded-md flex-row">
                 <span>{{ msg }}</span>
                 <svg @click="$emit('close')" cursor="pointer" xmlns="http://www.w3.org/2000/svg"
                     class="h-6 w-6 justify-self-end" fill="none" viewBox="0 0 24 24" stroke="currentColor">
