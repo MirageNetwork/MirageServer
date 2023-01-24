@@ -1,20 +1,30 @@
 <script setup>
-import { ref, computed, nextTick, onMounted } from "vue";
+import { ref, computed, nextTick,watch, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import MachineMenu from "./MachineMenu.vue";
 import RemoveMachine from "./RemoveMachine.vue";
+import Toast from "./Toast.vue";
+
+const devmode = ref(false);
 
 const router = useRouter();
 const route = useRoute();
 
 //界面控制部分
-const devmode = ref(false);
+const toastShow = ref(false);
+const toastMsg = ref("");
+watch(toastShow, () => {
+    if (toastShow.value) {
+        setTimeout(function () { toastShow.value = false }, 5000)
+    }
+})
+
 const hasSpecialStatus = computed(() => {
     return (
         currentMachine.value["issharedin"] ||
         currentMachine.value["issharedout"] ||
         currentMachine.value["expirydesc"] == "已过期" ||
-        currentMachine.value["isexpirydisabled"] ||
+        currentMachine.value["neverExpires"] ||
         currentMachine.value["soonexpiry"] ||
         currentMachine.value["isexitnode"] ||
         currentMachine.value["issubnet"]
@@ -59,7 +69,7 @@ function closeMachineMenu() {
 
 const delConfirmShow = ref(false);
 function showDelConfirm() {
-    closeMachineMenu(currentMID.value);
+    closeMachineMenu();
     delConfirmShow.value = true;
 }
 
@@ -112,17 +122,44 @@ onMounted(() => {
         });
 });
 //服务端请求
-function removeMachine(id) {
+function setExpires() {
+    closeMachineMenu()
     axios
-        .post("/admin/api/machine/remove", {
-            mid: id,
+        .post("/admin/api/machines", {
+            mid: currentMID.value,
+            state: "set-expires"
         })
         .then(function (response) {
-            if (response.data["status"] == "OK") {
-                delConfirmShow.value = false;
-                toastMsg.value = MList.value[id]["givename"] + "已从您的蜃境网络移除！";
+            if (response.data["status"] == "success") {
+                currentMachine.value["neverExpires"] = response.data["data"]["neverExpires"]
+                currentMachine.value["expirydesc"] = response.data["data"]["expires"]
+                if (response.data["data"]["neverExpires"] == true) {
+                    toastMsg.value = "已禁用密钥过期";
+                } else {
+                    toastMsg.value = "已启用密钥过期";
+                }
                 toastShow.value = true;
-                delete MList.value[id];
+            } else {
+                toastMsg.value = "失败：" + response.data["status"].substring(6);
+                toastShow.value = true;
+            }
+        })
+        .catch(function (error) {
+            console.log(error);
+        });
+}
+function removeMachine() {
+    axios
+        .post("/admin/api/machine/remove", {
+            mid: currentMID,
+        })
+        .then(function (response) {
+            if (response.data["status"] == "OK") { //TODO: 需处理设备页面删除跳转后的Toast显示
+                delConfirmShow.value = false;
+                toastMsg.value = currentMachine.value["givename"] + "已从您的蜃境网络移除！";
+                toastShow.value = true;
+
+                router.push('/machines')
             } else {
                 alert("失败：" + response.data["errmsg"]);
             }
@@ -200,7 +237,7 @@ function removeMachine(id) {
                                     已过期
                                 </div>
                             </span>
-                            <span v-if="currentMachine.isexpirydisabled">
+                            <span v-if="currentMachine.neverExpires">
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-sm px-1 text-xs mr-1">
                                     永不过期
@@ -381,7 +418,7 @@ function removeMachine(id) {
                                     </li>
                                 </ul>
                                 <ul v-else>
-                                    <li v-for="(latency,derpname) in currentMachine.derps">
+                                    <li v-for="(latency, derpname) in currentMachine.derps">
                                         <strong class="font-medium">{{ derpname }} 号中继</strong>: {{ latency }}&nbsp;ms
                                         <svg v-if="currentMachine.usederp == derpname"
                                             xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
@@ -406,10 +443,10 @@ function removeMachine(id) {
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">密钥过期</dt>
-                            <dd v-if="currentMachine.isexpirydisabled" class="min-w-0 truncate">
+                            <dd v-if="currentMachine.neverExpires" class="min-w-0 truncate">
                                 永不过期
                             </dd>
-                            <dd v-if="!currentMachine.isexpirydisabled" class="min-w-0 truncate">
+                            <dd v-if="!currentMachine.neverExpires" class="min-w-0 truncate">
                                 {{ currentMachine.expirydesc }}
                             </dd>
                         </dl>
@@ -459,26 +496,21 @@ function removeMachine(id) {
         </section>
     </main>
 
-    <div v-if="toastShow" class="toast">
-        <div class="alert shadow-lg bg-neutral text-neutral-content">
-            <span>{{ toastMsg }}</span>
-            <svg @click="toastShow = false" cursor="pointer" xmlns="http://www.w3.org/2000/svg"
-                class="h-6 w-6 justify-self-end" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        </div>
-    </div>
+    <!-- 提示框显示 -->
+    <Teleport to=".toast-container">
+        <Toast :show="toastShow" :msg="toastMsg" @close="toastShow = false"></Toast>
+    </Teleport>
 
     <!--设备配置菜单显示-->
     <Teleport to="body">
-        <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" @close="closeMachineMenu"
-            @showdialog-remove="showDelConfirm"></MachineMenu>
+        <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" :neverExpires="currentMachine.neverExpires" @close="closeMachineMenu"
+            @set-expires="setExpires" @showdialog-remove="showDelConfirm"></MachineMenu>
     </Teleport>
 
     <!-- 删除设备提示框显示 -->
     <Teleport to="body">
         <RemoveMachine v-if="delConfirmShow" :machine-name="currentMachine.givename" @close="delConfirmShow = false"
-            @confirm="removeMachine(currentMID)"></RemoveMachine>
+            @confirm="removeMachine"></RemoveMachine>
     </Teleport>
 </template>
 

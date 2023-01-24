@@ -19,6 +19,48 @@ type APIResponse struct {
 	Data   interface{} `json:"data"`
 }
 
+type machineData struct {
+	Address                []string `json:"addresses"`
+	AllowedIPs             []string `json:"allowedIPs"`         //未实现
+	ExtraIPs               []string `json:"extraIPs"`           //未实现
+	AdvertisedIPs          []string `json:"advertisedIPs"`      //未实现
+	HasSubnets             bool     `json:"hasSubnets"`         //未实现(子网路由)
+	AdvertisedExitNode     bool     `json:"advertisedExitNode"` //未实现（允许出口节点）
+	AllowedExitNode        bool     `json:"allowedExitNode"`    //未实现（启用出口节点）
+	HasExitNode            bool     `json:"hasExitNode"`        //未实现
+	AllowedTags            []string `json:"allowedTags"`        //未实现
+	InvalidTags            []string `json:"invalidTags"`        //未实现
+	HasTags                bool     `json:"hasTags"`            //未实现
+	Endpoints              []string `json:"endpoints"`          //未实现
+	Derp                   string   `json:"derp"`               //未实现
+	IpnVersion             string   `json:"ipnVersion"`         //未实现
+	Os                     string   `json:"os"`                 //未实现
+	Name                   string   `json:"name"`               //未实现
+	Fqdn                   string   `json:"fqdn"`               //未实现
+	Domain                 string   `json:"domain"`             //未实现
+	Created                string   `json:"created"`            //未实现
+	Hostname               string   `json:"hostname"`           //未实现
+	MachineKey             string   `json:"machineKey"`         //未实现
+	NodeKey                string   `json:"nodeKey"`            //未实现
+	Id                     string   `json:"id"`                 //未实现
+	StableId               string   `json:"stableId"`           //未实现
+	DisplayNodeKey         string   `json:"displayNodeKey"`     //未实现
+	LogID                  string   `json:"logID"`              //未实现
+	User                   string   `json:"user"`               //未实现
+	Creator                string   `json:"creator"`            //未实现
+	Expires                string   `json:"expires"`
+	NeverExpires           bool     `json:"neverExpires"`
+	Authorized             bool     `json:"authorized"`             //未实现
+	IsExternal             bool     `json:"isExternal"`             //未实现
+	BrokenIPForwarding     bool     `json:"brokenIPForwarding"`     //未实现
+	IsEphemeral            bool     `json:"isEphemeral"`            //未实现
+	AvailableUpdateVersion string   `json:"availableUpdateVersion"` //未实现
+	LastSeen               string   `json:"lastSeen"`               //未实现
+	ConnectedToControl     bool     `json:"connectedToControl"`     //未实现
+	AutomaticNameMode      bool     `json:"automaticNameMode"`      //未实现
+	TailnetLockKey         string   `json:"tailnetLockKey"`         //未实现
+}
+
 type machineItem struct {
 	GiveName     string   `json:"givename"`
 	UserAccount  string   `json:"useraccount"`
@@ -33,11 +75,11 @@ type machineItem struct {
 	LastSeen     string   `json:"lastseen"`
 	CreateAt     string   `json:"createat"`
 
-	IsSharedIn       bool `json:"issharedin"`
-	IsSharedOut      bool `json:"issharedout"`
-	IsExpiryDisabled bool `json:"isexpirydisabled"`
-	IsExitNode       bool `json:"isexitnode"`
-	IsSubnet         bool `json:"issubnet"`
+	IsSharedIn   bool `json:"issharedin"`
+	IsSharedOut  bool `json:"issharedout"`
+	NeverExpires bool `json:"neverExpires"`
+	IsExitNode   bool `json:"isexitnode"`
+	IsSubnet     bool `json:"issubnet"`
 
 	Varies      bool `json:"varies"`
 	HairPinning bool `json:"hairpinning"`
@@ -244,17 +286,17 @@ func (h *Headscale) ConsoleMachinesAPI(
 		tz, _ := time.LoadLocation("Asia/Shanghai")
 
 		tmpMachine := machineItem{
-			GiveName:         machine.GivenName,
-			UserAccount:      machine.User.Name,
-			UserNameHead:     string([]rune(machine.User.Display_Name)[0]),
-			OS:               machine.HostInfo.OS,
-			OSHostName:       machine.HostInfo.Hostname,
-			Version:          IPNver,
-			CreateAt:         machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
-			LastSeen:         machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
-			IfOnline:         machine.isOnline(),
-			MSubnetList:      make([]string, 0),
-			IsExpiryDisabled: *machine.Expiry == time.Time{},
+			GiveName:     machine.GivenName,
+			UserAccount:  machine.User.Name,
+			UserNameHead: string([]rune(machine.User.Display_Name)[0]),
+			OS:           machine.HostInfo.OS,
+			OSHostName:   machine.HostInfo.Hostname,
+			Version:      IPNver,
+			CreateAt:     machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
+			LastSeen:     machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
+			IfOnline:     machine.isOnline(),
+			MSubnetList:  make([]string, 0),
+			NeverExpires: *machine.Expiry == time.Time{},
 
 			Varies:      machine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
 			HairPinning: machine.HostInfo.NetInfo.HairPinning.EqualBool(true),
@@ -296,23 +338,9 @@ func (h *Headscale) ConsoleMachinesAPI(
 			tmpMachine.PrefferDERP = "x"
 			tmpMachine.DERPs = nil
 		}
-		if !tmpMachine.IsExpiryDisabled {
+		if !tmpMachine.NeverExpires {
 			ExpiryDuration := machine.Expiry.Sub(time.Now())
-			if ExpiryDuration.Seconds() <= 0 {
-				tmpMachine.ExpiryDesc = "已过期"
-			} else if ExpiryDuration.Hours()/24/365 >= 1 {
-				tmpMachine.ExpiryDesc = "还剩一年以上有效期"
-			} else if ExpiryDuration.Hours()/24/30 >= 1 {
-				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Hours()/24/30), 10) + "个月" + strconv.FormatInt(int64(ExpiryDuration.Hours()/24)-int64(ExpiryDuration.Hours()/24/30)*30, 10) + "天"
-			} else if ExpiryDuration.Hours()/24 >= 1 {
-				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Hours()/24), 10) + "天"
-			} else if ExpiryDuration.Hours() >= 1 {
-				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Hours()), 10) + "小时"
-			} else if ExpiryDuration.Minutes() >= 1 {
-				tmpMachine.ExpiryDesc = "有效期还剩" + strconv.FormatInt(int64(ExpiryDuration.Minutes()), 10) + "分钟"
-			} else {
-				tmpMachine.ExpiryDesc = "马上就要过期"
-			}
+			tmpMachine.ExpiryDesc = convExpiryToStr(ExpiryDuration)
 		}
 		if machine.IPAddresses[0].Is4() {
 			tmpMachine.MIPv4 = machine.IPAddresses[0].String()
@@ -408,6 +436,62 @@ func (h *Headscale) ConsoleUpdateKeyExpiryAPI(
 		return
 	}
 	doAPIResponse(writer, "", uint(newExpiryDuration))
+}
+
+func (h *Headscale) ConsoleMachinesUpdateAPI(
+	writer http.ResponseWriter,
+	req *http.Request,
+) {
+	userName := h.verifyTokenIDandGetUser(writer, req)
+	if userName == "" {
+		doAPIResponse(writer, "用户信息核对失败", nil)
+		return
+	}
+	err := req.ParseForm()
+	if err != nil {
+		doAPIResponse(writer, "用户请求解析失败:"+err.Error(), nil)
+		return
+	}
+	reqData := make(map[string]interface{})
+	json.NewDecoder(req.Body).Decode(&reqData)
+	reqMID, ok := reqData["mid"].(string)
+	if !ok {
+		doAPIResponse(writer, "用户请求mid解析失败", nil)
+		return
+	}
+	MachineID, err := strconv.ParseUint(reqMID, 0, 64)
+	if err != nil {
+		doAPIResponse(writer, "用户请求mid处理失败", nil)
+		return
+	}
+	toUpdateMachine, err := h.GetMachineByID(MachineID)
+	if err != nil {
+		doAPIResponse(writer, "查询用户设备失败", nil)
+		return
+	}
+	if toUpdateMachine.User.Name != userName {
+		doAPIResponse(writer, "用户没有该权限", nil)
+		return
+	}
+	reqState, ok := reqData["state"].(string)
+	if !ok {
+		doAPIResponse(writer, "用户请求state解析失败", nil)
+		return
+	}
+
+	switch reqState {
+	case "set-expires":
+		msg, err := h.setMachineExpiry(toUpdateMachine)
+		if err != nil {
+			doAPIResponse(writer, msg, nil)
+		} else {
+			resData := machineData{
+				NeverExpires: *toUpdateMachine.Expiry == time.Time{},
+				Expires:      msg,
+			}
+			doAPIResponse(writer, "", resData)
+		}
+	}
 }
 
 // 删除设备API
@@ -582,5 +666,43 @@ func doAPIResponse(writer http.ResponseWriter, msg string, data interface{}) {
 			Err(err).
 			Msg("Failed to write response")
 	}
-	return
+}
+
+// 切换设备密钥是否禁用过期
+func (h *Headscale) setMachineExpiry(machine *Machine) (string, error) {
+	if (*machine.Expiry != time.Time{}) {
+		err := h.RefreshMachine(machine, time.Time{})
+		if err != nil {
+			return "设备密钥过期禁用失败", err
+		} else {
+			return "", err
+		}
+	} else {
+		expiryDuration := time.Hour * 24 * time.Duration(machine.User.ExpiryDuration)
+		newExpiry := time.Now().Add(expiryDuration)
+		err := h.RefreshMachine(machine, newExpiry)
+		if err != nil {
+			return "设备密钥过期启用失败", err
+		} else {
+			return convExpiryToStr(expiryDuration), nil
+		}
+	}
+}
+
+func convExpiryToStr(duration time.Duration) string {
+	if duration.Seconds() <= 0 {
+		return "已过期"
+	} else if duration.Hours()/24/365 >= 1 {
+		return "还剩一年以上有效期"
+	} else if duration.Hours()/24/30 >= 1 {
+		return "有效期还剩" + strconv.FormatInt(int64(duration.Hours()/24/30), 10) + "个月" + strconv.FormatInt(int64(duration.Hours()/24)-int64(duration.Hours()/24/30)*30, 10) + "天"
+	} else if duration.Hours()/24 >= 1 {
+		return "有效期还剩" + strconv.FormatInt(int64(duration.Hours()/24), 10) + "天"
+	} else if duration.Hours() >= 1 {
+		return "有效期还剩" + strconv.FormatInt(int64(duration.Hours()), 10) + "小时"
+	} else if duration.Minutes() >= 1 {
+		return "有效期还剩" + strconv.FormatInt(int64(duration.Minutes()), 10) + "分钟"
+	} else {
+		return "马上就要过期"
+	}
 }

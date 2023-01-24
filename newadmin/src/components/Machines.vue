@@ -130,6 +130,32 @@ onBeforeRouteLeave(() => {
 });
 
 //服务端请求
+function setExpires(id){
+  closeMachineMenu()
+  axios
+    .post("/admin/api/machines", {
+      mid: id,
+      state:"set-expires"
+    })
+    .then(function (response) {
+      if (response.data["status"] == "success") {
+        MList.value[id]["neverExpires"]=response.data["data"]["neverExpires"]
+        MList.value[id]["expirydesc"]=response.data["data"]["expires"]
+        if (response.data["data"]["neverExpires"]==true){
+          toastMsg.value = "已禁用密钥过期";
+        } else {
+          toastMsg.value = "已启用密钥过期";
+        }
+        toastShow.value = true;
+      } else {
+        toastMsg.value = "失败：" + response.data["status"].substring(6);
+        toastShow.value = true;
+      }
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+}
 function removeMachine(id) {
   axios
     .post("/admin/api/machine/remove", {
@@ -245,7 +271,7 @@ function copyMIPv6() {
                         已过期
                       </div>
                     </span>
-                    <span v-if="m.isexpirydisabled">
+                    <span v-if="m.neverExpires">
                       <div
                         class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-sm px-1 text-xs mr-1">
                         永不过期
@@ -367,8 +393,8 @@ function copyMIPv6() {
 
   <!--设备配置菜单显示-->
   <Teleport to="body">
-    <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" @close="closeMachineMenu"
-      @showdialog-remove="showDelConfirm"></MachineMenu>
+    <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" :neverExpires="MList[currentMID].neverExpires"
+    @close="closeMachineMenu" @set-expires="setExpires(currentMID)" @showdialog-remove="showDelConfirm"></MachineMenu>
   </Teleport>
 
   <!-- 删除设备提示框显示 -->
