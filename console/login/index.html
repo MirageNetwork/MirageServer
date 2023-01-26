@@ -7,19 +7,30 @@
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   <link rel="shortcut icon" href="/admin/img/favicon.ico" type="img/x-icon">
   <link rel="apple-touch-icon" href="/admin/img/mlogo.png">
-  <title>蜃境 - 控制台</title>
-  <script type="module" crossorigin src="/admin/assets/main-e465b16e.js"></script>
+  <title>蜃境</title>
+  <script type="module" crossorigin src="/admin/assets/login-63389a6b.js"></script>
   <link rel="modulepreload" crossorigin href="/admin/assets/plugin-vueexport-helper-552a1bd3.js">
   <link rel="stylesheet" href="/admin/assets/plugin-vueexport-helper-b8162284.css">
-  <link rel="stylesheet" href="/admin/assets/index-90d8e147.css">
+  <link rel="stylesheet" href="/admin/assets/index-b89fdc63.css">
 </head>
 
 <body>
-
-  <div id="app" class="relative z-0"></div>
-  <div id="toast-root" class="relative z-20"><div class="toast-container"></div></div>
+  <main id="app-root"></main>
+  <div id="toast-root" class="relative z-50"><div class="toast-container"></div></div>
   
 
 </body>
+<style>
+  main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 2rem;
+    padding-bottom: 1rem;
+    text-align: center;
+    min-height: 100%;
+    margin: 0 auto;
+  }
+</style>
 
 </html>

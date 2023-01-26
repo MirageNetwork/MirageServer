@@ -72,7 +72,7 @@ onMounted(() => {
     <div class="container mx-auto mb-4 md:mb-6">
       <header class="flex justify-between items-center px-2 md:px-0">
         <a href="/" class="flex items-center" style="max-width: 80%">
-          <img width="18" height="18" src="/img/mlogo.png" />
+          <img width="18" height="18" src="/img/logo.svg" />
           <div role="banner" class="text-lg font-semibold ml-3 truncate">
             {{ OrgName }}
           </div>

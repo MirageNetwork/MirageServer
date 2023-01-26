@@ -1,7 +1,13 @@
 <script setup>
 const props = defineProps({
-    show: Boolean,
-    msg: String
+    show:{
+        type:Boolean,
+        default:false
+    },
+    msg: {
+        type:String,
+        default:""
+    },
 })
 </script>
 

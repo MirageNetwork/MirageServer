@@ -78,7 +78,7 @@ func (h *Headscale) ConsoleLogout(
 	}
 
 	http.SetCookie(w, delCookie)
-	http.Redirect(w, r, h.cfg.OIDC.LogoutURL+"?id_token_hint="+idtoken+"&post_logout_redirect_uri="+h.cfg.ServerURL+"/logout/callback", http.StatusFound)
+	http.Redirect(w, r, h.cfg.OIDC.LogoutURL+"?id_token_hint="+idtoken+"&post_logout_redirect_uri="+h.cfg.ServerURL+"/admin/login", http.StatusFound)
 }
 
 func (h *Headscale) ConsoleLogoutCallback(

@@ -26,7 +26,7 @@ func (h *Headscale) generateMapResponse(
 
 	peers, invalidNodeIDs, err := h.getValidPeers(machine)
 	if invalidNodeIDs != nil {
-		log.Info().Msg("Should ignore invalidNodeIDs for current")
+		//log.Info().Msg("Should ignore invalidNodeIDs for current")
 	}
 	if err != nil {
 		log.Error().

@@ -386,12 +386,12 @@ func (h *Headscale) getNetSettingAPI(
 ) {
 	userName := h.verifyTokenIDandGetUser(writer, req)
 	if userName == "" {
-		doAPIResponse(writer, "用户信息核对失败", nil)
+		h.doAPIResponse(writer, "用户信息核对失败", nil)
 		return
 	}
 	user, err := h.GetUser(userName)
 	if err != nil {
-		doAPIResponse(writer, "查询用户失败:"+err.Error(), nil)
+		h.doAPIResponse(writer, "查询用户失败:"+err.Error(), nil)
 		return
 	}
 	netsettingData := NetSettingResData{
@@ -404,7 +404,7 @@ func (h *Headscale) getNetSettingAPI(
 		NetworkLockEnabled: false, //未实现
 	}
 	netsettingData.MaxKeyDurationDays = int(user.ExpiryDuration)
-	doAPIResponse(writer, "", netsettingData)
+	h.doAPIResponse(writer, "", netsettingData)
 }
 
 // 更新用户网络密钥过期时长
@@ -414,12 +414,12 @@ func (h *Headscale) ConsoleUpdateKeyExpiryAPI(
 ) {
 	userName := h.verifyTokenIDandGetUser(writer, req)
 	if userName == "" {
-		doAPIResponse(writer, "用户信息核对失败", nil)
+		h.doAPIResponse(writer, "用户信息核对失败", nil)
 		return
 	}
 	err := req.ParseForm()
 	if err != nil {
-		doAPIResponse(writer, "用户请求解析失败:"+err.Error(), nil)
+		h.doAPIResponse(writer, "用户请求解析失败:"+err.Error(), nil)
 		return
 	}
 	reqData := make(map[string]int)
@@ -427,15 +427,15 @@ func (h *Headscale) ConsoleUpdateKeyExpiryAPI(
 	newExpiryDuration := reqData["maxKeyDurationDays"]
 	//	newExpiryDuration, err := strconv.Atoi(newExpiryDurationStr)
 	if err != nil {
-		doAPIResponse(writer, "从请求获取新值失败:"+err.Error(), nil)
+		h.doAPIResponse(writer, "从请求获取新值失败:"+err.Error(), nil)
 		return
 	}
 	err = h.UpdateUserKeyExpiry(userName, uint(newExpiryDuration))
 	if err != nil {
-		doAPIResponse(writer, "更新密钥过期时长失败:"+err.Error(), nil)
+		h.doAPIResponse(writer, "更新密钥过期时长失败:"+err.Error(), nil)
 		return
 	}
-	doAPIResponse(writer, "", uint(newExpiryDuration))
+	h.doAPIResponse(writer, "", uint(newExpiryDuration))
 }
 
 func (h *Headscale) ConsoleMachinesUpdateAPI(
@@ -444,38 +444,38 @@ func (h *Headscale) ConsoleMachinesUpdateAPI(
 ) {
 	userName := h.verifyTokenIDandGetUser(writer, req)
 	if userName == "" {
-		doAPIResponse(writer, "用户信息核对失败", nil)
+		h.doAPIResponse(writer, "用户信息核对失败", nil)
 		return
 	}
 	err := req.ParseForm()
 	if err != nil {
-		doAPIResponse(writer, "用户请求解析失败:"+err.Error(), nil)
+		h.doAPIResponse(writer, "用户请求解析失败:"+err.Error(), nil)
 		return
 	}
 	reqData := make(map[string]interface{})
 	json.NewDecoder(req.Body).Decode(&reqData)
 	reqMID, ok := reqData["mid"].(string)
 	if !ok {
-		doAPIResponse(writer, "用户请求mid解析失败", nil)
+		h.doAPIResponse(writer, "用户请求mid解析失败", nil)
 		return
 	}
 	MachineID, err := strconv.ParseUint(reqMID, 0, 64)
 	if err != nil {
-		doAPIResponse(writer, "用户请求mid处理失败", nil)
+		h.doAPIResponse(writer, "用户请求mid处理失败", nil)
 		return
 	}
 	toUpdateMachine, err := h.GetMachineByID(MachineID)
 	if err != nil {
-		doAPIResponse(writer, "查询用户设备失败", nil)
+		h.doAPIResponse(writer, "查询用户设备失败", nil)
 		return
 	}
 	if toUpdateMachine.User.Name != userName {
-		doAPIResponse(writer, "用户没有该权限", nil)
+		h.doAPIResponse(writer, "用户没有该权限", nil)
 		return
 	}
 	reqState, ok := reqData["state"].(string)
 	if !ok {
-		doAPIResponse(writer, "用户请求state解析失败", nil)
+		h.doAPIResponse(writer, "用户请求state解析失败", nil)
 		return
 	}
 
@@ -483,13 +483,13 @@ func (h *Headscale) ConsoleMachinesUpdateAPI(
 	case "set-expires":
 		msg, err := h.setMachineExpiry(toUpdateMachine)
 		if err != nil {
-			doAPIResponse(writer, msg, nil)
+			h.doAPIResponse(writer, msg, nil)
 		} else {
 			resData := machineData{
 				NeverExpires: *toUpdateMachine.Expiry == time.Time{},
 				Expires:      msg,
 			}
-			doAPIResponse(writer, "", resData)
+			h.doAPIResponse(writer, "", resData)
 		}
 	}
 }
@@ -649,7 +649,10 @@ func renderResult(
 	return nil
 }
 
-func doAPIResponse(writer http.ResponseWriter, msg string, data interface{}) {
+// API调用的统一响应发报
+// @msg 响应状态：成功时data不为nil则忽略，自动设置为success，否则拼接error-{msg}
+// @data 响应数据：key值为data的json对象
+func (h *Headscale) doAPIResponse(writer http.ResponseWriter, msg string, data interface{}) {
 	res := APIResponse{}
 	if data != nil {
 		res.Status = "success"

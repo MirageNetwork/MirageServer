@@ -527,9 +527,14 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 		log.Fatal().Msg(err.Error())
 	}
 
+	router.PathPrefix("/admin/login").HandlerFunc(h.doLogin).Methods(http.MethodPost)
+
 	console_router := router.PathPrefix("/admin").Subrouter()
+
 	console_router.PathPrefix("/api").Subrouter().Use(h.APIAuth)
 	console_router.Use(h.ConsoleAuth)
+
+	console_router.PathPrefix("/api/register").HandlerFunc(h.RegisterUserAPI).Methods(http.MethodPost)
 
 	console_router.HandleFunc("/api/self", h.ConsoleSelfAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/machines", h.ConsoleMachinesAPI).Methods(http.MethodGet)
