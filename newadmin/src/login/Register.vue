@@ -66,10 +66,10 @@ function closeMe() {
     emit('close')
 }
 
-watch(()=>props.wantMeClose,(newV)=>{
-if (newV){
-    closeMe()
-}
+watch(() => props.wantMeClose, (newV) => {
+    if (newV) {
+        closeMe()
+    }
 })
 
 onBeforeUpdate(() => {
@@ -127,8 +127,8 @@ function getNewVerifyCode(inputedCode) {
         codeInput.value = ""
         console.log("不再合规！")
     } else {
-        codeInput.value = inputedCode.toString()
-        console.log("输入完一个验证码：" + inputedCode.toString())
+        codeInput.value = inputedCode
+        console.log("输入完一个验证码：" + inputedCode)
     }
 }
 /*
@@ -246,7 +246,7 @@ function doRegister() {
                 <div class="font-semibold text-lg truncate">注册新用户</div>
             </header>
             <p class="flex justify-start text-stone-500 mt-2 mb-8  text-xs text-left">*测试阶段仅支持手机号注册</p>
-            <form @submit.stop="">
+            <form @submit.prevent="$emit('confirm')">
                 <input type="hidden" id="fp" name="fp" />
                 <div
                     class="flex flex-row mb-5 border rounded-md border-stone-300 hover:border-stone-400 max-w-xs tooltip-bottom tooltip-error">

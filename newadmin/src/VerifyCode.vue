@@ -49,7 +49,7 @@ function inputEvent(e) {
     input.value[index] = el.value
     if (input.value.join('').length === 6) {
         document.activeElement.blur();
-        emit('complete', input.value);
+        emit('complete', input.value.join(''));
     }
 }
 function keydown(e) {
@@ -112,7 +112,7 @@ function keyup(e) {
         el.nextElementSibling && el.nextElementSibling.focus();
         if (input.value.join('').length === 6) {
             document.activeElement.blur();
-            emit('complete', input.value);
+            emit('complete', input.value.join(''));
         }
     } else {
         if (input.value[index] === '') {
@@ -146,7 +146,7 @@ function paste(e) {
         if (str.toString().length === 6 && /^\d{6}$/.test(str.toString())) {
             input.value = str.split('');
             document.activeElement.blur();
-            emit('complete', input.value);
+            emit('complete', input.value.join(''));
         } else {
             // 如果粘贴内容不合规，清除所有内容
             input.value[0] = new Array(6)
