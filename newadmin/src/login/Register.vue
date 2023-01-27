@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onBeforeUpdate, watch, ref } from 'vue';
+import { onMounted, onBeforeUpdate, watch, ref, nextTick } from 'vue';
 import Identify from '../Identify.vue';
 import VerifyCode from '../VerifyCode.vue';
 import Toast from '../components/Toast.vue';
@@ -125,10 +125,10 @@ function captchaCheck(event) {
 function getNewVerifyCode(inputedCode) {
     if (inputedCode.length == 0) {
         codeInput.value = ""
-        console.log("不再合规！")
+        //        console.log("不再合规！")
     } else {
         codeInput.value = inputedCode
-        console.log("输入完一个验证码：" + inputedCode)
+        //        console.log("输入完一个验证码：" + inputedCode)
     }
 }
 /*
@@ -226,6 +226,7 @@ function reqReg() {
 function doRegister() {
     preventAction.value = true
     reqReg().then((res) => {
+        preventAction.value = false
         emit('reg-done', res.data["data"])
     }).catch((err) => {
         preventAction.value = false

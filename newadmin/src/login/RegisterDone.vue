@@ -1,6 +1,7 @@
 <script setup>
 const props = defineProps({
     show: Boolean,
+    welcomemsg: String
 })
 
 </script>
@@ -15,7 +16,11 @@ const props = defineProps({
             <header class="flex items-center justify-between space-x-4 mb-5 mr-8">
                 <div class="font-semibold text-lg truncate">注册成功！</div>
             </header>
-            <p class="flex justify-start text-stone-500 mt-2 mb-8  text-base text-left">您可以使用上面的阿里云IDaaS登录了！</p>
+            <p class="flex justify-start text-stone-600 mt-2 mb-8  text-base text-left">{{ welcomemsg.split("#10")[0] }}</p><br />
+            <p class="flex justify-start text-stone-600 mt-2 mb-8  text-base text-left">{{ welcomemsg.split("#10")[1] }}</p><br />
+            <p class="flex justify-start text-stone-600 mt-2 mb-8  text-base text-left">{{ welcomemsg.split("#10")[2] }}</p><br />
+            <p class="flex justify-start text-stone-600 mt-2 mb-8  text-base text-left">{{ welcomemsg.split("#10")[3] }}</p><br />
+            <p class="flex justify-start text-stone-500 mt-2 mb-8  text-base text-left">您可以使用上面的阿里云IDaaS登录控制台！</p>
 
             <button @click="$emit('close')"
                 class="btn btn-sm btn-ghost absolute top-5 right-5 px-2 py-2 border-0 bg-base-0 focus:bg-base-200 hover:bg-base-200"

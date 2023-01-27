@@ -397,14 +397,14 @@ func (h *Headscale) RegisterUserAPI(
 		log.Info().Msg("用户返回校验码为: " + verifyCode)
 		if userRegInterface, ok := h.smsCodeCache.Get(mobile); ok {
 			regCacheInfo := userRegInterface.(UserReg)
-			if regCacheInfo.SMSCode == verifyCode && regCacheInfo.reqIP == reqAddr && regCacheInfo.Name == name {
+			if regCacheInfo.SMSCode == verifyCode /*&& regCacheInfo.reqIP == reqAddr*/ && regCacheInfo.Name == name {
 				// 验证码校验通过，进行用户注册
-				createUserRes, err := h.AddUserToIDaaS(name, mobile)
+				_ /*createUserRes*/, err := h.AddUserToIDaaS(name, mobile)
 				if err != nil {
 					resMsg := "创建用户失败： " + err.Error()
 					h.doAPIResponse(writer, resMsg, nil)
 				} else {
-					resMsg := "恭喜你注册成功！ 姓名：" + req.Form["name"][0] + " 手机号：" + req.Form["mobile"][0] + " 用户ID：" + *createUserRes.Body.UserId + "\n 请安装客户端使用手机号登录！"
+					resMsg := "恭喜你注册成功！#10 姓名：" + name + "#10 手机号：" + mobile /* + " 用户ID：" + *createUserRes.Body.UserId*/ + "#10 请安装客户端使用手机号登录接入！"
 					h.doAPIResponse(writer, "", resMsg)
 				}
 			} else {

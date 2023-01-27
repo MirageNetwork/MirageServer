@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import { useGetURLQuery } from '../utils'
 import Register from './Register.vue'
 import RegisterDone from './RegisterDone.vue'
@@ -9,12 +9,22 @@ const next_url = useGetURLQuery("next_url")
 const showRegister = ref(false)
 const closeRegister = ref(false)
 const showRegSuccess = ref(false)
+const regSuccessMsg = ref("")
 
 onMounted(() => {
 })
 function doCloseRegister() {
     showRegister.value = false
     closeRegister.value = false
+}
+function doRegSuccess(data) {
+    doCloseRegister()
+    regSuccessMsg.value = data
+    showRegSuccess.value = true
+}
+function closeRegSuccess() {
+    regSuccessMsg.value = data
+    showRegSuccess.value = false
 }
 </script>
 
@@ -37,7 +47,7 @@ function doCloseRegister() {
         </button>
     </form>
     <div class="mt-6 mb-2 text-stone-500 text-xs">还没有账号？</div>
-    <Register :wantMeClose="closeRegister" :show="showRegister" @close="doCloseRegister()" @reg-done="showRegSuccess=true">
+    <Register :wantMeClose="closeRegister" :show="showRegister" @close="doCloseRegister" @reg-done="doRegSuccess">
     </Register>
 
     <Transition enter-from-class="opacity-0" enter-active-class="transition ease-in-out duration-75 delay-150">
@@ -45,7 +55,7 @@ function doCloseRegister() {
             class="btn rounded-md border-0 bg-stone-700 hover:bg-stone-800 h-10 min-h-fit mt-4">注册账号</button>
     </Transition>
 
-    <RegisterDone :show="showRegSuccess" @close="showRegSuccess=false">
+    <RegisterDone :show="showRegSuccess" :welcomemsg="regSuccessMsg" @close="closeRegSuccess">
     </RegisterDone>
 
     <footer class="mt-10 text-sm text-stone-600">
