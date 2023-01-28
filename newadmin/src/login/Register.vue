@@ -228,7 +228,8 @@ function doRegister() {
     reqReg().then((res) => {
         preventAction.value = false
         emit('reg-done', res.data["data"])
-    }).catch((err) => {
+    }).catch((err) => {ccbejnchjvrvcdtlrhgbfbhncivnnlvjuleiighnr
+        
         preventAction.value = false
         toastMsg.value = err;
         toastShow.value = true;
