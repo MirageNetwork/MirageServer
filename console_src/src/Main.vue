@@ -1,29 +1,23 @@
-<!doctype html>
-<html>
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="css/tw.css" rel="stylesheet">
-  <title>蜃境 - 控制台 未登录</title>
-</head>
-
-<body>
-  <div class="relative flex min-h-screen flex-col justify-center bg-gray-200">
+<script setup>
+</script>
+<template>
+      <div class="relative flex min-h-screen flex-col justify-center bg-gray-200">
     <div
       class="absolute inset-0 bg-[url(/img/grid.svg)] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]">
     </div>
     <div class="md:w-2/3 self-center card lg:card-side bg-base-100 shadow-xl">
-      <figure><img src="img/logo.png" alt="Logo" /></figure>
+      <figure><img src="/img/logoname.png" alt="Logo" /></figure>
       <div class="card-body mx-auto lg:flex-shrink-0 w-96">
-        <h1 class="card-title">蜃境 - 控制台</h1>
+        <h1 class="card-title">蜃境</h1>
         <span class="badge badge-secondary">仅供测试</span>
         <div class="divider"></div>
 
         <div class="card-actions justify-end pt-4">
-          <a href="/addUser">
+          <!--
+          <a href="/admin">
             <button class="btn btn-primary">注册</button>
           </a>
+          -->
           <a href="/admin">
             <button class="btn btn-primary">进入控制台</button>
           </a>
@@ -31,6 +25,4 @@
       </div>
     </div>
   </div>
-</body>
-
-</html>
+</template>

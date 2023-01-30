@@ -507,34 +507,39 @@ func (h *Headscale) ensureUnixSocketIsAbsent() error {
 	return os.Remove(h.cfg.UnixSocket)
 }
 
-//go:embed admin/css
-var cssFS embed.FS
-
-//go:embed admin/img
-var imgFS embed.FS
-
-//go:embed admin/js
-var jsFS embed.FS
+//go:embed console/admin
+var adminFS embed.FS
 
 //go:embed console
-var consoleFS embed.FS
+var mainpageFS embed.FS
+
+//go:embed console/login
+var loginFS embed.FS
 
 func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	router := mux.NewRouter()
 
-	consoleDir, err := fs.Sub(consoleFS, "console")
+	adminDir, err := fs.Sub(adminFS, "console/admin")
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+	}
+	loginDir, err := fs.Sub(loginFS, "console/login")
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+	}
+	mainpageDir, err := fs.Sub(mainpageFS, "console")
 	if err != nil {
 		log.Fatal().Msg(err.Error())
 	}
 
-	router.PathPrefix("/admin/login").HandlerFunc(h.doLogin).Methods(http.MethodPost)
+	router.PathPrefix("/login").HandlerFunc(h.doLogin).Methods(http.MethodPost)
+	router.PathPrefix("/api/register").HandlerFunc(h.RegisterUserAPI).Methods(http.MethodPost)
+	login_router := router.PathPrefix("/login").Subrouter()
+	login_router.PathPrefix("").Handler(http.StripPrefix("/login", http.FileServer(http.FS(loginDir))))
 
 	console_router := router.PathPrefix("/admin").Subrouter()
-
 	console_router.PathPrefix("/api").Subrouter().Use(h.APIAuth)
 	console_router.Use(h.ConsoleAuth)
-
-	console_router.PathPrefix("/api/register").HandlerFunc(h.RegisterUserAPI).Methods(http.MethodPost)
 
 	console_router.HandleFunc("/api/self", h.ConsoleSelfAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/machines", h.ConsoleMachinesAPI).Methods(http.MethodGet)
@@ -546,29 +551,13 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 
 	console_router.HandleFunc("/logout", h.ConsoleLogout).Methods(http.MethodGet)
 
-	console_router.PathPrefix("").Handler(http.StripPrefix("/admin", http.FileServer(http.FS(consoleDir))))
+	console_router.PathPrefix("").Handler(http.StripPrefix("/admin", http.FileServer(http.FS(adminDir))))
 
 	//console_router.HandleFunc("", h.ConsolePanel).Methods(http.MethodGet)
 
 	router.HandleFunc("/login/callback", h.ConsoleLogin).Methods(http.MethodGet)
-	router.HandleFunc("/logout/callback", h.ConsoleLogoutCallback).Methods(http.MethodGet)
-	router.HandleFunc("/", h.ConsoleWelcome).Methods(http.MethodGet)
-
-	cssDir, err := fs.Sub(cssFS, "admin/css")
-	if err != nil {
-		log.Fatal().Msg(err.Error())
-	}
-	router.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.FS(cssDir))))
-	imgDir, err := fs.Sub(imgFS, "admin/img")
-	if err != nil {
-		log.Fatal().Msg(err.Error())
-	}
-	router.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(http.FS(imgDir))))
-	jsDir, err := fs.Sub(jsFS, "admin/js")
-	if err != nil {
-		log.Fatal().Msg(err.Error())
-	}
-	router.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.FS(jsDir))))
+	//	router.HandleFunc("/logout/callback", h.ConsoleLogoutCallback).Methods(http.MethodGet)
+	//	router.HandleFunc("/", h.ConsoleWelcome).Methods(http.MethodGet)
 
 	router.HandleFunc(ts2021UpgradePath, h.NoiseUpgradeHandler).Methods(http.MethodPost)
 
@@ -582,9 +571,6 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	router.HandleFunc("/apple", h.AppleConfigMessage).Methods(http.MethodGet)
 	router.HandleFunc("/apple/{platform}", h.ApplePlatformConfig).
 		Methods(http.MethodGet)
-
-	router.HandleFunc("/addUser", h.AddUserPage).Methods(http.MethodGet)
-	router.HandleFunc("/addUser", h.AddUserAction).Methods(http.MethodPost)
 
 	router.HandleFunc("/windows", h.WindowsConfigMessage).Methods(http.MethodGet)
 	router.HandleFunc("/windows/tailscale.reg", h.WindowsRegConfig).
@@ -603,7 +589,9 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	apiRouter.Use(h.httpAuthenticationMiddleware)
 	apiRouter.PathPrefix("/v1/").HandlerFunc(grpcMux.ServeHTTP)
 
-	router.PathPrefix("/").HandlerFunc(stdoutHandler)
+	//router.PathPrefix("/").HandlerFunc(stdoutHandler)
+
+	router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.FS(mainpageDir))))
 
 	return router
 }

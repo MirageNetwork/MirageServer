@@ -7,7 +7,7 @@ const DRIVE_LETTER_REGEX = /^[a-z]:/i;
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/admin',
+  base: '/',
   mode: 'production',
   plugins: [vue()],
   build: {
@@ -17,6 +17,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
+        admin: resolve(__dirname, 'admin/index.html'),
         login: resolve(__dirname, 'login/index.html')
       },
       output:{

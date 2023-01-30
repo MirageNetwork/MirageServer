@@ -108,11 +108,6 @@ func (h *Headscale) getIDTokenFromOIDCCallback(
 // WebUI控制台鉴权中间件
 func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//TODO: 排除登录页面（后续调整路由后待改进）
-		if strings.HasPrefix(r.URL.Path, "/admin/login") || strings.HasPrefix(r.URL.Path, "/admin/assets") || strings.HasPrefix(r.URL.Path, "/admin/img") || strings.HasPrefix(r.URL.Path, "/admin/api/register") {
-			next.ServeHTTP(w, r)
-			return
-		}
 		//检查是否OIDC callback
 		if rawIDToken, idToken := h.getIDTokenFromOIDCCallback(w, r); idToken != nil {
 			newQuery := r.URL.Query()
@@ -146,7 +141,7 @@ func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 					newQuery := r.URL.Query()
 					newQuery.Add("next_url", nextURL)
 					r.URL.RawQuery = newQuery.Encode()
-					http.Redirect(w, r, "/admin/login?"+r.URL.RawQuery, http.StatusFound)
+					http.Redirect(w, r, "/login?"+r.URL.RawQuery, http.StatusFound)
 					return
 				}
 				var claims IDTokenClaims
@@ -159,7 +154,7 @@ func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 					newQuery := r.URL.Query()
 					newQuery.Add("next_url", nextURL)
 					r.URL.RawQuery = newQuery.Encode()
-					http.Redirect(w, r, "/admin/login?"+r.URL.RawQuery, http.StatusFound)
+					http.Redirect(w, r, "/login?"+r.URL.RawQuery, http.StatusFound)
 					return
 				}
 				next.ServeHTTP(w, r)
@@ -169,7 +164,7 @@ func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 				newQuery := r.URL.Query()
 				newQuery.Add("next_url", nextURL)
 				r.URL.RawQuery = newQuery.Encode()
-				http.Redirect(w, r, "/admin/login?"+r.URL.RawQuery, http.StatusFound)
+				http.Redirect(w, r, "/login?"+r.URL.RawQuery, http.StatusFound)
 			}
 		}
 	})

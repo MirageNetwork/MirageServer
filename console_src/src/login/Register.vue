@@ -161,7 +161,7 @@ function startCodeCounter() {
 function reqSMSCode() {
     return new Promise((resolve, reject) => {
         axios
-            .post("/admin/api/register", {
+            .post("/api/register", {
                 name: nameInput.value?.value,
                 mobile: phoneInput.value?.value,
             })
@@ -206,7 +206,7 @@ function sendCode() {
 function reqReg() {
     return new Promise((resolve, reject) => {
         axios
-            .post("/admin/api/register", {
+            .post("/api/register", {
                 name: nameInput.value?.value,
                 mobile: phoneInput.value?.value,
                 verifyCode: codeInput.value

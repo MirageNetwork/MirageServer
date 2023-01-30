@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import { createMemoryHistory, createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 import './style.css'
-import App from './App.vue'
+import App from './Console.vue'
 import VueClickAway from "vue3-click-away"
 import Machines from './components/Machines.vue'
 import Machine from './components/Machine.vue'

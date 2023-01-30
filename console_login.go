@@ -1,9 +1,7 @@
 package headscale
 
 import (
-	"bytes"
 	_ "embed"
-	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -78,64 +76,5 @@ func (h *Headscale) ConsoleLogout(
 	}
 
 	http.SetCookie(w, delCookie)
-	http.Redirect(w, r, h.cfg.OIDC.LogoutURL+"?id_token_hint="+idtoken+"&post_logout_redirect_uri="+h.cfg.ServerURL+"/admin/login", http.StatusFound)
-}
-
-func (h *Headscale) ConsoleLogoutCallback(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
-	/*
-		delCookie := &http.Cookie{
-			Name:     "OIDC_Token",
-			Domain:   strings.Split(h.cfg.ServerURL, "://")[1],
-			Expires:  time.Now().Add(time.Minute * 5),
-			MaxAge:   -1,
-			Secure:   true,
-			HttpOnly: true,
-			Path:     "/",
-		}
-
-		http.SetCookie(w, delCookie)
-	*/
-	renderResult(w, false, "您已经成功登出！", "/", "返回首页")
-}
-
-//go:embed admin/welcome.html
-var welcomeHTML string
-
-func (h *Headscale) ConsoleWelcome(
-	writer http.ResponseWriter,
-	req *http.Request,
-) {
-	welcomeT := template.Must(template.New("welcome").Parse(welcomeHTML))
-	var payload bytes.Buffer
-	if err := welcomeT.Execute(&payload, nil); err != nil {
-		log.Error().
-			Str("handler", "welcomeHTML").
-			Err(err).
-			Msg("Could not render welcome HTML")
-
-		writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		writer.WriteHeader(http.StatusInternalServerError)
-		_, err := writer.Write([]byte("Could not render welcome index template"))
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
-
-		return
-	}
-
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-	_, err := writer.Write(payload.Bytes())
-	if err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Failed to write response")
-	}
+	http.Redirect(w, r, h.cfg.OIDC.LogoutURL+"?id_token_hint="+idtoken+"&post_logout_redirect_uri="+h.cfg.ServerURL+"/login", http.StatusFound)
 }
