@@ -537,8 +537,10 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	login_router := router.PathPrefix("/login").Subrouter()
 	login_router.PathPrefix("").Handler(http.StripPrefix("/login", http.FileServer(http.FS(loginDir))))
 
+	api_router := router.PathPrefix("/admin/api").Subrouter()
+	api_router.Use(h.APIAuth)
+
 	console_router := router.PathPrefix("/admin").Subrouter()
-	console_router.PathPrefix("/api").Subrouter().Use(h.APIAuth)
 	console_router.Use(h.ConsoleAuth)
 
 	console_router.HandleFunc("/api/self", h.ConsoleSelfAPI).Methods(http.MethodGet)

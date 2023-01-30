@@ -108,6 +108,10 @@ func (h *Headscale) getIDTokenFromOIDCCallback(
 // WebUI控制台鉴权中间件
 func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "admin/api") {
+			h.APIAuth(next).ServeHTTP(w, r)
+			return
+		}
 		//检查是否OIDC callback
 		if rawIDToken, idToken := h.getIDTokenFromOIDCCallback(w, r); idToken != nil {
 			newQuery := r.URL.Query()
@@ -191,7 +195,7 @@ func (h *Headscale) APIAuth(next http.Handler) http.Handler {
 					Reason:     "IDaaS无法校验",
 				}
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
-				w.WriteHeader(http.StatusOK)
+				w.WriteHeader(http.StatusUnauthorized)
 				json.NewEncoder(w).Encode(&renderData)
 				return
 			}
@@ -207,7 +211,7 @@ func (h *Headscale) APIAuth(next http.Handler) http.Handler {
 					Reason:     "Token解析Claim错误",
 				}
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
-				w.WriteHeader(http.StatusOK)
+				w.WriteHeader(http.StatusUnauthorized)
 				json.NewEncoder(w).Encode(&renderData)
 				return
 			}
@@ -219,7 +223,7 @@ func (h *Headscale) APIAuth(next http.Handler) http.Handler {
 				Reason:     "未读取到Token",
 			}
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(&renderData)
 			return
 		}

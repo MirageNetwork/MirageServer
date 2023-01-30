@@ -77,9 +77,12 @@ onMounted(() => {
 
   axios.interceptors.response.use(
     response => {
-      if (response.data["errormsg"] == "") {
+      if (response.status == 200) {
         netErrMsg.value = ""
         needReauth.value = false
+      } else {
+        netErrMsg.value = "登录状态超时失效"
+        needReauth.value = true
       }
       return response
     },
