@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch, watchEffect, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import UserMenu from "./components/UserMenu.vue";
+import UserMenu from "./components/UserMenu.vue"
 
 const router = useRouter();
 const route = useRoute();
@@ -10,6 +10,12 @@ const route = useRoute();
 const userAvatar = ref(null)
 const avatarLeft = ref(0)
 const avatarTop = ref(0)
+
+const needReauth = ref(false)
+const netErrMsg = ref("")
+const curURL = computed(() => {
+  return route.path
+})
 
 function refreshUserMenuPos() {
   avatarLeft.value = userAvatar.value?.getBoundingClientRect().left
@@ -39,35 +45,90 @@ const Basedomain = ref("");
 const UserName = ref("");
 const UserNameHead = ref("");
 const OrgName = ref("");
+
+let getSelfIntID;
+function getSelf() {
+  return new Promise((resolve, reject) => {
+    axios
+      .get("/admin/api/self")
+      .then(function (response) {
+        // 处理成功情况
+        if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
+          UserAccount.value = response.data["useraccount"];
+          Basedomain.value = response.data["basedomain"];
+          UserName.value = response.data["username"];
+          UserNameHead.value = response.data["usernamehead"];
+          OrgName.value = response.data["orgname"];
+          resolve("success")
+        }
+        reject("err")
+      })
+      .catch(function (error) {
+        // 处理错误情况
+        reject("error");
+      })
+  });
+}
+
 onMounted(() => {
   refreshUserMenuPos()
-  window.addEventListener("resize",refreshUserMenuPos)
-  window.addEventListener("scroll",refreshUserMenuPos)
+  window.addEventListener("resize", refreshUserMenuPos)
+  window.addEventListener("scroll", refreshUserMenuPos)
 
-  axios
-    .get("/admin/api/self")
-    .then(function (response) {
-      // 处理成功情况
-
-      if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
-        UserAccount.value = response.data["useraccount"];
-        Basedomain.value = response.data["basedomain"];
-        UserName.value = response.data["username"];
-        UserNameHead.value = response.data["usernamehead"];
-        OrgName.value = response.data["orgname"];
+  axios.interceptors.response.use(
+    response => {
+      if (response.data["errormsg"] == "") {
+        netErrMsg.value = ""
+        needReauth.value = false
       }
-    })
-    .catch(function (error) {
-      // 处理错误情况
-      alert(error);
-    })
-    .then(function () {
-      // 总是会执行
-    });
+      return response
+    },
+    error => {
+      if (error && error.response) {
+        switch (error.response.status) {
+          case 400: error.message = '请求错误(400)';
+            break;
+          case 401: error.message = '未授权，请重新登录(401)';
+            break;
+          case 403: error.message = '拒绝访问(403)';
+            break;
+          case 404: error.message = '请求出错(404)';
+            break;
+          case 408: error.message = '请求超时(408)';
+            break;
+          case 500: error.message = '服务器错误(500)';
+            break;
+          case 501: error.message = '服务未实现(501)';
+            break;
+          case 502: error.message = '网络错误(502)';
+            break;
+          case 503: error.message = '服务不可用(503)';
+            break;
+          case 504: error.message = '网络超时(504)';
+            break;
+          case 505: error.message = 'HTTP版本不受支持(505)';
+            break;
+          default: error.message = '连接出错' + error.response.status;
+        }
+      } else {
+        error.message = '连接服务器失败!'
+      }
+      netErrMsg.value = error.message
+      needReauth.value = true
+      return Promise.reject(error)
+    }
+  )
+
+  getSelf().then().catch();
+  getSelfIntID = setInterval(() => {
+    getSelf().then().catch();
+  }, 15000);
 });
 </script>
 
 <template>
+  <div v-if="needReauth" class="bg-amber-700 text-white font-medium py-2 px-4 text-center">连接服务器出现{{ netErrMsg }}，请尝试 <a
+      class="text-amber-100" :href="'/login?next_url=' + curURL">重新登录</a> </div>
   <div class="bg-base-200 border-b border-base-300 pt-4 mb-6">
     <div class="container mx-auto mb-4 md:mb-6">
       <header class="flex justify-between items-center px-2 md:px-0">
@@ -141,7 +202,29 @@ onMounted(() => {
       </nav>
     </div>
   </div>
-  <router-view></router-view>
+  <router-view v-if="!needReauth"></router-view>
+  <main v-if="needReauth" class="container mx-auto pb-20 md:pb-24">
+    <section class="mb-24">
+      <header class="mb-8">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center">
+            <h1 class="text-3xl font-semibold tracking-tight leading-tight mb-2">错误</h1>
+          </div>
+        </div>
+      </header>
+      <div class="w-full p-3 flex items-center justify-center text-sm">
+        <div class="flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            class="mr-3 text-red-400 h-5 w-5">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <div><strong>错误：</strong> 请求失败 {{ netErrMsg }}</div>
+        </div>
+      </div>
+    </section>
+  </main>
 </template>
 
 <style>

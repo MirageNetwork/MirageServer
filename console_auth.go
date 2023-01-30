@@ -42,7 +42,7 @@ func (h *Headscale) doAliLogin(w http.ResponseWriter, r *http.Request, nextURL s
 		extras = append(extras, oauth2.SetAuthURLParam(k, v))
 	}
 	nextURL, err := url.PathUnescape(nextURL)
-	toDistPath := "/admin"
+	toDistPath := "/"
 	if strings.Contains(nextURL, "#") {
 		toDistPath = strings.Split(nextURL, "#")[1]
 	}

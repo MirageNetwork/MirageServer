@@ -8,9 +8,9 @@
     <div class="md:w-2/3 self-center card lg:card-side bg-base-100 shadow-xl">
       <figure><img src="/img/logoname.png" alt="Logo" /></figure>
       <div class="card-body mx-auto lg:flex-shrink-0 w-96">
-        <h1 class="card-title">蜃境</h1>
+      <!--  <h1 class="card-title">蜃境</h1>-->
         <span class="badge badge-secondary">仅供测试</span>
-        <div class="divider"></div>
+      <!--  <div class="divider"></div>-->
 
         <div class="card-actions justify-end pt-4">
           <!--
