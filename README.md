@@ -1,9 +1,11 @@
 ![Mirage logo](./docs/logo/logo_withname@1024.png)    
 基于Headscale实现的具有WebUI的Tailscale控制服务器    
 **注意** 此版本可能与Headscale、Tailscale官方版本均有不兼容的情况，如需与官方版本并用需要考虑进行兼容性测试。    
-    
+   
+      
 以下是Headscale原README文件。    
 感谢Tailscale、Headscale及开源社区的共同努力。    
+      
 ----    
 
 ![headscale logo](./docs/logo/headscale3_header_stacked_left.png)
