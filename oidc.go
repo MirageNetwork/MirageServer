@@ -27,8 +27,10 @@ const (
 	errOIDCAllowedDomains      = Error("authenticated principal does not match any allowed domain")
 	errOIDCAllowedGroups       = Error("authenticated principal is not in any allowed group")
 	errOIDCAllowedUsers        = Error("authenticated principal does not match any allowed user")
-	errOIDCInvalidMachineState = Error("requested machine state key expired before authorisation completed")
-	errOIDCNodeKeyMissing      = Error("could not get node key from cache")
+	errOIDCInvalidMachineState = Error(
+		"requested machine state key expired before authorisation completed",
+	)
+	errOIDCNodeKeyMissing = Error("could not get node key from cache")
 )
 
 type IDTokenClaims struct {
@@ -67,6 +69,14 @@ func (h *Headscale) initOIDC() error {
 	}
 
 	return nil
+}
+
+func (h *Headscale) determineTokenExpiration(idTokenExpiration time.Time) time.Time {
+	if h.cfg.OIDC.UseExpiryFromToken {
+		return idTokenExpiration
+	}
+
+	return time.Now().Add(h.cfg.OIDC.Expiry)
 }
 
 // RegisterOIDC redirects to the OIDC provider for authentication
@@ -194,6 +204,7 @@ func (h *Headscale) OIDCCallback(
 	if err != nil {
 		return
 	}
+	idTokenExpiry := h.determineTokenExpiration(idToken.Expiry)
 
 	// TODO: we can use userinfo at some point to grab additional information about the user (groups membership, etc)
 	// userInfo, err := oidcProvider.UserInfo(context.Background(), oauth2.StaticTokenSource(oauth2Token))
@@ -207,7 +218,7 @@ func (h *Headscale) OIDCCallback(
 	if err != nil {
 		return
 	}
-	/* cgao6: temp unsed part
+	/* cgao6: temp unused part
 
 	if err := validateOIDCAllowedDomains(writer, h.cfg.OIDC.AllowedDomains, claims); err != nil {
 		return
@@ -220,9 +231,13 @@ func (h *Headscale) OIDCCallback(
 	if err := validateOIDCAllowedUsers(writer, h.cfg.OIDC.AllowedUsers, claims); err != nil {
 		return
 	}
-
 	*/
-	nodeKey, machineExists, err := h.validateMachineForOIDCCallback(writer, state, claims, idToken.Expiry)
+	nodeKey, machineExists, err := h.validateMachineForOIDCCallback(
+		writer,
+		state,
+		claims,
+		idTokenExpiry,
+	)
 	if err != nil || machineExists {
 		return
 	}
@@ -240,7 +255,7 @@ func (h *Headscale) OIDCCallback(
 		return
 	}
 
-	if err := h.registerMachineForOIDCCallback(writer, user, nodeKey, idToken.Expiry); err != nil {
+	if err := h.registerMachineForOIDCCallback(writer, user, nodeKey, idTokenExpiry); err != nil {
 		return
 	}
 
