@@ -1,6 +1,6 @@
 <script setup>
 import { watch, ref, onMounted, computed } from 'vue';
-import { useDisScroll } from '../utils.js';
+import { useDisScroll } from '/src/utils.js';
 
 useDisScroll()
 
@@ -10,7 +10,7 @@ const props = defineProps({
 </script>
 
 <template>
-    <div @click.self="$emit('close')" class="fixed overflow-y-auto inset-0 py-8 z-10 bg-gray-900 bg-opacity-[0.07]"
+    <div @click.self="$emit('close')" class="fixed overflow-y-auto inset-0 py-8 z-30 bg-gray-900 bg-opacity-[0.07]"
         style="pointer-events: auto;">
         <div class="bg-white rounded-lg relative p-4 md:p-6 text-gray-700 max-w-lg min-w-[19rem] my-8 mx-auto w-[97%] shadow-2xl"
             style="pointer-events: auto;">

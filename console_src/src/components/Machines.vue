@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, nextTick, onMounted,onUnmounted, watch, watchEffect } from "vue";
+import { ref, computed, nextTick, onMounted, onUnmounted, watch, watchEffect } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
 import MachineMenu from "./MachineMenu.vue";
-import RemoveMachine from "./RemoveMachine.vue";
+import RemoveMachine from "./mmenu/RemoveMachine.vue";
+import UpdateHostname from "./mmenu/UpdateHostname.vue";
 import Toast from "./Toast.vue";
 
 //与框架交互部分
@@ -53,11 +54,16 @@ const machineMenuShow = ref(false);
 const machineBtnShow = ref(false);
 
 const delConfirmShow = ref(false);
-
 function showDelConfirm() {
   machineBtnShow.value = false;
   closeMachineMenu(currentMID.value);
   delConfirmShow.value = true;
+}
+const updateHostnameShow = ref(false);
+function showUpdateHostname() {
+  machineBtnShow.value = false;
+  closeMachineMenu(currentMID.value);
+  updateHostnameShow.value = true;
 }
 
 //数据填充控制部分
@@ -94,7 +100,7 @@ function getMachines() {
           }
           resolve();
         } else if (response.data["errormsg"] != undefined) {
-          toastMsg.value = "获取机器信息出错：" + response.data["errormsg"];
+          toastMsg.value = "获设备信息出错：" + response.data["errormsg"];
           toastShow.value = true;
           reject();
         }
@@ -112,8 +118,8 @@ function getMachines() {
 }
 onMounted(() => {
   refreshMachineMenuPos()
-  window.addEventListener("resize",refreshMachineMenuPos)
-  window.addEventListener("scroll",refreshMachineMenuPos)
+  window.addEventListener("resize", refreshMachineMenuPos)
+  window.addEventListener("scroll", refreshMachineMenuPos)
 
 
   getMachines().then().catch();
@@ -121,27 +127,27 @@ onMounted(() => {
     getMachines().then().catch();
   }, 15000);
 });
-onUnmounted(()=>{
-window.removeEventListener("resize",refreshMachineMenuPos)
-window.removeEventListener("scroll",refreshMachineMenuPos)
+onUnmounted(() => {
+  window.removeEventListener("resize", refreshMachineMenuPos)
+  window.removeEventListener("scroll", refreshMachineMenuPos)
 })
 onBeforeRouteLeave(() => {
   clearInterval(getMIntID);
 });
 
 //服务端请求
-function setExpires(id){
+function setExpires(id) {
   closeMachineMenu()
   axios
     .post("/admin/api/machines", {
       mid: id,
-      state:"set-expires"
+      state: "set-expires"
     })
     .then(function (response) {
       if (response.data["status"] == "success") {
-        MList.value[id]["neverExpires"]=response.data["data"]["neverExpires"]
-        MList.value[id]["expirydesc"]=response.data["data"]["expires"]
-        if (response.data["data"]["neverExpires"]==true){
+        MList.value[id]["neverExpires"] = response.data["data"]["neverExpires"]
+        MList.value[id]["expirydesc"] = response.data["data"]["expires"]
+        if (response.data["data"]["neverExpires"] == true) {
           toastMsg.value = "已禁用密钥过期";
         } else {
           toastMsg.value = "已启用密钥过期";
@@ -164,7 +170,7 @@ function removeMachine(id) {
     .then(function (response) {
       if (response.data["status"] == "OK") {
         delConfirmShow.value = false;
-        toastMsg.value = MList.value[id]["givename"] + "已从您的蜃境网络移除！";
+        toastMsg.value = MList.value[id]["name"] + "已从您的蜃境网络移除！";
         toastShow.value = true;
         delete MList.value[id];
       } else {
@@ -174,6 +180,22 @@ function removeMachine(id) {
     .catch(function (error) {
       console.log(error);
     });
+}
+
+function hostnameUpdateDone(newName, newAutomaticNameMode, wantClose) {
+  MList.value[currentMID.value]["name"] = newName
+  MList.value[currentMID.value]["automaticNameMode"] = newAutomaticNameMode
+  nextTick(() => {
+    updateHostnameShow.value = !wantClose
+    nextTick(() => {
+      toastMsg.value = "已更新设备名称！"
+      toastShow.value = true
+    })
+  })
+}
+function hostnameUpdateFail(msg) {
+  toastMsg.value = "更新设备名称失败！"
+  toastShow.value = true
 }
 
 //客户端操作动作部分
@@ -189,8 +211,6 @@ function copyMIPv6() {
     toastShow.value = true;
   });
 }
-
-
 </script>
 
 <template>
@@ -236,7 +256,7 @@ function copyMIPv6() {
                         'bg-green-500': m.ifonline,
                         'bg-gray-300': !m.ifonline,
                       }" class="inline-block w-2 h-2 rounded-full relative -top-px lg:hidden mr-2"></span>
-                      <a class="stretched-link">{{ m.givename }} </a>
+                      <a class="stretched-link">{{ m.name }} </a>
                     </p>
                     <div class="md:hidden flex space-x-1 truncate">
                       <span class="text-sm">{{ m.mipv4 }}</span><span>·</span><span
@@ -307,7 +327,7 @@ function copyMIPv6() {
                         <span>{{ m.mipv4 }} </span>
                       </div>
                       <div v-if="machineIPShow && currentMID == id"
-                        class="absolute -mt-1 -ml-2 -top-px -left-px shadow-md cursor-pointer rounded-md active:shadow-sm transition-shadow duration-100 ease-in-out z-50"
+                        class="absolute -mt-1 -ml-2 -top-px -left-px shadow-md cursor-pointer rounded-md active:shadow-sm transition-shadow duration-100 ease-in-out z-20"
                         style="visibility: visible; max-width: 934px">
                         <div class="flex border rounded-md button-outline bg-white">
                           <div @click="copyMIPv4" class="flex min-w-0 py-1 px-2 hover:bg-gray-100 rounded-l-md">
@@ -357,7 +377,7 @@ function copyMIPv6() {
                 <div v-if="!machineBtnShow && !machineMenuShow || currentMID != id" @click="openMachineMenu(id, $event)"
                   class="flex-none w-12 -mt-0.5 relative">
                   <button
-                    class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow duration-100 ease-in-out z-50">
+                    class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow duration-100 ease-in-out z-20">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                       class="text-gray-500">
@@ -369,7 +389,7 @@ function copyMIPv6() {
                 </div>
                 <!---->
                 <div v-if="(machineBtnShow || machineMenuShow) && currentMID == id" @click="openMachineMenu(id, $event)"
-                  class="flex-none w-12 border button-outline bg-white shadow-md cursor-pointer focus:outline-none focus:ring -mt-0.5 relative py-0.5 px-2 rounded-md border-gray-300/100 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 transition-shadow duration-100 ease-in-out z-50 ">
+                  class="flex-none w-12 border button-outline bg-white shadow-md cursor-pointer focus:outline-none focus:ring -mt-0.5 relative py-0.5 px-2 rounded-md border-gray-300/100 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 transition-shadow duration-100 ease-in-out z-20 ">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                     class="text-gray-500">
@@ -394,13 +414,18 @@ function copyMIPv6() {
   <!--设备配置菜单显示-->
   <Teleport to="body">
     <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" :neverExpires="MList[currentMID].neverExpires"
-    @close="closeMachineMenu" @set-expires="setExpires(currentMID)" @showdialog-remove="showDelConfirm"></MachineMenu>
+      @close="closeMachineMenu" @set-expires="setExpires(currentMID)" @showdialog-remove="showDelConfirm"
+      @showdialog-updatehostname="showUpdateHostname"></MachineMenu>
   </Teleport>
 
   <!-- 删除设备提示框显示 -->
   <Teleport to="body">
-    <RemoveMachine v-if="delConfirmShow" :machine-name="MList[currentMID].givename" @close="delConfirmShow = false"
+    <RemoveMachine v-if="delConfirmShow" :machine-name="MList[currentMID].name" @close="delConfirmShow = false"
       @confirm="removeMachine(currentMID)"></RemoveMachine>
+    <UpdateHostname v-if="updateHostnameShow" :id="currentMID" :given-name="MList[currentMID].name"
+      :host-name="MList[currentMID].hostname" :auto-gen="MList[currentMID].automaticNameMode"
+      @close="updateHostnameShow = false" @update-done="hostnameUpdateDone" @update-fail="hostnameUpdateFail">
+    </UpdateHostname>
   </Teleport>
 
 </template>

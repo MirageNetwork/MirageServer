@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, nextTick,watch, onMounted } from "vue";
+import { ref, computed, nextTick, watch, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import MachineMenu from "./MachineMenu.vue";
-import RemoveMachine from "./RemoveMachine.vue";
+import RemoveMachine from "./mmenu/RemoveMachine.vue";
+import UpdateHostname from "./mmenu/UpdateHostname.vue";
 import Toast from "./Toast.vue";
 
 const devmode = ref(false);
@@ -71,6 +72,11 @@ const delConfirmShow = ref(false);
 function showDelConfirm() {
     closeMachineMenu();
     delConfirmShow.value = true;
+}
+const updateHostnameShow = ref(false);
+function showUpdateHostname() {
+    closeMachineMenu();
+    updateHostnameShow.value = true;
 }
 
 //数据填充控制部分
@@ -156,7 +162,7 @@ function removeMachine() {
         .then(function (response) {
             if (response.data["status"] == "OK") { //TODO: 需处理设备页面删除跳转后的Toast显示
                 delConfirmShow.value = false;
-                toastMsg.value = currentMachine.value["givename"] + "已从您的蜃境网络移除！";
+                toastMsg.value = currentMachine.value["name"] + "已从您的蜃境网络移除！";
                 toastShow.value = true;
 
                 router.push('/machines')
@@ -167,6 +173,21 @@ function removeMachine() {
         .catch(function (error) {
             console.log(error);
         });
+}
+function hostnameUpdateDone(newName, newAutomaticNameMode, wantClose) {
+    currentMachine.value["name"] = newName
+    currentMachine.value["automaticNameMode"] = newAutomaticNameMode
+    nextTick(() => {
+        updateHostnameShow.value = !wantClose
+        nextTick(() => {
+            toastMsg.value = "已更新设备名称！"
+            toastShow.value = true
+        })
+    })
+}
+function hostnameUpdateFail(msg) {
+    toastMsg.value = "更新设备名称失败！"
+    toastShow.value = true
 }
 </script>
 
@@ -181,7 +202,7 @@ function removeMachine() {
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h1 class="text-2xl font-semibold tracking-tight leading-tight truncate flex-shrink-0 max-w-full"
                         tabindex="-1">
-                        {{ currentMachine.givename }}
+                        {{ currentMachine.name }}
                     </h1>
                     <div class="flex">
                         <div class="flex gap-2 flex-wrap">
@@ -333,7 +354,7 @@ function removeMachine() {
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">设备名称</dt>
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
-                                    <div class="truncate">{{ currentMachine.givename }}</div>
+                                    <div class="truncate">{{ currentMachine.name }}</div>
                                     <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
                                 </div>
                             </dd>
@@ -343,7 +364,7 @@ function removeMachine() {
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
                                     <div class="truncate">
-                                        {{ currentMachine.givename }}.{{ currentMachine.useraccount }}.{{
+                                        {{ currentMachine.name }}.{{ currentMachine.useraccount }}.{{
                                             basedomain
                                         }}
                                     </div>
@@ -353,7 +374,7 @@ function removeMachine() {
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">系统主机名</dt>
-                            <dd class="min-w-0 truncate">{{ currentMachine.oshostname }}</dd>
+                            <dd class="min-w-0 truncate">{{ currentMachine.hostname }}</dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">操作系统</dt>
@@ -503,14 +524,19 @@ function removeMachine() {
 
     <!--设备配置菜单显示-->
     <Teleport to="body">
-        <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" :neverExpires="currentMachine.neverExpires" @close="closeMachineMenu"
-            @set-expires="setExpires" @showdialog-remove="showDelConfirm"></MachineMenu>
+        <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop"
+            :neverExpires="currentMachine.neverExpires" @close="closeMachineMenu" @set-expires="setExpires"
+            @showdialog-remove="showDelConfirm" @showdialog-updatehostname="showUpdateHostname"></MachineMenu>
     </Teleport>
 
     <!-- 删除设备提示框显示 -->
     <Teleport to="body">
-        <RemoveMachine v-if="delConfirmShow" :machine-name="currentMachine.givename" @close="delConfirmShow = false"
+        <RemoveMachine v-if="delConfirmShow" :machine-name="currentMachine.name" @close="delConfirmShow = false"
             @confirm="removeMachine"></RemoveMachine>
+        <UpdateHostname v-if="updateHostnameShow" :id="currentMID" :host-name="currentMachine.hostname"
+            :given-name="currentMachine.name" :auto-gen="currentMachine.automaticNameMode"
+            @close="updateHostnameShow = false" @update-done="hostnameUpdateDone" @update-fail="hostnameUpdateFail">
+        </UpdateHostname>
     </Teleport>
 </template>
 

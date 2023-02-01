@@ -202,7 +202,7 @@ function updateKeyExpiry() {
                   v-model="keyExpiryInputValue"
                   @input="keyExpiryCheck(false)"
                   @blur="keyExpiryCheck(true)"
-                  class="input z-10 border focus:outline-blue-500/60 hover:border border-stone-200 hover:border-stone-400 rounded-r-none h-9 min-h-fit"
+                  class="input z-0 border focus:outline-blue-500/60 hover:border border-stone-200 hover:border-stone-400 rounded-r-none h-9 min-h-fit"
                   inputmode="numeric"
                   pattern="[0-9]*"
                   id="key-expiry-duration"

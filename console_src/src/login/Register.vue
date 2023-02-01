@@ -339,7 +339,7 @@ function doRegister() {
                         @complete="getNewVerifyCode">
                     </VerifyCode>
                     <button ref="sendCodeBtn" :disabled="sendCodeBtnDis" @click="sendCode"
-                        class="text-xs h-9 w-20 z-10 text-blue-500 hover:text-blue-900 disabled:text-stone-500/60">{{
+                        class="text-xs h-9 w-20 z-0 text-blue-500 hover:text-blue-900 disabled:text-stone-500/60">{{
                             codeBtnText
                         }}</button>
                 </div>
@@ -363,7 +363,7 @@ function doRegister() {
                 </svg></button>
         </div>
     </Transition>
-    <div v-if="preventAction" class="flex fixed overflow-y-auto inset-0 py-8 z-20 bg-gray-900 bg-opacity-[0.07]"
+    <div v-if="preventAction" class="flex fixed overflow-y-auto inset-0 py-8 z-100 bg-gray-900 bg-opacity-[0.07]"
         style="pointer-events: auto;">
         <svg t="1674733336391" class="icon w-full animate-slowspin self-center" viewBox="0 0 1024 1024" version="1.1"
             xmlns="http://www.w3.org/2000/svg" p-id="9256" width="200" height="200">

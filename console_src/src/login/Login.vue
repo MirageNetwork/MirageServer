@@ -30,7 +30,7 @@ function closeRegSuccess() {
 
 <template>
     <div class="mb-10">
-        <img class="h-8 w-24" src="/img/logoname.png" />
+        <img class="h-8 w-24" src="/img/logo_withname@60.png" />
     </div>
     <form method="POST">
         <input type="hidden" name="provider" value="Ali">

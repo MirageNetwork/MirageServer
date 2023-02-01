@@ -131,7 +131,7 @@ onMounted(() => {
 
 <template>
   <div v-if="needReauth" class="bg-amber-700 text-white font-medium py-2 px-4 text-center">连接服务器出现{{ netErrMsg }}，请尝试 <a
-      class="text-amber-100" :href="'/login?next_url=' + curURL">重新登录</a> </div>
+      class="text-amber-100" :href="'/login?next_url=/admin#' + curURL">重新登录</a> </div>
   <div class="bg-base-200 border-b border-base-300 pt-4 mb-6">
     <div class="container mx-auto mb-4 md:mb-6">
       <header class="flex justify-between items-center px-2 md:px-0">

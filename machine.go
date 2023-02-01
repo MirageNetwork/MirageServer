@@ -56,9 +56,10 @@ type Machine struct {
 	//
 	// GivenName is the name used in all DNS related
 	// parts of headscale.
-	GivenName string `gorm:"type:varchar(63);unique_index"`
-	UserID    uint
-	User      User `gorm:"foreignKey:UserID"`
+	GivenName   string `gorm:"type:varchar(63)"`
+	AutoGenName bool   `gorm:"default:true"`
+	UserID      uint
+	User        User `gorm:"foreignKey:UserID"`
 
 	RegisterMethod string
 
@@ -507,6 +508,46 @@ func (h *Headscale) ExpireMachine(machine *Machine) error {
 	}
 
 	return nil
+}
+
+// setAutoGenName can set whether a machine should use hostname as its given name
+// (will generated if there's already same hostname node). will return new givenname when success.
+func (h *Headscale) setAutoGenName(machine *Machine, newName string) (string, error) {
+	isAutoGen := false
+	if newName == "" {
+		isAutoGen = true
+	}
+	if !(machine.AutoGenName && machine.GivenName == newName) {
+		if isAutoGen {
+			if machine.AutoGenName == isAutoGen {
+				return machine.GivenName, nil
+			}
+			newGiveName, err := h.GenerateGivenName(machine.HostInfo.BackendLogID, machine.Hostname)
+			if err != nil {
+				return "", fmt.Errorf("fail to gen a new given name: %w", err)
+			}
+			machine.GivenName = newGiveName
+		} else {
+			_, err := h.GetMachineByGivenName(machine.User.Name, newName)
+			if err != nil && err != ErrMachineNotFound {
+				return "", fmt.Errorf("fail to check whether new name already exist: %w", err)
+			} else if err == nil {
+				return machine.GivenName, nil
+			}
+			err = h.RenameMachine(machine, newName)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+	machine.AutoGenName = isAutoGen
+
+	h.setLastStateChangeToNow()
+	if err := h.db.Save(machine).Error; err != nil {
+		return "", fmt.Errorf("failed to save setAutoGen machine in the database: %w", err)
+	}
+
+	return machine.GivenName, nil
 }
 
 // RenameMachine takes a Machine struct and a new GivenName for the machines

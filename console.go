@@ -55,19 +55,19 @@ type machineData struct {
 	AvailableUpdateVersion string   `json:"availableUpdateVersion"` //未实现
 	LastSeen               string   `json:"lastSeen"`               //未实现
 	ConnectedToControl     bool     `json:"connectedToControl"`     //未实现
-	AutomaticNameMode      bool     `json:"automaticNameMode"`      //未实现
-	TailnetLockKey         string   `json:"tailnetLockKey"`         //未实现
+	AutomaticNameMode      bool     `json:"automaticNameMode"`
+	TailnetLockKey         string   `json:"tailnetLockKey"` //未实现
 }
 
 type machineItem struct {
-	GiveName     string   `json:"givename"`
+	Name         string   `json:"name"`
 	UserAccount  string   `json:"useraccount"`
 	UserNameHead string   `json:"usernamehead"`
 	MIPv4        string   `json:"mipv4"`
 	MIPv6        string   `json:"mipv6"`
 	MSubnetList  []string `json:"msubnetlist"`
 	OS           string   `json:"os"`
-	OSHostName   string   `json:"oshostname"`
+	Hostname     string   `json:"hostname"`
 	Version      string   `json:"version"`
 	IfOnline     bool     `json:"ifonline"`
 	LastSeen     string   `json:"lastseen"`
@@ -89,9 +89,10 @@ type machineItem struct {
 
 	ExpiryDesc string `json:"expirydesc"`
 
-	Endpoints   []string       `json:"eps"`
-	DERPs       map[string]int `json:"derps"`
-	PrefferDERP string         `json:"usederp"`
+	Endpoints         []string       `json:"eps"`
+	DERPs             map[string]int `json:"derps"`
+	PrefferDERP       string         `json:"usederp"`
+	AutomaticNameMode bool           `json:"automaticNameMode"`
 }
 type adminTemplateConfig struct {
 	ErrorMsg     string                 `json:"errormsg"`
@@ -218,7 +219,7 @@ func (h *Headscale) verifyTokenIDandGetUser(
 	return userName
 }
 
-// 控制台获取机器信息列表的API
+// 控制台获取设备信息列表的API
 func (h *Headscale) ConsoleMachinesAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
@@ -284,11 +285,11 @@ func (h *Headscale) ConsoleMachinesAPI(
 		tz, _ := time.LoadLocation("Asia/Shanghai")
 
 		tmpMachine := machineItem{
-			GiveName:     machine.GivenName,
+			Name:         machine.GivenName,
 			UserAccount:  machine.User.Name,
 			UserNameHead: string([]rune(machine.User.Display_Name)[0]),
 			OS:           machine.HostInfo.OS,
-			OSHostName:   machine.HostInfo.Hostname,
+			Hostname:     machine.HostInfo.Hostname,
 			Version:      IPNver,
 			CreateAt:     machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
 			LastSeen:     machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
@@ -296,14 +297,15 @@ func (h *Headscale) ConsoleMachinesAPI(
 			MSubnetList:  make([]string, 0),
 			NeverExpires: *machine.Expiry == time.Time{},
 
-			Varies:      machine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
-			HairPinning: machine.HostInfo.NetInfo.HairPinning.EqualBool(true),
-			CanIPv6:     machine.HostInfo.NetInfo.WorkingIPv6.EqualBool(true),
-			CanUDP:      machine.HostInfo.NetInfo.WorkingUDP.EqualBool(true),
-			CanUPnP:     machine.HostInfo.NetInfo.UPnP.EqualBool(true),
-			CanPCP:      machine.HostInfo.NetInfo.PCP.EqualBool(true),
-			CanPMP:      machine.HostInfo.NetInfo.PMP.EqualBool(true),
-			Endpoints:   machine.Endpoints,
+			Varies:            machine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
+			HairPinning:       machine.HostInfo.NetInfo.HairPinning.EqualBool(true),
+			CanIPv6:           machine.HostInfo.NetInfo.WorkingIPv6.EqualBool(true),
+			CanUDP:            machine.HostInfo.NetInfo.WorkingUDP.EqualBool(true),
+			CanUPnP:           machine.HostInfo.NetInfo.UPnP.EqualBool(true),
+			CanPCP:            machine.HostInfo.NetInfo.PCP.EqualBool(true),
+			CanPMP:            machine.HostInfo.NetInfo.PMP.EqualBool(true),
+			Endpoints:         machine.Endpoints,
+			AutomaticNameMode: machine.AutoGenName,
 		}
 
 		if machine.HostInfo.NetInfo.PreferredDERP != 0 {
@@ -489,6 +491,21 @@ func (h *Headscale) ConsoleMachinesUpdateAPI(
 			}
 			h.doAPIResponse(writer, "", resData)
 		}
+	case "rename-node":
+		newName := reqData["nodeName"].(string)
+		msg, _, err := h.setMachineName(toUpdateMachine, newName)
+		if err != nil {
+			h.doAPIResponse(writer, msg, nil)
+		} else {
+			resData := machineData{
+				AutomaticNameMode: toUpdateMachine.AutoGenName,
+				Name:              toUpdateMachine.GivenName,
+				Hostname:          toUpdateMachine.Hostname,
+				NeverExpires:      *toUpdateMachine.Expiry == time.Time{},
+				Expires:           msg,
+			}
+			h.doAPIResponse(writer, "", resData)
+		}
 	}
 }
 
@@ -636,6 +653,15 @@ func (h *Headscale) setMachineExpiry(machine *Machine) (string, error) {
 			return convExpiryToStr(expiryDuration), nil
 		}
 	}
+}
+
+// 三个参数：msg、nowName、err
+func (h *Headscale) setMachineName(machine *Machine, newName string) (string, string, error) {
+	newGiveName, err := h.setAutoGenName(machine, newName)
+	if err != nil {
+		return "设置主机名失败", "", err
+	}
+	return "", newGiveName, nil
 }
 
 func convExpiryToStr(duration time.Duration) string {
