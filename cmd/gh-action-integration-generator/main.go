@@ -7,13 +7,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"strings"
 	"text/template"
 )
 
 var (
 	jobFileNameTemplate = `test-integration-v2-%s.yaml`
-	jobTemplate         = template.Must(template.New("jobTemplate").Parse(`
-# DO NOT EDIT, generated with cmd/gh-action-integration-generator/main.go
+	jobTemplate         = template.Must(
+		template.New("jobTemplate").
+			Parse(`# DO NOT EDIT, generated with cmd/gh-action-integration-generator/main.go
 # To regenerate, run "go generate" in cmd/gh-action-integration-generator/
 
 name: Integration Test v2 - {{.Name}}
@@ -70,43 +73,57 @@ jobs:
         with:
           name: logs
           path: "control_logs/*.log"
-`))
+`),
+	)
 )
 
 const workflowFilePerm = 0o600
+
+func findTests() []string {
+	rgBin, err := exec.LookPath("rg")
+	if err != nil {
+		log.Fatalf("failed to find rg (ripgrep) binary")
+	}
+
+	args := []string{
+		"--regexp", "func (Test.+)\\(.*",
+		"../../integration/",
+		"--replace", "$1",
+		"--sort", "path",
+		"--no-line-number",
+		"--no-filename",
+		"--no-heading",
+	}
+
+	log.Printf("executing: %s %s", rgBin, strings.Join(args, " "))
+
+	ripgrep := exec.Command(
+		rgBin,
+		args...,
+	)
+
+	result, err := ripgrep.CombinedOutput()
+	if err != nil {
+		log.Printf("out: %s", result)
+		log.Fatalf("failed to run ripgrep: %s", err)
+	}
+
+	tests := strings.Split(string(result), "\n")
+	tests = tests[:len(tests)-1]
+
+	return tests
+}
 
 func main() {
 	type testConfig struct {
 		Name string
 	}
 
-	// TODO(kradalby): automatic fetch tests at runtime
-	tests := []string{
-		"TestAuthKeyLogoutAndRelogin",
-		"TestAuthWebFlowAuthenticationPingAll",
-		"TestAuthWebFlowLogoutAndRelogin",
-		"TestCreateTailscale",
-		"TestEnablingRoutes",
-		"TestHeadscale",
-		"TestUserCommand",
-		"TestOIDCAuthenticationPingAll",
-		"TestOIDCExpireNodesBasedOnTokenExpiry",
-		"TestPingAllByHostname",
-		"TestPingAllByIP",
-		"TestPreAuthKeyCommand",
-		"TestPreAuthKeyCommandReusableEphemeral",
-		"TestPreAuthKeyCommandWithoutExpiry",
-		"TestResolveMagicDNS",
-		"TestSSHIsBlockedInACL",
-		"TestSSHMultipleUsersAllToAll",
-		"TestSSHNoSSHConfigured",
-		"TestSSHOneUserAllToAll",
-		"TestSSUserOnlyIsolation",
-		"TestTaildrop",
-		"TestTailscaleNodesJoiningHeadcale",
-	}
+	tests := findTests()
 
 	for _, test := range tests {
+		log.Printf("generating workflow for %s", test)
+
 		var content bytes.Buffer
 
 		if err := jobTemplate.Execute(&content, testConfig{
