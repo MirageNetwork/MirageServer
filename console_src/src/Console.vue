@@ -35,6 +35,7 @@ function switchUserMenu() {
 const currentRoute = computed(() => {
   let curPath = route.path
   if (curPath == "/") return "machine"
+  if (curPath.substring(0, 4) == "/dns") return "dns"
   if (curPath.substring(0, 8) == "/machine") return "machine"
   if (curPath.substring(0, 8) == "/setting") return "setting"
 })
@@ -185,6 +186,25 @@ onMounted(() => {
             <div :class="{ 'font-medium': currentRoute == 'machine' }">设备</div>
           </div>
         </router-link>
+
+        <router-link class="whitespace-nowrap py-2 group relative" to="/dns">
+          <div :class="{
+            'text-blue-600 after:visible': currentRoute == 'dns',
+            'text-gray-600 group-hover:text-gray-800 after:invisible': currentRoute != 'dns',
+          }"
+            class="px-3 py-2 flex items-center rounded-md group-hover:bg-gray-200 after:absolute after:bottom-0 after:right-3 after:left-3 after:h-0.5 after:bg-blue-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1.125em" height="1.125em" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" :stroke-width="currentRoute == 'dns' ? '2.5' : '2'" stroke-linecap="round"
+              stroke-linejoin="round" class="mr-2 inline-block">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+              </path>
+            </svg>
+            <div :class="{ 'font-medium': currentRoute == 'dns' }">DNS</div>
+          </div>
+        </router-link>
+
         <router-link class="whitespace-nowrap py-2 group relative" to="/settings">
           <div :class="{
             'text-blue-600 after:visible': currentRoute == 'setting',

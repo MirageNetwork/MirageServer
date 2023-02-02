@@ -17,6 +17,17 @@ type APIResponse struct {
 	Data   interface{} `json:"data"`
 }
 
+type DNSData struct {
+	Warning           []string            `json:"warnings"`          // TODO:未实现
+	Resolvers         []string            `json:"resolvers"`         //域名服务器列表(覆写本地时)
+	Domains           []string            `json:"domains"`           //分离DNS设置的域名
+	Routes            map[string][]string `json:"routes"`            //分离DNS设置的映射关系
+	FallbackResolvers []string            `json:"fallbackResolvers"` //域名服务器列表(不覆写本地时)
+	MagicDNS          bool                `json:"magicDNS"`          //是否启用幻域
+	HasNextDNS        bool                `json:"hasNextDNS"`        // TODO:未实现
+	MagicDNSDomains   []string            `json:"magicDNSDomains"`   //幻域域列表
+}
+
 type machineData struct {
 	Address                []string `json:"addresses"`
 	AllowedIPs             []string `json:"allowedIPs"`         //未实现
@@ -217,6 +228,51 @@ func (h *Headscale) verifyTokenIDandGetUser(
 		return ""
 	}
 	return userName
+}
+
+func (h *Headscale) ConsoleDNSAPI(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	userName := h.verifyTokenIDandGetUser(w, r)
+	if userName == "" {
+		h.doAPIResponse(w, "用户信息核对失败", nil)
+		return
+	}
+	/* 后续DNS设置应该分用户，存、读于数据库
+	user, err := h.GetUser(userName)
+	if err != nil {
+		h.doAPIResponse(w, "查询用户失败:"+err.Error(), nil)
+		return
+	}
+	*/
+	dnsData := DNSData{
+		Domains:           h.cfg.DNSConfig.Domains,
+		Resolvers:         make([]string, 0),
+		FallbackResolvers: make([]string, 0),
+		Routes:            make(map[string][]string, 0),
+		MagicDNS:          h.cfg.DNSConfig.Proxied,
+	}
+	if len(h.cfg.DNSConfig.Resolvers) > 0 {
+		for _, ns := range h.cfg.DNSConfig.Resolvers {
+			dnsData.Resolvers = append(dnsData.Resolvers, ns.Addr)
+		}
+	} else if len(h.cfg.DNSConfig.FallbackResolvers) > 0 {
+		for _, ns := range h.cfg.DNSConfig.FallbackResolvers {
+			dnsData.FallbackResolvers = append(dnsData.FallbackResolvers, ns.Addr)
+		}
+	}
+	dnsData.MagicDNSDomains = make([]string, 0)
+	dnsData.MagicDNSDomains = append(dnsData.MagicDNSDomains, h.cfg.BaseDomain)
+	if len(h.cfg.DNSConfig.Routes) > 0 {
+		for domain, nsl := range h.cfg.DNSConfig.Routes {
+			dnsData.Routes[domain] = make([]string, 0)
+			for _, ns := range nsl {
+				dnsData.Routes[domain] = append(dnsData.Routes[domain], ns.Addr)
+			}
+		}
+	}
+	h.doAPIResponse(w, "", dnsData)
 }
 
 // 控制台获取设备信息列表的API
