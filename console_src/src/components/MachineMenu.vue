@@ -35,17 +35,23 @@ const closeMe = (event) => {
         :style="'position: fixed; left: '+menuLeft+'px; top: '+menuTop+'px; min-width: max-content; --radix-popper-transform-origin: 0% 0px;'">
         <div class="dropdown bg-white rounded-md py-1 z-20"
             style="outline: none; --radix-dropdown-menu-content-transform-origin: var(--radix-popper-transform-origin); pointer-events: auto;">
-            <div @click="$emit('showdialog-updatehostname')" class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100" :hidden="devMode">
+            <div @click="$emit('showdialog-updatehostname')"
+                class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                :hidden="devMode">
                 编辑设备名称…</div>
-            <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100" :hidden="devMode">
+            <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                :hidden="devMode">
                 分享…</div>
             <div @click="$emit('set-expires')"
-            class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
+                class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
                 {{ neverExpires?'启用密钥过期': '禁用密钥过期' }}</div>
             <div class="my-1 border-b border-base-300"></div>
-            <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100" :hidden="devMode">
+            <div @click="$emit('showdialog-setsubnet')"
+                class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                :hidden="devMode">
                 编辑子网转发…</div>
-            <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100" :hidden="devMode">
+            <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                :hidden="devMode">
                 编辑ACL标签…</div>
             <div class="my-1 border-b border-base-300"></div>
             <div @click="$emit('showdialog-remove')"

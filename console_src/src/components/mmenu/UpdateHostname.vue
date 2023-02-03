@@ -180,4 +180,8 @@ function updateName() {
     --tglbg: #1e40af;
     background-color: white;
 }
+
+.toggle:disabled {
+    --togglehandleborder: 0 0 0 3px white inset, var(--handleoffsetcalculator) 0 0 3px white inset;
+}
 </style>

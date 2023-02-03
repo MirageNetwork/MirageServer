@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"time"
@@ -30,33 +31,33 @@ type DNSData struct {
 
 type machineData struct {
 	Address                []string `json:"addresses"`
-	AllowedIPs             []string `json:"allowedIPs"`         //未实现
-	ExtraIPs               []string `json:"extraIPs"`           //未实现
-	AdvertisedIPs          []string `json:"advertisedIPs"`      //未实现
-	HasSubnets             bool     `json:"hasSubnets"`         //未实现(子网路由)
-	AdvertisedExitNode     bool     `json:"advertisedExitNode"` //未实现（允许出口节点）
-	AllowedExitNode        bool     `json:"allowedExitNode"`    //未实现（启用出口节点）
-	HasExitNode            bool     `json:"hasExitNode"`        //未实现
-	AllowedTags            []string `json:"allowedTags"`        //未实现
-	InvalidTags            []string `json:"invalidTags"`        //未实现
-	HasTags                bool     `json:"hasTags"`            //未实现
-	Endpoints              []string `json:"endpoints"`          //未实现
-	Derp                   string   `json:"derp"`               //未实现
-	IpnVersion             string   `json:"ipnVersion"`         //未实现
-	Os                     string   `json:"os"`                 //未实现
-	Name                   string   `json:"name"`               //未实现
-	Fqdn                   string   `json:"fqdn"`               //未实现
-	Domain                 string   `json:"domain"`             //未实现
-	Created                string   `json:"created"`            //未实现
-	Hostname               string   `json:"hostname"`           //未实现
-	MachineKey             string   `json:"machineKey"`         //未实现
-	NodeKey                string   `json:"nodeKey"`            //未实现
-	Id                     string   `json:"id"`                 //未实现
-	StableId               string   `json:"stableId"`           //未实现
-	DisplayNodeKey         string   `json:"displayNodeKey"`     //未实现
-	LogID                  string   `json:"logID"`              //未实现
-	User                   string   `json:"user"`               //未实现
-	Creator                string   `json:"creator"`            //未实现
+	AllowedIPs             []string `json:"allowedIPs"`
+	ExtraIPs               []string `json:"extraIPs"`
+	AdvertisedIPs          []string `json:"advertisedIPs"`
+	HasSubnets             bool     `json:"hasSubnets"`
+	AdvertisedExitNode     bool     `json:"advertisedExitNode"`
+	AllowedExitNode        bool     `json:"allowedExitNode"`
+	HasExitNode            bool     `json:"hasExitNode"` //未实现
+	AllowedTags            []string `json:"allowedTags"` //未实现
+	InvalidTags            []string `json:"invalidTags"` //未实现
+	HasTags                bool     `json:"hasTags"`     //未实现
+	Endpoints              []string `json:"endpoints"`
+	Derp                   string   `json:"derp"`           //未实现
+	IpnVersion             string   `json:"ipnVersion"`     //未实现
+	Os                     string   `json:"os"`             //未实现
+	Name                   string   `json:"name"`           //未实现
+	Fqdn                   string   `json:"fqdn"`           //未实现
+	Domain                 string   `json:"domain"`         //未实现
+	Created                string   `json:"created"`        //未实现
+	Hostname               string   `json:"hostname"`       //未实现
+	MachineKey             string   `json:"machineKey"`     //未实现
+	NodeKey                string   `json:"nodeKey"`        //未实现
+	Id                     string   `json:"id"`             //未实现
+	StableId               string   `json:"stableId"`       //未实现
+	DisplayNodeKey         string   `json:"displayNodeKey"` //未实现
+	LogID                  string   `json:"logID"`          //未实现
+	User                   string   `json:"user"`           //未实现
+	Creator                string   `json:"creator"`        //未实现
 	Expires                string   `json:"expires"`
 	NeverExpires           bool     `json:"neverExpires"`
 	Authorized             bool     `json:"authorized"`             //未实现
@@ -71,24 +72,28 @@ type machineData struct {
 }
 
 type machineItem struct {
-	Name         string   `json:"name"`
-	UserAccount  string   `json:"useraccount"`
-	UserNameHead string   `json:"usernamehead"`
-	MIPv4        string   `json:"mipv4"`
-	MIPv6        string   `json:"mipv6"`
-	MSubnetList  []string `json:"msubnetlist"`
-	OS           string   `json:"os"`
-	Hostname     string   `json:"hostname"`
-	Version      string   `json:"version"`
-	IfOnline     bool     `json:"ifonline"`
-	LastSeen     string   `json:"lastseen"`
-	CreateAt     string   `json:"createat"`
+	Name         string `json:"name"`
+	UserAccount  string `json:"useraccount"`
+	UserNameHead string `json:"usernamehead"`
+	MIPv4        string `json:"mipv4"`
+	MIPv6        string `json:"mipv6"`
+	OS           string `json:"os"`
+	Hostname     string `json:"hostname"`
+	Version      string `json:"version"`
+	IfOnline     bool   `json:"ifonline"`
+	LastSeen     string `json:"lastseen"`
+	CreateAt     string `json:"createat"`
 
 	IsSharedIn   bool `json:"issharedin"`
 	IsSharedOut  bool `json:"issharedout"`
 	NeverExpires bool `json:"neverExpires"`
-	IsExitNode   bool `json:"isexitnode"`
-	IsSubnet     bool `json:"issubnet"`
+
+	AllowedIPs         []string `json:"allowedIPs"`
+	ExtraIPs           []string `json:"extraIPs"`
+	AdvertisedIPs      []string `json:"advertisedIPs"`
+	HasSubnets         bool     `json:"hasSubnets"`
+	AdvertisedExitNode bool     `json:"advertisedExitNode"`
+	AllowedExitNode    bool     `json:"allowedExitNode"`
 
 	Varies      bool `json:"varies"`
 	HairPinning bool `json:"hairpinning"`
@@ -100,7 +105,7 @@ type machineItem struct {
 
 	ExpiryDesc string `json:"expirydesc"`
 
-	Endpoints         []string       `json:"eps"`
+	Endpoints         []string       `json:"endpoints"`
 	DERPs             map[string]int `json:"derps"`
 	PrefferDERP       string         `json:"usederp"`
 	AutomaticNameMode bool           `json:"automaticNameMode"`
@@ -350,7 +355,6 @@ func (h *Headscale) ConsoleMachinesAPI(
 			CreateAt:     machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
 			LastSeen:     machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
 			IfOnline:     machine.isOnline(),
-			MSubnetList:  make([]string, 0),
 			NeverExpires: *machine.Expiry == time.Time{},
 
 			Varies:            machine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
@@ -362,6 +366,47 @@ func (h *Headscale) ConsoleMachinesAPI(
 			CanPMP:            machine.HostInfo.NetInfo.PMP.EqualBool(true),
 			Endpoints:         machine.Endpoints,
 			AutomaticNameMode: machine.AutoGenName,
+		}
+
+		machineRoutes, err := h.GetMachineRoutes(&machine)
+		if err != nil {
+			errRes := adminTemplateConfig{ErrorMsg: "查询设备路由失败"}
+			err = json.NewEncoder(writer).Encode(&errRes)
+			if err != nil {
+				log.Error().
+					Caller().
+					Err(err).
+					Msg("Failed to write response")
+			}
+			return
+		}
+		for _, route := range machineRoutes {
+			if route.isExitRoute() {
+				tmpMachine.AdvertisedExitNode = true
+				if route.Enabled {
+					tmpMachine.AllowedExitNode = true
+				}
+			} else {
+				tmpMachine.HasSubnets = true
+				routeV := netip.Prefix(route.Prefix).String()
+				if err != nil {
+					errRes := adminTemplateConfig{ErrorMsg: "子网路由地址转换失败"}
+					err = json.NewEncoder(writer).Encode(&errRes)
+					if err != nil {
+						log.Error().
+							Caller().
+							Err(err).
+							Msg("Failed to write response")
+					}
+					return
+				}
+				tmpMachine.AdvertisedIPs = append(tmpMachine.AdvertisedIPs, routeV)
+				if route.Enabled {
+					tmpMachine.AllowedIPs = append(tmpMachine.AllowedIPs, routeV)
+				} else {
+					tmpMachine.ExtraIPs = append(tmpMachine.ExtraIPs, routeV)
+				}
+			}
 		}
 
 		if machine.HostInfo.NetInfo.PreferredDERP != 0 {

@@ -27,8 +27,8 @@ const hasSpecialStatus = computed(() => {
         currentMachine.value["expirydesc"] == "已过期" ||
         currentMachine.value["neverExpires"] ||
         currentMachine.value["soonexpiry"] ||
-        currentMachine.value["isexitnode"] ||
-        currentMachine.value["issubnet"]
+        currentMachine.value["advertisedExitNode"] ||
+        currentMachine.value["hasSubnets"]
     );
 });
 
@@ -77,6 +77,11 @@ const updateHostnameShow = ref(false);
 function showUpdateHostname() {
     closeMachineMenu();
     updateHostnameShow.value = true;
+}
+const setSubnetShow = ref(false);
+function showSetSubnet() {
+    closeMachineMenu();
+    setSubnetShow.value = true;
 }
 
 //数据填充控制部分
@@ -271,16 +276,36 @@ function hostnameUpdateFail(msg) {
                                     {{ currentMachine.expirydesc }}
                                 </div>
                             </span>
-                            <span v-if="currentMachine.isexitnode">
+                            <span v-if="currentMachine.hasSubnets">
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
                                     子网转发
+                                    <div v-if="currentMachine.hasSubnets && currentMachine.extraIPs.length > 0"
+                                        class="tooltip" data-tip="该设备存在未批准子网转发，请在设备菜单的“编辑子网转发…”中检查">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.35"
+                                            stroke-linecap="round" stroke-linejoin="round" class="ml-1">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                        </svg>
+                                    </div>
                                 </div>
                             </span>
-                            <span v-if="currentMachine.issubnet">
+                            <span v-if="currentMachine.advertisedExitNode">
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
                                     出口节点
+                                    <div v-if="!currentMachine.allowedExitNode" class="tooltip"
+                                        data-tip="该设备申请被用作出口节点，请在设备菜单的“编辑子网转发…”中检查">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.35"
+                                            stroke-linecap="round" stroke-linejoin="round" class="ml-1">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                        </svg>
+                                    </div>
                                 </div>
                             </span>
                         </div>
@@ -295,33 +320,26 @@ function hostnameUpdateFail(msg) {
                             “子网转发”允许你暴露设备可访问物理网络路由给您的蜃境网络
                         </p>
                     </div>
-                    <div v-if="currentMachine.issubnet">
+                    <div v-if="currentMachine.hasSubnets">
                         <button
                             class="btn btn-outline bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 mt-2">
                             配置
                         </button>
                     </div>
                 </header>
-                <div v-if="currentMachine.issubnet" class="p-4 md:p-6 border border-gray-200 rounded-md">
+                <div v-if="currentMachine.hasSubnets" class="p-4 md:p-6 border border-gray-200 rounded-md">
                     <ul class="leading-normal">
-                        <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
-                            192.168.0.0/24
+                        <li v-for="allowedIP in currentMachine.allowedIPs">
+                            <span>{{ allowedIP }} </span>
                         </li>
-                        <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
-                            192.168.1.0/24
-                        </li>
-                        <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
-                            192.168.166.0/24
-                        </li>
-                        <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
-                            192.168.168.0/24
-                        </li>
-                        <li title="This IP is a subnet that has not been enabled." class="font-medium text-gray-400">
-                            198.18.0.0/16
-                        </li>
+                        <template v-for="extraIP in currentMachine.extraIPs">
+                            <li class="tooltip text-gray-400" data-tip="这条子网转发未启用">
+                                <span>{{ extraIP }} </span>
+                            </li><br />
+                        </template>
                     </ul>
                 </div>
-                <div v-if="!currentMachine.issubnet && !currentMachine.issharedin"
+                <div v-if="!currentMachine.hasSubnets && !currentMachine.issharedin"
                     class="p-4 md:p-6 border border-gray-200 rounded-md flex items-center justify-center text-gray-500 text-center">
                     <div class="flex justify-center">
                         <div class="w-full text-center max-w-xl text-gray-500">
@@ -419,7 +437,7 @@ function hostnameUpdateFail(msg) {
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">设备端点信息</dt>
                             <dd class="min-w-0 truncate">
                                 <ul class="pl-3 -indent-3">
-                                    <li v-for="ep in currentMachine.eps" class="select-all">
+                                    <li v-for="ep in currentMachine.endpoints" class="select-all">
                                         <span>{{ ep }}</span>
                                     </li>
                                     <!--
@@ -526,20 +544,52 @@ function hostnameUpdateFail(msg) {
     <Teleport to="body">
         <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop"
             :neverExpires="currentMachine.neverExpires" @close="closeMachineMenu" @set-expires="setExpires"
-            @showdialog-remove="showDelConfirm" @showdialog-updatehostname="showUpdateHostname"></MachineMenu>
+            @showdialog-remove="showDelConfirm" @showdialog-updatehostname="showUpdateHostname"
+            @showdialog-setsubnet="showSetSubnet"></MachineMenu>
     </Teleport>
 
-    <!-- 删除设备提示框显示 -->
+    <!-- 菜单弹出提示框显示 -->
     <Teleport to="body">
+        <!-- 删除设备提示框显示 -->
         <RemoveMachine v-if="delConfirmShow" :machine-name="currentMachine.name" @close="delConfirmShow = false"
             @confirm="removeMachine"></RemoveMachine>
+        <!-- 修改设备名提示框显示 -->
         <UpdateHostname v-if="updateHostnameShow" :id="currentMID" :host-name="currentMachine.hostname"
             :given-name="currentMachine.name" :auto-gen="currentMachine.automaticNameMode"
             @close="updateHostnameShow = false" @update-done="hostnameUpdateDone" @update-fail="hostnameUpdateFail">
         </UpdateHostname>
+        <!-- 设置子网转发提示框显示 -->
+        <SetSubnet v-if="setSubnetShow" :id="currentMID" :machine-name="MList[currentMID].name"
+            @close="setSubnetShow = false"></SetSubnet>
     </Teleport>
 </template>
 
 <style scoped>
+.table tr.hover:hover th,
+.table tr.hover:hover td,
+.table tr.hover:nth-child(even):hover th,
+.table tr.hover:nth-child(even):hover td {
+    background-color: #faf9f8;
+}
 
+.tooltip {
+    --tooltip-color: #faf9f8;
+    --tooltip-text-color: #3a3939;
+    text-align: start;
+    white-space: normal;
+}
+
+.tooltip:before {
+    max-width: 16rem;
+    font-size: small;
+    font-weight: 300;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-width: 1px;
+    border-color: #e1dfde;
+}
 </style>
