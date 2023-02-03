@@ -1,15 +1,19 @@
 package integration
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/netip"
 	"strings"
 	"testing"
 	"time"
 
+	v1 "github.com/juanfont/headscale/gen/go/headscale/v1"
 	"github.com/juanfont/headscale/integration/hsic"
 	"github.com/juanfont/headscale/integration/tsic"
 	"github.com/rs/zerolog/log"
+	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPingAllByIP(t *testing.T) {
@@ -46,19 +50,11 @@ func TestPingAllByIP(t *testing.T) {
 		t.Errorf("failed wait for tailscale clients to be in sync: %s", err)
 	}
 
-	success := 0
+	allAddrs := lo.Map(allIps, func(x netip.Addr, index int) string {
+		return x.String()
+	})
 
-	for _, client := range allClients {
-		for _, ip := range allIps {
-			err := client.Ping(ip.String())
-			if err != nil {
-				t.Errorf("failed to ping %s from %s: %s", ip, client.Hostname(), err)
-			} else {
-				success++
-			}
-		}
-	}
-
+	success := pingAllHelper(t, allClients, allAddrs)
 	t.Logf("%d successful pings out of %d", success, len(allClients)*len(allIps))
 
 	err = scenario.Shutdown()
@@ -148,18 +144,11 @@ func TestAuthKeyLogoutAndRelogin(t *testing.T) {
 		t.Errorf("failed to get clients: %s", err)
 	}
 
-	success := 0
-	for _, client := range allClients {
-		for _, ip := range allIps {
-			err := client.Ping(ip.String())
-			if err != nil {
-				t.Errorf("failed to ping %s from %s: %s", ip, client.Hostname(), err)
-			} else {
-				success++
-			}
-		}
-	}
+	allAddrs := lo.Map(allIps, func(x netip.Addr, index int) string {
+		return x.String()
+	})
 
+	success := pingAllHelper(t, allClients, allAddrs)
 	t.Logf("%d successful pings out of %d", success, len(allClients)*len(allIps))
 
 	for _, client := range allClients {
@@ -184,7 +173,12 @@ func TestAuthKeyLogoutAndRelogin(t *testing.T) {
 			}
 
 			if !found {
-				t.Errorf("IPs changed for client %s. Used to be %v now %v", client.Hostname(), clientIPs[client], ips)
+				t.Errorf(
+					"IPs changed for client %s. Used to be %v now %v",
+					client.Hostname(),
+					clientIPs[client],
+					ips,
+				)
 			}
 		}
 	}
@@ -253,18 +247,11 @@ func TestEphemeral(t *testing.T) {
 		t.Errorf("failed to get clients: %s", err)
 	}
 
-	success := 0
-	for _, client := range allClients {
-		for _, ip := range allIps {
-			err := client.Ping(ip.String())
-			if err != nil {
-				t.Errorf("failed to ping %s from %s: %s", ip, client.Hostname(), err)
-			} else {
-				success++
-			}
-		}
-	}
+	allAddrs := lo.Map(allIps, func(x netip.Addr, index int) string {
+		return x.String()
+	})
 
+	success := pingAllHelper(t, allClients, allAddrs)
 	t.Logf("%d successful pings out of %d", success, len(allClients)*len(allIps))
 
 	for _, client := range allClients {
@@ -335,18 +322,7 @@ func TestPingAllByHostname(t *testing.T) {
 		t.Errorf("failed to get FQDNs: %s", err)
 	}
 
-	success := 0
-
-	for _, client := range allClients {
-		for _, hostname := range allHostnames {
-			err := client.Ping(hostname)
-			if err != nil {
-				t.Errorf("failed to ping %s from %s: %s", hostname, client.Hostname(), err)
-			} else {
-				success++
-			}
-		}
-	}
+	success := pingAllHelper(t, allClients, allHostnames)
 
 	t.Logf("%d successful pings out of %d", success, len(allClients)*len(allClients))
 
@@ -574,6 +550,96 @@ func TestResolveMagicDNS(t *testing.T) {
 					t.Errorf("ip %s is not found in \n%s\n", ip.String(), result)
 				}
 			}
+		}
+	}
+
+	err = scenario.Shutdown()
+	if err != nil {
+		t.Errorf("failed to tear down scenario: %s", err)
+	}
+}
+
+func TestExpireNode(t *testing.T) {
+	IntegrationSkip(t)
+	t.Parallel()
+
+	scenario, err := NewScenario()
+	if err != nil {
+		t.Errorf("failed to create scenario: %s", err)
+	}
+
+	spec := map[string]int{
+		"user1": len(TailscaleVersions),
+	}
+
+	err = scenario.CreateHeadscaleEnv(spec, []tsic.Option{}, hsic.WithTestName("expirenode"))
+	if err != nil {
+		t.Errorf("failed to create headscale environment: %s", err)
+	}
+
+	allClients, err := scenario.ListTailscaleClients()
+	if err != nil {
+		t.Errorf("failed to get clients: %s", err)
+	}
+
+	allIps, err := scenario.ListTailscaleClientsIPs()
+	if err != nil {
+		t.Errorf("failed to get clients: %s", err)
+	}
+
+	err = scenario.WaitForTailscaleSync()
+	if err != nil {
+		t.Errorf("failed wait for tailscale clients to be in sync: %s", err)
+	}
+
+	allAddrs := lo.Map(allIps, func(x netip.Addr, index int) string {
+		return x.String()
+	})
+
+	success := pingAllHelper(t, allClients, allAddrs)
+	t.Logf("before expire: %d successful pings out of %d", success, len(allClients)*len(allIps))
+
+	for _, client := range allClients {
+		status, err := client.Status()
+		assert.NoError(t, err)
+
+		// Assert that we have the original count - self
+		assert.Len(t, status.Peers(), len(TailscaleVersions)-1)
+	}
+
+	headscale, err := scenario.Headscale()
+	assert.NoError(t, err)
+
+	// TODO(kradalby): This is Headscale specific and would not play nicely
+	// with other implementations of the ControlServer interface
+	result, err := headscale.Execute([]string{
+		"headscale", "nodes", "expire", "--identifier", "0", "--output", "json",
+	})
+	assert.NoError(t, err)
+
+	var machine v1.Machine
+	err = json.Unmarshal([]byte(result), &machine)
+	assert.NoError(t, err)
+
+	time.Sleep(30 * time.Second)
+
+	// Verify that the expired not is no longer present in the Peer list
+	// of connected nodes.
+	for _, client := range allClients {
+		status, err := client.Status()
+		assert.NoError(t, err)
+
+		for _, peerKey := range status.Peers() {
+			peerStatus := status.Peer[peerKey]
+
+			peerPublicKey := strings.TrimPrefix(peerStatus.PublicKey.String(), "nodekey:")
+
+			assert.NotEqual(t, machine.NodeKey, peerPublicKey)
+		}
+
+		if client.Hostname() != machine.Name {
+			// Assert that we have the original count - self - expired node
+			assert.Len(t, status.Peers(), len(TailscaleVersions)-2)
 		}
 	}
 

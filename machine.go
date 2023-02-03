@@ -12,6 +12,7 @@ import (
 
 	v1 "github.com/juanfont/headscale/gen/go/headscale/v1"
 	"github.com/rs/zerolog/log"
+	"github.com/samber/lo"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm"
 	"tailscale.com/tailcfg"
@@ -821,30 +822,39 @@ func (h *Headscale) toNode(
 
 	online := machine.isOnline()
 
+	tags, _ := getTags(h.aclPolicy, machine, h.cfg.OIDC.StripEmaildomain)
+	tags = lo.Uniq(append(tags, machine.ForcedTags...))
+
 	node := tailcfg.Node{
 		ID: tailcfg.NodeID(machine.ID), // this is the actual ID
 		StableID: tailcfg.StableNodeID(
 			strconv.FormatUint(machine.ID, Base10),
 		), // in headscale, unlike tailcontrol server, IDs are permanent
-		Name:          hostname,
-		User:          tailcfg.UserID(machine.UserID),
-		Key:           nodeKey,
-		KeyExpiry:     keyExpiry,
-		Machine:       machineKey,
-		DiscoKey:      discoKey,
-		Addresses:     addrs,
-		AllowedIPs:    allowedIPs,
+		Name: hostname,
+
+		User: tailcfg.UserID(machine.UserID),
+
+		Key:       nodeKey,
+		KeyExpiry: keyExpiry,
+
+		Machine:    machineKey,
+		DiscoKey:   discoKey,
+		Addresses:  addrs,
+		AllowedIPs: allowedIPs,
+		Endpoints:  machine.Endpoints,
+		DERP:       derp,
+		Hostinfo:   hostInfo.View(),
+		Created:    machine.CreatedAt,
+
+		Tags: tags,
+
 		PrimaryRoutes: primaryPrefixes,
-		Endpoints:     machine.Endpoints,
-		DERP:          derp,
 
-		Online:   &online,
-		Hostinfo: hostInfo.View(),
-		Created:  machine.CreatedAt,
-		LastSeen: machine.LastSeen,
-
+		LastSeen:          machine.LastSeen,
+		Online:            &online,
 		KeepAlive:         true,
 		MachineAuthorized: !machine.isExpired(),
+
 		Capabilities: []string{
 			tailcfg.CapabilityFileSharing,
 			tailcfg.CapabilityAdmin,
@@ -1235,7 +1245,8 @@ func (h *Headscale) EnableAutoApprovedRoutes(machine *Machine) error {
 	routes := []Route{}
 	err := h.db.
 		Preload("Machine").
-		Where("machine_id = ? AND advertised = true AND enabled = false", machine.ID).Find(&routes).Error
+		Where("machine_id = ? AND advertised = true AND enabled = false", machine.ID).
+		Find(&routes).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Error().
 			Caller().
@@ -1249,7 +1260,9 @@ func (h *Headscale) EnableAutoApprovedRoutes(machine *Machine) error {
 	approvedRoutes := []Route{}
 
 	for _, advertisedRoute := range routes {
-		routeApprovers, err := h.aclPolicy.AutoApprovers.GetRouteApprovers(netip.Prefix(advertisedRoute.Prefix))
+		routeApprovers, err := h.aclPolicy.AutoApprovers.GetRouteApprovers(
+			netip.Prefix(advertisedRoute.Prefix),
+		)
 		if err != nil {
 			log.Err(err).
 				Str("advertisedRoute", advertisedRoute.String()).

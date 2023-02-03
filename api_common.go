@@ -1,6 +1,8 @@
 package headscale
 
 import (
+	"time"
+
 	"github.com/rs/zerolog/log"
 	"tailscale.com/tailcfg"
 )
@@ -58,18 +60,46 @@ func (h *Headscale) generateMapResponse(
 		peers,
 	)
 
+	now := time.Now()
+
 	resp := tailcfg.MapResponse{
 		KeepAlive: false,
 		Node:      node,
-		Peers:     nodePeers,
-		//		PeersChanged: nodePeers,
-		//		PeersRemoved: invalidNodeIDs,
-		DNSConfig:    dnsConfig,
-		Domain:       h.cfg.BaseDomain,
+
+		// TODO: Only send if updated
+		DERPMap: h.DERPMap,
+
+		// TODO: Only send if updated
+		Peers: nodePeers,
+
+		// TODO(kradalby): Implement:
+		// https://github.com/tailscale/tailscale/blob/main/tailcfg/tailcfg.go#L1351-L1374
+		// PeersChanged
+		// PeersRemoved
+		// PeersChangedPatch
+		// PeerSeenChange
+		// OnlineChange
+
+		// TODO: Only send if updated
+		DNSConfig: dnsConfig,
+
+		// TODO: Only send if updated
+		Domain: h.cfg.BaseDomain,
+
+		// Do not instruct clients to collect services, we do not
+		// support or do anything with them
+		CollectServices: "false",
+
+		// TODO: Only send if updated
 		PacketFilter: h.aclRules,
-		SSHPolicy:    h.sshPolicy,
-		DERPMap:      h.DERPMap,
+
 		UserProfiles: profiles,
+
+		// TODO: Only send if updated
+		SSHPolicy: h.sshPolicy,
+
+		ControlTime: &now,
+
 		Debug: &tailcfg.Debug{
 			DisableLogTail:      !h.cfg.LogTail.Enabled,
 			RandomizeClientPort: h.cfg.RandomizeClientPort,
