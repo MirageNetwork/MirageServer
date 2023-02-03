@@ -4,6 +4,7 @@ import { useRouter, useRoute } from "vue-router";
 import MachineMenu from "./MachineMenu.vue";
 import RemoveMachine from "./mmenu/RemoveMachine.vue";
 import UpdateHostname from "./mmenu/UpdateHostname.vue";
+import SetSubnet from "./mmenu/SetSubnet.vue";
 import Toast from "./Toast.vue";
 
 const devmode = ref(false);
@@ -194,6 +195,22 @@ function hostnameUpdateFail(msg) {
     toastMsg.value = "更新设备名称失败！"
     toastShow.value = true
 }
+
+function subnetUpdateDone(newAllIPs, newAllowedIPs, newExtraIPs, newEnExitNode) {
+    currentMachine.value["advertisedIPs"] = newAllIPs
+    currentMachine.value["allowedIPs"] = newAllowedIPs
+    currentMachine.value["extraIPs"] = newExtraIPs
+    currentMachine.value["allowedExitNode"] = newEnExitNode
+    nextTick(() => {
+        toastMsg.value = "已更新子网转发设置！"
+        toastShow.value = true
+    })
+}
+function subnetUpdateFail(msg) {
+    toastMsg.value = "更新子网转发设置失败！"
+    toastShow.value = true
+}
+
 </script>
 
 <template>
@@ -280,7 +297,7 @@ function hostnameUpdateFail(msg) {
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
                                     子网转发
-                                    <div v-if="currentMachine.hasSubnets && currentMachine.extraIPs.length > 0"
+                                    <div v-if="currentMachine.hasSubnets && currentMachine.extraIPs && currentMachine.extraIPs.length > 0"
                                         class="tooltip" data-tip="该设备存在未批准子网转发，请在设备菜单的“编辑子网转发…”中检查">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.35"
@@ -321,7 +338,7 @@ function hostnameUpdateFail(msg) {
                         </p>
                     </div>
                     <div v-if="currentMachine.hasSubnets">
-                        <button
+                        <button @click="showSetSubnet"
                             class="btn btn-outline bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 mt-2">
                             配置
                         </button>
@@ -559,8 +576,8 @@ function hostnameUpdateFail(msg) {
             @close="updateHostnameShow = false" @update-done="hostnameUpdateDone" @update-fail="hostnameUpdateFail">
         </UpdateHostname>
         <!-- 设置子网转发提示框显示 -->
-        <SetSubnet v-if="setSubnetShow" :id="currentMID" :machine-name="MList[currentMID].name"
-            @close="setSubnetShow = false"></SetSubnet>
+        <SetSubnet v-if="setSubnetShow" :id="currentMID" :current-machine="currentMachine"
+            @close="setSubnetShow = false" @update-done="subnetUpdateDone" @update-fail="subnetUpdateFail"></SetSubnet>
     </Teleport>
 </template>
 

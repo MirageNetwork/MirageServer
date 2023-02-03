@@ -400,11 +400,13 @@ func (h *Headscale) ConsoleMachinesAPI(
 					}
 					return
 				}
-				tmpMachine.AdvertisedIPs = append(tmpMachine.AdvertisedIPs, routeV)
-				if route.Enabled {
-					tmpMachine.AllowedIPs = append(tmpMachine.AllowedIPs, routeV)
-				} else {
-					tmpMachine.ExtraIPs = append(tmpMachine.ExtraIPs, routeV)
+				if route.Advertised {
+					tmpMachine.AdvertisedIPs = append(tmpMachine.AdvertisedIPs, routeV)
+					if route.Enabled {
+						tmpMachine.AllowedIPs = append(tmpMachine.AllowedIPs, routeV)
+					} else {
+						tmpMachine.ExtraIPs = append(tmpMachine.ExtraIPs, routeV)
+					}
 				}
 			}
 		}
@@ -581,7 +583,7 @@ func (h *Headscale) ConsoleMachinesUpdateAPI(
 	}
 
 	switch reqState {
-	case "set-expires":
+	case "set-expires": //切换密钥永不过期设置
 		msg, err := h.setMachineExpiry(toUpdateMachine)
 		if err != nil {
 			h.doAPIResponse(writer, msg, nil)
@@ -592,7 +594,7 @@ func (h *Headscale) ConsoleMachinesUpdateAPI(
 			}
 			h.doAPIResponse(writer, "", resData)
 		}
-	case "rename-node":
+	case "rename-node": //设置设备名称
 		newName := reqData["nodeName"].(string)
 		msg, _, err := h.setMachineName(toUpdateMachine, newName)
 		if err != nil {
@@ -604,6 +606,57 @@ func (h *Headscale) ConsoleMachinesUpdateAPI(
 				Hostname:          toUpdateMachine.Hostname,
 				NeverExpires:      *toUpdateMachine.Expiry == time.Time{},
 				Expires:           msg,
+			}
+			h.doAPIResponse(writer, "", resData)
+		}
+	case "set-route-settings": //设置子网转发及出口节点
+		allowedIPsInterface := reqData["allowedIPs"].([]interface{})
+		allowExitNode := reqData["allowedExitNode"].(bool)
+
+		allowedIPs := new([]string)
+		for _, ip := range allowedIPsInterface {
+			*allowedIPs = append(*allowedIPs, ip.(string))
+		}
+
+		msg, err := h.setMachineSubnet(toUpdateMachine, allowExitNode, *allowedIPs)
+		if err != nil {
+			h.doAPIResponse(writer, msg, nil)
+			return
+		} else {
+			resData := machineData{
+				AutomaticNameMode: toUpdateMachine.AutoGenName,
+				Name:              toUpdateMachine.GivenName,
+				Hostname:          toUpdateMachine.Hostname,
+				NeverExpires:      *toUpdateMachine.Expiry == time.Time{},
+				Expires:           msg,
+			}
+			machineRoutes, err := h.GetMachineRoutes(toUpdateMachine)
+			if err != nil {
+				h.doAPIResponse(writer, "查询设备路由失败", nil)
+				return
+			}
+			for _, route := range machineRoutes {
+				if route.isExitRoute() {
+					resData.AdvertisedExitNode = true
+					if route.Enabled {
+						resData.AllowedExitNode = true
+					}
+				} else {
+					resData.HasSubnets = true
+					routeV := netip.Prefix(route.Prefix).String()
+					if err != nil {
+						h.doAPIResponse(writer, "子网路由地址转换失败", nil)
+						return
+					}
+					if route.Advertised {
+						resData.AdvertisedIPs = append(resData.AdvertisedIPs, routeV)
+						if route.Enabled {
+							resData.AllowedIPs = append(resData.AllowedIPs, routeV)
+						} else {
+							resData.ExtraIPs = append(resData.ExtraIPs, routeV)
+						}
+					}
+				}
 			}
 			h.doAPIResponse(writer, "", resData)
 		}
@@ -756,13 +809,39 @@ func (h *Headscale) setMachineExpiry(machine *Machine) (string, error) {
 	}
 }
 
-// 三个参数：msg、nowName、err
+// 三个返回值：msg、nowName、err
 func (h *Headscale) setMachineName(machine *Machine, newName string) (string, string, error) {
 	newGiveName, err := h.setAutoGenName(machine, newName)
 	if err != nil {
 		return "设置主机名失败", "", err
 	}
 	return "", newGiveName, nil
+}
+
+func (h *Headscale) setMachineSubnet(machine *Machine, ExitNodeEnable bool, allowedIPs []string) (string, error) {
+	machineRoutes, err := h.GetMachineRoutes(machine)
+	if err != nil {
+		return "获取设备路由设置失败", err
+	}
+	for _, r := range machineRoutes {
+		if r.isExitRoute() {
+			if ExitNodeEnable {
+				err = h.EnableRoute(uint64(r.ID))
+			} else {
+				err = h.DisableRoute(uint64(r.ID))
+			}
+			if err != nil {
+				return "设置设备出口节点状态失败", err
+			}
+		} else {
+			err = h.DisableRoute(uint64(r.ID))
+		}
+	}
+	err = h.enableRoutes(machine, allowedIPs...)
+	if err != nil {
+		return "设置设备子网路由状态失败", err
+	}
+	return "", nil
 }
 
 func convExpiryToStr(duration time.Duration) string {

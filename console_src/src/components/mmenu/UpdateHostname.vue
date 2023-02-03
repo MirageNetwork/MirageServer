@@ -125,7 +125,7 @@ function updateName() {
             <form @submit.prevent="$emit('confirm')">
                 <p class="text-gray-700 mb-6">这个名称显示在控制台、客户端，以及生成对应的「<strong>幻域</strong>」名称</p>
                 <div class="flex items-center">
-                    <input :disabled="inputBlocking" @change="autoGenToggle" v-model="setAutogen"
+                    <input :disabled="inputBlocking" v-model="setAutogen"
                         id="auto-generate-checkbox" type="checkbox" class="toggle toggle-sm">
                     <label for="auto-generate-checkbox" class="font-medium ml-3">由设备OS主机名生成</label>
                 </div>

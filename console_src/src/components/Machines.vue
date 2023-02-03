@@ -205,6 +205,21 @@ function hostnameUpdateFail(msg) {
   toastShow.value = true
 }
 
+function subnetUpdateDone(newAllIPs, newAllowedIPs, newExtraIPs, newEnExitNode) {
+  MList.value[currentMID.value]["advertisedIPs"] = newAllIPs
+  MList.value[currentMID.value]["allowedIPs"] = newAllowedIPs
+  MList.value[currentMID.value]["extraIPs"] = newExtraIPs
+  MList.value[currentMID.value]["allowedExitNode"] = newEnExitNode
+  nextTick(() => {
+    toastMsg.value = "已更新子网转发设置！"
+    toastShow.value = true
+  })
+}
+function subnetUpdateFail(msg) {
+  toastMsg.value = "更新子网转发设置失败！"
+  toastShow.value = true
+}
+
 //客户端操作动作部分
 function copyMIPv4() {
   navigator.clipboard.writeText(MList.value[currentMID.value]["mipv4"]).then(function () {
@@ -314,7 +329,7 @@ function copyMIPv6() {
                       <div
                         class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
                         子网转发
-                        <div v-if="m.hasSubnets && m.extraIPs.length > 0" class="tooltip"
+                        <div v-if="m.hasSubnets && m.extraIPs && m.extraIPs.length > 0" class="tooltip"
                           data-tip="该设备存在未批准子网转发，请在设备菜单的“编辑子网转发…”中检查">
                           <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"
@@ -458,8 +473,8 @@ function copyMIPv6() {
       @close="updateHostnameShow = false" @update-done="hostnameUpdateDone" @update-fail="hostnameUpdateFail">
     </UpdateHostname>
     <!-- 设置子网转发提示框显示 -->
-    <SetSubnet v-if="setSubnetShow" :id="currentMID" :current-machine="MList[currentMID]"
-      @close="setSubnetShow = false"></SetSubnet>
+    <SetSubnet v-if="setSubnetShow" :id="currentMID" :current-machine="MList[currentMID]" @close="setSubnetShow = false"
+      @update-done="subnetUpdateDone" @update-fail="subnetUpdateFail"></SetSubnet>
   </Teleport>
 
 </template>

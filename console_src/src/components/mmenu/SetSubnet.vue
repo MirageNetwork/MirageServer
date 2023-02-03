@@ -2,12 +2,16 @@
 import { watch, ref, onMounted, onBeforeUpdate, computed } from 'vue';
 import { useDisScroll } from '/src/utils.js';
 
+const emit = defineEmits(['update-done', 'update-fail'])
+
 useDisScroll()
+const inputBlocking = ref(false)
 
 const props = defineProps({
     id: String,
     currentMachine: Object
 })
+
 
 const hasAllowedSubnet = computed(() => {
     return props.currentMachine.allowedIPs && props.currentMachine.allowedIPs.length > 0
@@ -17,8 +21,10 @@ const hasExtraSubnet = computed(() => {
 })
 
 function isAllowedRoute(routeCIDR) {
-    if (!props.currentMachine.allowedIPs || props.currentMachine.allowedIPs.length == 0)
+    if (!props.currentMachine.allowedIPs || props.currentMachine.allowedIPs.length == 0) {
+
         return false
+    }
     for (var id in props.currentMachine.allowedIPs) {
         if (routeCIDR === props.currentMachine.allowedIPs[id]) {
             return true
@@ -28,9 +34,39 @@ function isAllowedRoute(routeCIDR) {
 }
 
 onMounted(() => {
-
 })
 
+function updateSubnet(type) {
+    inputBlocking.value = true
+    var newAllowedIPs = []
+    if (type != 'Off') {
+        for (var i in props.currentMachine.advertisedIPs) {
+            if (type == 'On' || document.getElementById(props.currentMachine.advertisedIPs[i]).checked) {
+                newAllowedIPs.push(props.currentMachine.advertisedIPs[i])
+            }
+        }
+    }
+    var setExitNode = document.getElementById("exit-node").checked
+    axios
+        .post("/admin/api/machines", {
+            mid: props.id,
+            state: "set-route-settings",
+            allowedIPs: newAllowedIPs,
+            allowedExitNode: setExitNode
+        })
+        .then(function (response) {
+            if (response.data["status"] == "success") {
+                emit("update-done", response.data["data"]["advertisedIPs"], response.data["data"]["allowedIPs"], response.data["data"]["extraIPs"], response.data["data"]["allowedExitNode"])
+            } else {
+                emit("update-fail", response.data["status"].substring(6))
+            }
+        })
+        .catch(function (error) {
+            console.log(error);
+            emit("update-fail", error)
+        });
+    inputBlocking.value = false
+}
 </script>
 
 <template>
@@ -53,16 +89,17 @@ onMounted(() => {
                     </div>
                     <div v-if="currentMachine.hasSubnets">
                         <li v-for="route in currentMachine.advertisedIPs" class="flex items-center py-2 border-t">
-                            <div><input :value="isAllowedRoute(route)" :id="route" type="checkbox"
+                            <div><input @change="updateSubnet('Update')" :disabled="inputBlocking"
+                                    :checked="isAllowedRoute(route)" :id="route" type="checkbox"
                                     class="toggle block mr-3"></div>
                             <div class="flex items-center"><label :for="route">{{ route }}</label></div>
                         </li>
                     </div>
                     <div v-if="currentMachine.hasSubnets" class="flex-1 flex border-t items-center pt-2">
-                        <button
+                        <button @click="updateSubnet('Off')"
                             class="btn border-0 bg-red-600 hover:bg-red-700 disabled:bg-red-600/60 disabled:text-white/60 text-white h-9 min-h-fit mr-2"
                             :disabled="!hasAllowedSubnet">全部禁用</button>
-                        <button
+                        <button @click="updateSubnet('On')"
                             class="btn border border-base-300 hover:border-base-300 bg-base-200 hover:bg-base-300 disabled:bg-base-200 disabled:text-base-400 text-black h-9 min-h-fit"
                             :disabled="!hasExtraSubnet">全部启用</button>
                     </div>
@@ -72,8 +109,9 @@ onMounted(() => {
                 <h3 class="font-semibold flex items-center text-gray-800 mb-2">出口节点</h3>
                 <p class="text-gray-700 mb-3">允许您的网络上访问互联网流量通过该设备流出</p>
                 <div class="flex items-center">
-                    <input :disabled="!currentMachine.advertisedExitNode" :value="currentMachine.allowedExitNode"
-                        id="exit-node" type="checkbox" class="toggle mr-3">
+                    <input @change="updateSubnet('Update')"
+                        :disabled="inputBlocking || !currentMachine.advertisedExitNode"
+                        :checked="currentMachine.allowedExitNode" id="exit-node" type="checkbox" class="toggle mr-3">
                     <label for="exit-node">用作出口节点</label>
                     <span v-if="!currentMachine.advertisedExitNode" class="tooltip"
                         data-tip="该设备未声明它自己为出口节点。可使用 --advertise-exit-node 参数再次运行以开启。">

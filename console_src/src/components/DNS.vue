@@ -32,7 +32,7 @@ onMounted(() => {
       if (response.data["status"] == "success") {
         MNetName.value = response.data["data"]["magicDNSDomains"][0];
         enMagicDNS.value = response.data["data"]["magicDNS"];
-        enOverride.value = (response.data["data"]["resolvers"].length > 0)
+        enOverride.value = (response.data["data"]["resolvers"] && response.data["data"]["resolvers"].length > 0)
         if (enOverride.value) {
           resolvers.value = response.data["data"]["resolvers"]
         } else {
