@@ -100,7 +100,7 @@ function updateSubnet(type) {
                             class="btn border-0 bg-red-600 hover:bg-red-700 disabled:bg-red-600/60 disabled:text-white/60 text-white h-9 min-h-fit mr-2"
                             :disabled="!hasAllowedSubnet">全部禁用</button>
                         <button @click="updateSubnet('On')"
-                            class="btn border border-base-300 hover:border-base-300 bg-base-200 hover:bg-base-300 disabled:bg-base-200 disabled:text-base-400 text-black h-9 min-h-fit"
+                            class="btn border border-stone-300 hover:border-stone-300 disabled:border-stone-300 bg-base-200 hover:bg-base-300 disabled:bg-base-200/60 text-black disabled:text-black/30 h-9 min-h-fit"
                             :disabled="!hasExtraSubnet">全部启用</button>
                     </div>
                 </div>

@@ -861,3 +861,8 @@ func convExpiryToStr(duration time.Duration) string {
 		return "马上就要过期"
 	}
 }
+
+func Time2SHString(t time.Time) string {
+	tz, _ := time.LoadLocation("Asia/Shanghai")
+	return t.In(tz).Format("2006年01月02日 15:04:05")
+}

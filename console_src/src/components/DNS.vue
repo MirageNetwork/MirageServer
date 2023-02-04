@@ -82,7 +82,7 @@ onMounted(() => {
           </div>
         </div>
         <button disabled="" @click="$emit('')"
-          class="btn border border-base-300 hover:border-base-300 bg-base-200 hover:bg-base-300 text-black h-9 min-h-fit mt-8">网域重命名</button>
+          class="btn border border-stone-300 hover:border-stone-300 disabled:border-stone-300 bg-base-200 hover:bg-base-300 disabled:bg-base-200/60 text-black disabled:text-black/30 h-9 min-h-fit mt-8">网域重命名</button>
       </section>
       <section class="mb-16 max-w-2xl">
         <header class="mb-6">

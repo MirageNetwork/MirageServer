@@ -60,8 +60,10 @@ function keyExpiryCheck(isChange) {
   keyExpiryInputValue.value = keyExpiryInputValue.value
     .replace(/[^\d]+/g, "")
     .replace(/^0+(\d)/, "$1");
-  if (keyExpiryInputValue.value == "") keyExpiryInputValue.value = 0;
+  //if (keyExpiryInputValue.value == "") keyExpiryInputValue.value = 1;
   if (isChange) {
+    if (keyExpiryInputValue.value == "") keyExpiryInputValue.value = MaxKeyExpiry.value;
+    if (Number(keyExpiryInputValue.value) == 0) keyExpiryInputValue.value = 1;
     if (Number(keyExpiryInputValue.value) > 180) keyExpiryInputValue.value = 180;
   }
   updateKeyExpiryBtns();
@@ -242,7 +244,8 @@ function updateKeyExpiry() {
           </p>
         </header>
         <div class="mt-4">
-          <button :disabled="devMode" class="btn border-0 bg-red-600 hover:bg-red-700 text-white h-9 min-h-fit">
+          <button :disabled="devMode"
+            class="btn border-0 bg-red-600 hover:bg-red-700 disabled:bg-red-600/60 disabled:text-white/60 text-white h-9 min-h-fit">
             注销蜃境…
           </button>
         </div>
