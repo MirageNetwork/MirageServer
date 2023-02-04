@@ -545,7 +545,7 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 
 	console_router.HandleFunc("/api/self", h.ConsoleSelfAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/machines", h.ConsoleMachinesAPI).Methods(http.MethodGet)
-	console_router.HandleFunc("/api/dns", h.ConsoleDNSAPI).Methods(http.MethodGet)
+	console_router.HandleFunc("/api/dns", h.CAPIGetDNS).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/netsettings", h.getNetSettingAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/keys", h.CAPIGetKeys).Methods(http.MethodGet)
 
@@ -553,6 +553,7 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 	console_router.HandleFunc("/api/machine/remove", h.ConsoleRemoveMachineAPI).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/netsetting/updatekeyexpiry", h.ConsoleUpdateKeyExpiryAPI).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/keys", h.CAPIPostKeys).Methods(http.MethodPost)
+	console_router.HandleFunc("/api/dns", h.CAPIPostDNS).Methods(http.MethodPost)
 
 	console_router.PathPrefix("/api/keys/").HandlerFunc(h.CAPIDelKeys).Methods(http.MethodDelete)
 

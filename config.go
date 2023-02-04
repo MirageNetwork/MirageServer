@@ -437,6 +437,7 @@ func GetDNSConfig() (*tailcfg.DNSConfig, string) {
 			}
 		}
 
+		//cgao6: split DNS related here
 		if viper.IsSet("dns_config.restricted_nameservers") {
 			dnsConfig.Routes = make(map[string][]*dnstype.Resolver)
 			domains := []string{}

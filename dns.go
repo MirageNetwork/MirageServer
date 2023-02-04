@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strings"
 
-	mapset "github.com/deckarep/golang-set/v2"
 	"go4.org/netipx"
 	"tailscale.com/tailcfg"
 	"tailscale.com/types/dnstype"
@@ -183,13 +182,15 @@ func addNextDNSMetadata(resolvers []*dnstype.Resolver, machine Machine) {
 }
 
 func getMapResponseDNSConfig(
-	dnsConfigOrig *tailcfg.DNSConfig,
-	baseDomain string,
+	ipPrefixes []netip.Prefix, //
+	//	dnsConfigOrig *tailcfg.DNSConfig,
+	//	baseDomain string,
 	machine Machine,
 	peers Machines,
 ) *tailcfg.DNSConfig {
-	var dnsConfig *tailcfg.DNSConfig = dnsConfigOrig.Clone()
-	if dnsConfigOrig != nil && dnsConfigOrig.Proxied { // if MagicDNS is enabled
+	//cgao6: change to use User's DNSConfig
+	dnsConfig, baseDomain := machine.User.GetDNSConfig(ipPrefixes) //*tailcfg.DNSConfig = dnsConfigOrig.Clone()
+	if dnsConfig.Proxied {                                         // dnsConfigOrig != nil && dnsConfigOrig.Proxied {             // if MagicDNS is enabled
 		// Only inject the Search Domain of the current user - shared nodes should use their full FQDN
 		dnsConfig.Domains = append(
 			dnsConfig.Domains,
@@ -200,18 +201,25 @@ func getMapResponseDNSConfig(
 			),
 		)
 
+		/* cgao6: due to we need to add uncomparable field to User, can't use mapset any more
 		userSet := mapset.NewSet[User]()
 		userSet.Add(machine.User)
 		for _, p := range peers {
 			userSet.Add(p.User)
 		}
-		for _, user := range userSet.ToSlice() {
+		*/
+		userSet := make([]User, 0)
+		userSet = append(userSet, machine.User)
+		for _, p := range peers {
+			userSet = append(userSet, p.User)
+		}
+		for _, user := range userSet { //cgao6: same as above .ToSlice() {
 			dnsRoute := fmt.Sprintf("%v.%v", user.Name, baseDomain)
 			dnsConfig.Routes[dnsRoute] = nil
 		}
-	} else {
+	} /* else {
 		dnsConfig = dnsConfigOrig
-	}
+	}*/
 
 	addNextDNSMetadata(dnsConfig.Resolvers, machine)
 

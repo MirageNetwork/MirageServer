@@ -701,13 +701,13 @@ func (machines MachinesP) String() string {
 
 func (h *Headscale) toNodes(
 	machines Machines,
-	baseDomain string,
-	dnsConfig *tailcfg.DNSConfig,
+	// baseDomain string,
+	// dnsConfig *tailcfg.DNSConfig,
 ) ([]*tailcfg.Node, error) {
 	nodes := make([]*tailcfg.Node, len(machines))
 
 	for index, machine := range machines {
-		node, err := h.toNode(machine, baseDomain, dnsConfig)
+		node, err := h.toNode(machine) //, baseDomain, dnsConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -722,8 +722,8 @@ func (h *Headscale) toNodes(
 // as per the expected behaviour in the official SaaS.
 func (h *Headscale) toNode(
 	machine Machine,
-	baseDomain string,
-	dnsConfig *tailcfg.DNSConfig,
+	// baseDomain string,
+	// dnsConfig *tailcfg.DNSConfig,
 ) (*tailcfg.Node, error) {
 	var nodeKey key.NodePublic
 	err := nodeKey.UnmarshalText([]byte(NodePublicKeyEnsurePrefix(machine.NodeKey)))
@@ -800,7 +800,8 @@ func (h *Headscale) toNode(
 	}
 
 	var hostname string
-	if dnsConfig != nil && dnsConfig.Proxied { // MagicDNS
+	if machine.User.EnableMagic { //[cgao6 removed] dnsConfig != nil && dnsConfig.Proxied { // MagicDNS
+		_, baseDomain := machine.User.GetDNSConfig(h.cfg.IPPrefixes)
 		hostname = fmt.Sprintf(
 			"%s.%s.%s",
 			machine.GivenName,

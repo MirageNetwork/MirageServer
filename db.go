@@ -402,3 +402,26 @@ func (i StringList) Value() (driver.Value, error) {
 
 	return string(bytes), err
 }
+
+// cgao6: add splitdns type to store dns config into user's db
+type SplitDNS map[string][]string
+
+func (i *SplitDNS) Scan(destination interface{}) error {
+	switch value := destination.(type) {
+	case []byte:
+		return json.Unmarshal(value, i)
+
+	case string:
+		return json.Unmarshal([]byte(value), i)
+
+	default:
+		return fmt.Errorf("%w: unexpected data type %T", ErrMachineAddressesInvalid, destination)
+	}
+}
+
+// Value return json value, implement driver.Valuer interface.
+func (i SplitDNS) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(i)
+
+	return string(bytes), err
+}

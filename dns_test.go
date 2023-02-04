@@ -5,8 +5,6 @@ import (
 	"net/netip"
 
 	"gopkg.in/check.v1"
-	"tailscale.com/tailcfg"
-	"tailscale.com/types/dnstype"
 )
 
 func (s *Suite) TestMagicDNSRootDomains100(c *check.C) {
@@ -226,18 +224,22 @@ func (s *Suite) TestDNSConfigMapResponseWithMagicDNS(c *check.C) {
 	app.db.Save(machine2InShared1)
 
 	baseDomain := "foobar.headscale.net"
-	dnsConfigOrig := tailcfg.DNSConfig{
-		Routes:  make(map[string][]*dnstype.Resolver),
-		Domains: []string{baseDomain},
-		Proxied: true,
-	}
-
+	/*	dnsConfigOrig := tailcfg.DNSConfig{
+			Routes:  make(map[string][]*dnstype.Resolver),
+			Domains: []string{baseDomain},
+			Proxied: true,
+		}
+	*/
 	peersOfMachineInShared1, _, err := app.getPeers(machineInShared1)
 	c.Assert(err, check.IsNil)
 
+	prefixes := []netip.Prefix{
+		netip.MustParsePrefix("100.64.0.0/10"),
+	}
 	dnsConfig := getMapResponseDNSConfig(
-		&dnsConfigOrig,
-		baseDomain,
+		prefixes,
+		//		&dnsConfigOrig,
+		//		baseDomain,
 		*machineInShared1,
 		peersOfMachineInShared1,
 	)
@@ -372,19 +374,23 @@ func (s *Suite) TestDNSConfigMapResponseWithoutMagicDNS(c *check.C) {
 	}
 	app.db.Save(machine2InShared1)
 
-	baseDomain := "foobar.headscale.net"
-	dnsConfigOrig := tailcfg.DNSConfig{
-		Routes:  make(map[string][]*dnstype.Resolver),
-		Domains: []string{baseDomain},
-		Proxied: false,
-	}
-
+	/*	baseDomain := "foobar.headscale.net"
+		dnsConfigOrig := tailcfg.DNSConfig{
+			Routes:  make(map[string][]*dnstype.Resolver),
+			Domains: []string{baseDomain},
+			Proxied: false,
+		}
+	*/
 	peersOfMachine1Shared1, _, err := app.getPeers(machineInShared1)
 	c.Assert(err, check.IsNil)
 
+	prefixes := []netip.Prefix{
+		netip.MustParsePrefix("100.64.0.0/10"),
+	}
 	dnsConfig := getMapResponseDNSConfig(
-		&dnsConfigOrig,
-		baseDomain,
+		prefixes, //
+		//		&dnsConfigOrig,
+		//		baseDomain,
 		*machineInShared1,
 		peersOfMachine1Shared1,
 	)

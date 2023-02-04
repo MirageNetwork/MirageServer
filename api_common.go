@@ -15,7 +15,9 @@ func (h *Headscale) generateMapResponse(
 		Str("func", "generateMapResponse").
 		Str("machine", mapRequest.Hostinfo.Hostname).
 		Msg("Creating Map response")
-	node, err := h.toNode(*machine, h.cfg.BaseDomain, h.cfg.DNSConfig)
+
+	//cgao6: change to use User's DNSConfig
+	node, err := h.toNode(*machine) //h.cfg.BaseDomain, h.cfg.DNSConfig)
 	if err != nil {
 		log.Error().
 			Caller().
@@ -42,7 +44,8 @@ func (h *Headscale) generateMapResponse(
 
 	profiles := h.getMapResponseUserProfiles(*machine, peers)
 
-	nodePeers, err := h.toNodes(peers, h.cfg.BaseDomain, h.cfg.DNSConfig)
+	//cgao6: change to use User's DNSConfig
+	nodePeers, err := h.toNodes(peers) //, h.cfg.BaseDomain, h.cfg.DNSConfig)
 	if err != nil {
 		log.Error().
 			Caller().
@@ -53,9 +56,11 @@ func (h *Headscale) generateMapResponse(
 		return nil, err
 	}
 
+	//cgao6: use User's DNSconfig instead
 	dnsConfig := getMapResponseDNSConfig(
-		h.cfg.DNSConfig,
-		h.cfg.BaseDomain,
+		h.cfg.IPPrefixes, //
+		//		h.cfg.DNSConfig,
+		//		h.cfg.BaseDomain,
 		*machine,
 		peers,
 	)

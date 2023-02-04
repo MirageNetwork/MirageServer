@@ -1,16 +1,44 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, watch, watchEffect } from "vue";
 import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
+import Toast from "./Toast.vue";
 
 const devmode = ref("true")
 
-const MNetName = ref("");
-const resolvers = ref([])
-const domains = ref([])
-const domainResolvers = ref({})
+const toastShow = ref(false);
+const toastMsg = ref("");
+watch(toastShow, () => {
+  if (toastShow.value) {
+    setTimeout(function () { toastShow.value = false }, 5000)
+  }
+})
+const DisableMagicDNSShow = ref(false)
 
-const enMagicDNS = ref(false)
-const enOverride = ref(false)
+const DNSCfg = ref({})
+
+const MNetName = computed(() => {
+  return DNSCfg.value["magicDNSDomains"][0]
+})
+const enOverride = computed(() => {
+  return DNSCfg.value["resolvers"] && DNSCfg.value["resolvers"].length > 0
+})
+const enMagicDNS = computed(() => {
+  return DNSCfg.value["magicDNS"]
+})
+const resolvers = computed(() => {
+  if (enOverride.value) {
+    return DNSCfg.value["resolvers"]
+  }
+  return DNSCfg.value["fallbackResolvers"]
+})
+const domains = computed(() => {
+  return DNSCfg.value["domains"]
+})
+const domainResolvers = computed(() => {
+  return DNSCfg.value["routes"]
+})
+
+
 
 
 const copyBtnText = ref("复制");
@@ -30,18 +58,7 @@ onMounted(() => {
     .then(function (response) {
       // 处理成功情况
       if (response.data["status"] == "success") {
-        MNetName.value = response.data["data"]["magicDNSDomains"][0];
-        enMagicDNS.value = response.data["data"]["magicDNS"];
-        enOverride.value = (response.data["data"]["resolvers"] && response.data["data"]["resolvers"].length > 0)
-        if (enOverride.value) {
-          resolvers.value = response.data["data"]["resolvers"]
-        } else {
-          resolvers.value = response.data["data"]["fallbackResolvers"]
-        }
-        domains.value = response.data["data"]["domains"]
-        for (var name in response.data["data"]["routes"]) {
-          domainResolvers.value[name] = response.data["data"]["routes"][name]
-        }
+        DNSCfg.value = response.data["data"]
       } else {
         if (response.data["status"].substring(6) == "用户信息核对失败") {
           //TODO:token失效跳转
@@ -54,6 +71,32 @@ onMounted(() => {
     })
 });
 
+function switchMagicDNS(newStatus) {
+  var reqData = DNSCfg.value
+  switch (newStatus) {
+    case "on":
+    case "doOff":
+      reqData["magicDNS"] = (newStatus == "on" ? true : false)
+      axios
+        .post("/admin/api/dns", reqData)
+        .then(function (response) {
+          if (response.data["status"] == "success") {
+            DisableMagicDNSShow.value = false
+            toastMsg.value = (newStatus == "on" ? "已启用幻域" : "已禁用幻域")
+            toastShow.value = true
+          } else {
+            console.log(response.data["status"])
+          }
+        })
+        .catch(function (error) {
+          console.log(error)
+        })
+      break;
+    case "off":
+      DisableMagicDNSShow.value = true
+      break;
+  }
+}
 </script>
 
 <template>
@@ -89,9 +132,9 @@ onMounted(() => {
           <h2 class="text-xl font-semibold tracking-tight mb-1">幻域</h2>
           <p class="text-gray-600">自动为您蜃境网域中的设备注册域名，令您从而可以使用名称替代IP地址访问设备</p>
         </header>
-        <button v-if="enMagicDNS"
+        <button @click="switchMagicDNS('off')" v-if="enMagicDNS"
           class="btn border-0 bg-red-600 hover:bg-red-700 text-white h-9 min-h-fit">停用幻域…</button>
-        <button v-if="!enMagicDNS"
+        <button @click="switchMagicDNS('on')" v-if="!enMagicDNS"
           class="btn border-0 bg-blue-500 hover:bg-blue-900 text-white h-9 min-h-fit">启用幻域</button>
       </section>
       <section class="mb-16 max-w-2xl">
@@ -191,8 +234,21 @@ onMounted(() => {
               <h4 class="font-medium text-gray-600 mr-2">全球域名服务器</h4>
               <div class="flex items-center space-x-2 ml-auto">
                 <label class="flex items-center cursor-pointer text-sm font-medium select-none space-x-1 text-gray-500"
-                  for="fallback"><span>覆盖本地 DNS</span></label>
-                <input v-model="enOverride" id="fallback" ref="fallback" type="checkbox" class="toggle toggle-xs">
+                  for="fallback">
+                  <span class="tooltip" data-tip="启用时，连接的客户端会忽略本地DNS设置，并总使用这些全球域名服务器。
+禁用时，客户端首选本地DNS设置，只在需要时使用这些全球服务器。">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                      class="relative -top-0.5 inline-block">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                  </span>
+                  <span>覆盖本地 DNS</span>
+                </label>
+                <input :disabled="!resolvers || resolvers.length == 0" v-model="enOverride" id="fallback" ref="fallback"
+                  type="checkbox" class="toggle toggle-xs">
               </div>
             </header>
             <div class="border border-gray-200 bg-white rounded-md divide-y overflow-hidden">
@@ -255,6 +311,43 @@ onMounted(() => {
       </section>
     </section>
   </main>
+  <!-- 提示框显示 -->
+  <Teleport to=".toast-container">
+    <Toast :show="toastShow" :msg="toastMsg" @close="toastShow = false"></Toast>
+  </Teleport>
+
+  <Teleport to="body">
+    <!-- 停用幻域提示框显示 -->
+    <template v-if="DisableMagicDNSShow">
+      <div @click.self="DisableMagicDNSShow = false"
+        class="fixed overflow-y-auto inset-0 py-8 z-30 bg-gray-900 bg-opacity-[0.07]" style="pointer-events: auto;">
+        <div
+          class="bg-white rounded-lg relative p-4 md:p-6 text-gray-700 max-w-lg min-w-[19rem] my-8 mx-auto w-[97%] shadow-2xl"
+          style="pointer-events: auto;">
+          <header class="flex items-center justify-between space-x-4 mb-5 mr-8">
+            <div class="font-semibold text-lg truncate">停用幻域？</div>
+          </header>
+          <form @submit.prevent="switchMagicDNS('doOff')">
+            <p class="text-gray-700 mb-4">你网络中的用户将无法继续使用短名称在蜃境中访问设备</p>
+            <footer class="flex mt-10 justify-end space-x-4">
+              <button @click="DisableMagicDNSShow = false"
+                class="btn border border-base-300 hover:border-base-300 bg-base-200 hover:bg-base-300 text-black h-9 min-h-fit"
+                type="button">取消</button>
+              <button class="btn border-0 bg-red-600 hover:bg-red-700 text-white h-9 min-h-fit"
+                type="submit">停用幻域</button>
+            </footer>
+          </form>
+          <button @click="DisableMagicDNSShow = false"
+            class="btn btn-sm btn-ghost absolute top-5 right-5 px-2 py-2 border-0 bg-base-0 focus:bg-base-200 hover:bg-base-200"
+            type="button"><svg xmlns="http://www.w3.org/2000/svg" width="1.25em" height="1.25em" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg></button>
+        </div>
+      </div>
+    </template>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -268,5 +361,31 @@ onMounted(() => {
   border: 0;
   --tglbg: #1e40af;
   background-color: white;
+}
+
+.toggle:disabled {
+  --togglehandleborder: 0 0 0 3px white inset, var(--handleoffsetcalculator) 0 0 3px white inset;
+}
+
+
+.tooltip {
+  --tooltip-color: #faf9f8;
+  --tooltip-text-color: #3a3939;
+  text-align: start;
+  white-space: normal;
+}
+
+.tooltip:before {
+  max-width: 16rem;
+  font-size: small;
+  font-weight: 300;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-width: 1px;
+  border-color: #e1dfde;
 }
 </style>

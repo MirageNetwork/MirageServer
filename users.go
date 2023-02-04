@@ -3,6 +3,7 @@ package headscale
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"regexp"
 	"strconv"
 	"strings"
@@ -10,9 +11,11 @@ import (
 
 	v1 "github.com/juanfont/headscale/gen/go/headscale/v1"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm"
 	"tailscale.com/tailcfg"
+	"tailscale.com/types/dnstype"
 )
 
 const (
@@ -38,7 +41,11 @@ type User struct {
 	Name           string `gorm:"unique"`
 	OIDC_UID       string `gorm:"unique"`
 	Display_Name   string `gorm:"unique"`
-	ExpiryDuration uint
+	ExpiryDuration uint   `gorm:"default:180"`
+	EnableMagic    bool   `gorm:"default:false"`
+	OverrideLocal  bool   `gorm:"default:false"`
+	Nameservers    StringList
+	SplitDns       SplitDNS
 }
 
 // CreateUser creates a new User. Returns error if could not be created
@@ -318,6 +325,146 @@ func CheckForFQDNRules(name string) error {
 			name,
 			ErrInvalidUserName,
 		)
+	}
+
+	return nil
+}
+
+// 增加User独立配置的DNS设置读取
+func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, string) {
+	dnsConfig := &tailcfg.DNSConfig{}
+
+	nameserversStr := me.Nameservers
+
+	nameservers := []netip.Addr{}
+	resolvers := []*dnstype.Resolver{}
+
+	for _, nameserverStr := range nameserversStr {
+		// Search for explicit DNS-over-HTTPS resolvers
+		if strings.HasPrefix(nameserverStr, "https://") {
+			resolvers = append(resolvers, &dnstype.Resolver{
+				Addr: nameserverStr,
+			})
+			// This nameserver can not be parsed as an IP address
+			continue
+		}
+		// Parse nameserver as a regular IP
+		nameserver, err := netip.ParseAddr(nameserverStr)
+		if err != nil {
+			log.Error().
+				Str("func", "getDNSConfig").
+				Err(err).
+				Msgf("Could not parse nameserver IP: %s", nameserverStr)
+		}
+
+		nameservers = append(nameservers, nameserver)
+		resolvers = append(resolvers, &dnstype.Resolver{
+			Addr: nameserver.String(),
+		})
+	}
+
+	dnsConfig.Nameservers = nameservers
+
+	if me.OverrideLocal {
+		dnsConfig.Resolvers = resolvers
+	} else {
+		dnsConfig.FallbackResolvers = resolvers
+	}
+
+	//cgao6: split DNS related here
+	dnsConfig.Routes = make(map[string][]*dnstype.Resolver)
+	domains := []string{}
+	restrictedDNS := me.SplitDns
+	for domain, restrictedNameservers := range restrictedDNS {
+		restrictedResolvers := make(
+			[]*dnstype.Resolver,
+			len(restrictedNameservers),
+		)
+		for index, nameserverStr := range restrictedNameservers {
+			nameserver, err := netip.ParseAddr(nameserverStr)
+			if err != nil {
+				log.Error().
+					Str("func", "getDNSConfig").
+					Err(err).
+					Msgf("Could not parse restricted nameserver IP: %s", nameserverStr)
+			}
+			restrictedResolvers[index] = &dnstype.Resolver{
+				Addr: nameserver.String(),
+			}
+		}
+		dnsConfig.Routes[domain] = restrictedResolvers
+		domains = append(domains, domain)
+	}
+	dnsConfig.Domains = domains
+
+	//cgao6: TODO
+	if viper.IsSet("dns_config.domains") {
+		domains := viper.GetStringSlice("dns_config.domains")
+		if len(dnsConfig.Resolvers) > 0 {
+			dnsConfig.Domains = domains
+		} else if domains != nil {
+			log.Warn().
+				Msg("Warning: dns_config.domains is set, but no nameservers are configured. Ignoring domains.")
+		}
+	}
+
+	//cgao6: TODO
+	if viper.IsSet("dns_config.extra_records") {
+		var extraRecords []tailcfg.DNSRecord
+
+		err := viper.UnmarshalKey("dns_config.extra_records", &extraRecords)
+		if err != nil {
+			log.Error().
+				Str("func", "getDNSConfig").
+				Err(err).
+				Msgf("Could not parse dns_config.extra_records")
+		}
+
+		dnsConfig.ExtraRecords = extraRecords
+	}
+
+	dnsConfig.Proxied = me.EnableMagic
+
+	if dnsConfig.Proxied { // if MagicDNS
+		magicDNSDomains := generateMagicDNSRootDomains(ipPrefixesCfg)
+		// we might have routes already from Split DNS
+		if dnsConfig.Routes == nil {
+			dnsConfig.Routes = make(map[string][]*dnstype.Resolver)
+		}
+		for _, d := range magicDNSDomains {
+			dnsConfig.Routes[d.WithoutTrailingDot()] = nil
+		}
+	}
+
+	var baseDomain string
+	if viper.IsSet("dns_config.base_domain") {
+		baseDomain = viper.GetString("dns_config.base_domain")
+	} else {
+		baseDomain = "headscale.net" // does not really matter when MagicDNS is not enabled
+	}
+
+	return dnsConfig, baseDomain
+}
+
+func (h *Headscale) UpdateDNSConfig(userName string, newDNSCfg DNSData) error {
+	var err error
+	user, err := h.GetUser(userName)
+	if err != nil {
+		return err
+	}
+	user.EnableMagic = newDNSCfg.MagicDNS
+	user.Nameservers = make([]string, 0)
+	if len(newDNSCfg.Resolvers) > 0 {
+		user.OverrideLocal = false
+		user.Nameservers = newDNSCfg.Resolvers
+	} else if len(newDNSCfg.FallbackResolvers) > 0 {
+		user.OverrideLocal = true
+		user.Nameservers = newDNSCfg.FallbackResolvers
+	}
+	user.SplitDns = newDNSCfg.Routes
+
+	if result := h.db.Save(user); result.Error != nil {
+		return result.Error
 	}
 
 	return nil
