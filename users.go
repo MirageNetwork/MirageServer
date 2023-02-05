@@ -398,15 +398,16 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 	dnsConfig.Domains = domains
 
 	//cgao6: TODO
-	if viper.IsSet("dns_config.domains") {
-		domains := viper.GetStringSlice("dns_config.domains")
-		if len(dnsConfig.Resolvers) > 0 {
-			dnsConfig.Domains = domains
-		} else if domains != nil {
-			log.Warn().
-				Msg("Warning: dns_config.domains is set, but no nameservers are configured. Ignoring domains.")
-		}
-	}
+	/*
+		if viper.IsSet("dns_config.domains") {
+			domains := viper.GetStringSlice("dns_config.domains")
+			if len(dnsConfig.Resolvers) > 0 {
+				dnsConfig.Domains = domains
+			} else if domains != nil {
+				log.Warn().
+					Msg("Warning: dns_config.domains is set, but no nameservers are configured. Ignoring domains.")
+			}
+		}*/
 
 	//cgao6: TODO
 	if viper.IsSet("dns_config.extra_records") {
@@ -455,10 +456,10 @@ func (h *Headscale) UpdateDNSConfig(userName string, newDNSCfg DNSData) error {
 	user.EnableMagic = newDNSCfg.MagicDNS
 	user.Nameservers = make([]string, 0)
 	if len(newDNSCfg.Resolvers) > 0 {
-		user.OverrideLocal = false
+		user.OverrideLocal = true
 		user.Nameservers = newDNSCfg.Resolvers
 	} else if len(newDNSCfg.FallbackResolvers) > 0 {
-		user.OverrideLocal = true
+		user.OverrideLocal = false
 		user.Nameservers = newDNSCfg.FallbackResolvers
 	}
 	user.SplitDns = newDNSCfg.Routes

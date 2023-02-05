@@ -94,11 +94,12 @@ function getMachines() {
           for (var k in response.data["mlist"]) {
             MList.value[k] = response.data["mlist"][k];
             let tailtwo = MList.value[k]["expirydesc"].slice(-2);
+            let tailthree = MList.value[k]["expirydesc"].slice(-3);
             if (
               MList.value[k]["expirydesc"] == "马上就要过期" ||
               tailtwo == "分钟" ||
               tailtwo == "小时" ||
-              tailtwo == "1天"
+              tailthree == "剩1天"
             ) {
               MList.value[k]["soonexpiry"] = true;
             } else {

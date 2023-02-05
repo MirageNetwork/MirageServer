@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, watch, watchEffect } from "vue";
 import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
+import { useScrollOff } from '../utils.js';
 import Toast from "./Toast.vue";
+import AddNS from "./dns/AddNS.vue"
+import EditNS from "./dns/EditNS.vue";
 
 const devmode = ref("true")
 
@@ -13,6 +16,115 @@ watch(toastShow, () => {
   }
 })
 const DisableMagicDNSShow = ref(false)
+
+const addNSBtn = ref(null)
+const AddNameserverShow = ref(false)
+const addNSLeft = ref(0)
+const addNSTop = ref(0)
+const AddNSShow = ref(false)
+function refreshPos() {
+  if (addNSBtn.value != null) {
+    addNSLeft.value = addNSBtn.value?.getBoundingClientRect().left
+    if (addNSBtn.value?.getBoundingClientRect().top > window.innerHeight - 108) {
+      addNSTop.value = addNSBtn.value?.getBoundingClientRect().top - 58
+    } else {
+      addNSTop.value = addNSBtn.value?.getBoundingClientRect().top + 42
+    }
+  }
+  if (NSMenuBtn.value != null) {
+    NSMenuLeft.value = NSMenuBtn.value?.getBoundingClientRect().left - 80
+    if (NSMenuBtn.value?.getBoundingClientRect().top > window.innerHeight - 112) {
+      NSMenuTop.value = NSMenuBtn.value?.getBoundingClientRect().top - 76
+    } else {
+      NSMenuTop.value = NSMenuBtn.value?.getBoundingClientRect().top
+    }
+  }
+}
+
+const NSMenuBtn = ref(null)
+const NSMenuLeft = ref(0)
+const NSMenuTop = ref(0)
+const NSMenuShow = ref(false)
+const EditNSShow = ref(false)
+
+const currentResolver = ref("")
+const currentDomain = ref("")
+const DNSCfgRemovedCurrent = computed(() => {
+  var tmpDNSCfg = JSON.parse(JSON.stringify(DNSCfg.value))
+  if (currentDomain.value == "") {
+    if (currentResolver.value == "") return tmpDNSCfg
+    if (!tmpDNSCfg["resolvers"] || tmpDNSCfg["resolvers"].length == 0) {
+      var newFallbackResolvers = []
+      for (var i in tmpDNSCfg["fallbackResolvers"]) {
+        if (tmpDNSCfg["fallbackResolvers"][i] != currentResolver.value) {
+          newFallbackResolvers.push(tmpDNSCfg["fallbackResolvers"][i])
+        }
+      }
+      tmpDNSCfg["fallbackResolvers"] = newFallbackResolvers
+      return tmpDNSCfg
+    } else {
+      var newResolvers = []
+      for (var i in tmpDNSCfg["resolvers"]) {
+        if (tmpDNSCfg["resolvers"][i] != currentResolver.value) {
+          newResolvers.push(tmpDNSCfg["resolvers"][i])
+        }
+      }
+      tmpDNSCfg["resolvers"] = newResolvers
+      return tmpDNSCfg
+    }
+  } else {
+    if (currentResolver.value == "") return tmpDNSCfg
+    var newDomain = []
+    var newRoute = []
+    for (var i in tmpDNSCfg["domains"]) {
+      if (tmpDNSCfg["domains"][i] != currentDomain.value) {
+        newDomain.push(tmpDNSCfg["domains"][i])
+      } else {
+        for (var j in tmpDNSCfg["routes"][currentDomain.value]) {
+          if (tmpDNSCfg["routes"][currentDomain.value][j] != currentResolver.value) {
+            newRoute.push(tmpDNSCfg["routes"][currentDomain.value][j])
+          }
+        }
+        tmpDNSCfg["routes"][currentDomain.value] = newRoute
+        if (newRoute.length > 0) {
+          newDomain.push(currentDomain.value)
+        }
+      }
+    }
+    tmpDNSCfg["domains"] = newDomain
+    if (newRoute.length == 0) {
+      var newRoutes = {}
+      for (var key in tmpDNSCfg["routes"]) {
+        if (key != currentDomain.value) {
+          newRoutes[key] = tmpDNSCfg["routes"][key]
+        }
+      }
+      tmpDNSCfg["routes"] = newRoutes
+    }
+    return tmpDNSCfg
+  }
+})
+
+function showNSMenu(e) {
+  NSMenuBtn.value = e.target
+  while (NSMenuBtn.value?.tagName.toLowerCase() != "button") {
+    NSMenuBtn.value = NSMenuBtn.value.parentNode
+  }
+  refreshPos()
+  useScrollOff(true)
+  currentResolver.value = NSMenuBtn.value.parentNode.previousElementSibling.firstChild.innerText
+  if (NSMenuBtn.value.parentNode.parentNode.parentNode.previousElementSibling.firstChild.innerText == "全球域名服务器") {
+    currentDomain.value = ""
+  } else {
+    currentDomain.value = NSMenuBtn.value.parentNode.parentNode.parentNode.previousElementSibling.firstChild.nextElementSibling.innerText
+  }
+  /*
+    console.log("currentResolver:  " + currentResolver.value)
+    console.log("currentDomain:  " + currentDomain.value)
+    console.log("currentCfgDomains:  " + JSON.stringify(DNSCfgRemovedCurrent.value))
+  */
+  NSMenuShow.value = true
+}
 
 const DNSCfg = ref({})
 
@@ -40,7 +152,6 @@ const domainResolvers = computed(() => {
 
 
 
-
 const copyBtnText = ref("复制");
 
 function copyMNetName() {
@@ -53,6 +164,10 @@ function copyMNetName() {
 }
 
 onMounted(() => {
+  refreshPos()
+  window.addEventListener("resize", refreshPos)
+  window.addEventListener("scroll", refreshPos)
+
   axios
     .get("/admin/api/dns")
     .then(function (response) {
@@ -81,7 +196,9 @@ function switchMagicDNS(newStatus) {
         .post("/admin/api/dns", reqData)
         .then(function (response) {
           if (response.data["status"] == "success") {
+            DNSCfg.value = response.data["data"]
             DisableMagicDNSShow.value = false
+            useScrollOff(false)
             toastMsg.value = (newStatus == "on" ? "已启用幻域" : "已禁用幻域")
             toastShow.value = true
           } else {
@@ -93,9 +210,61 @@ function switchMagicDNS(newStatus) {
         })
       break;
     case "off":
+      useScrollOff(true)
       DisableMagicDNSShow.value = true
       break;
   }
+}
+function switchOverride(event) {
+  var reqData = DNSCfg.value
+  if (event.target.checked) {
+    reqData["resolvers"] = reqData["fallbackResolvers"]
+    reqData["fallbackResolvers"] = []
+  } else {
+    reqData["fallbackResolvers"] = reqData["resolvers"]
+    reqData["resolvers"] = []
+  }
+  axios
+    .post("/admin/api/dns", reqData)
+    .then(function (response) {
+      if (response.data["status"] == "success") {
+        DNSCfg.value = response.data["data"]
+      } else {
+        console.log(response.data["status"])
+      }
+    })
+    .catch(function (error) {
+      console.log(error)
+    })
+}
+function newNSAdded(newDNSCfg) {
+  DNSCfg.value = newDNSCfg
+  AddNSShow.value = false
+}
+function newNSEdited(newDNSCfg) {
+  DNSCfg.value = newDNSCfg
+  EditNSShow.value = false
+}
+
+function removeNS() {
+  axios
+    .post("/admin/api/dns", DNSCfgRemovedCurrent.value)
+    .then(function (response) {
+      if (response.data["status"] == "success") {
+        DNSCfg.value = response.data["data"]
+      } else {
+        console.log(response.data["status"])
+      }
+    })
+    .catch(function (error) {
+      console.log(error)
+    })
+    .then(function () {
+      currentDomain.value = ""
+      currentResolver.value = ""
+      NSMenuShow.value = false
+      useScrollOff(false)
+    })
 }
 </script>
 
@@ -208,13 +377,14 @@ function switchMagicDNS(newStatus) {
                     </div>
                   </span></div>
               </header>
-              <div v-for="oneRoute in domainResolvers[singleDomain]"
-                class="border border-gray-200 bg-white rounded-md divide-y overflow-hidden">
-                <div class="transition-shadow -mb-px flex justify-between select-none ">
+              <div class="border border-gray-200 bg-white rounded-md divide-y overflow-hidden">
+                <div v-for="oneRoute in domainResolvers[singleDomain]"
+                  class="transition-shadow -mb-px flex justify-between select-none ">
                   <div class="pl-4 flex flex-1 items-start">
                     <div class="tabular-nums pr-2 py-2 w-full">{{ oneRoute }}</div>
                   </div>
-                  <div class="pr-2 pt-1.5"><button type="button" id="radix-:r19:" aria-haspopup="menu"
+                  <div class="pr-2 pt-1.5">
+                    <button @click="showNSMenu" type="button" id="radix-:r19:" aria-haspopup="menu"
                       aria-expanded="false" data-state="closed" class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0
           group-hover:border-gray-300/100 hover:border-gray-300/100 group-hover:bg-white hover:!bg-gray-0
           group-hover:shadow-md hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow
@@ -224,7 +394,8 @@ function switchMagicDNS(newStatus) {
                         <circle cx="12" cy="12" r="1"></circle>
                         <circle cx="19" cy="12" r="1"></circle>
                         <circle cx="5" cy="12" r="1"></circle>
-                      </svg></button></div>
+                      </svg></button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -247,8 +418,8 @@ function switchMagicDNS(newStatus) {
                   </span>
                   <span>覆盖本地 DNS</span>
                 </label>
-                <input :disabled="!resolvers || resolvers.length == 0" v-model="enOverride" id="fallback" ref="fallback"
-                  type="checkbox" class="toggle toggle-xs">
+                <input @change="switchOverride" :disabled="!resolvers || resolvers.length == 0" :checked="enOverride"
+                  id="fallback" ref="fallback" type="checkbox" class="toggle toggle-xs">
               </div>
             </header>
             <div class="border border-gray-200 bg-white rounded-md divide-y overflow-hidden">
@@ -269,8 +440,9 @@ function switchMagicDNS(newStatus) {
                 <div class="pl-4 flex flex-1 items-start">
                   <div class="tabular-nums pr-2 py-2 w-full">{{ ns }}</div>
                 </div>
-                <div class="pr-2 pt-1.5"><button type="button" id="radix-:r26:" aria-haspopup="menu"
-                    aria-expanded="false" data-state="closed" class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0
+                <div class="pr-2 pt-1.5">
+                  <button @click="showNSMenu" type="button" id="radix-:r26:" aria-haspopup="menu" aria-expanded="false"
+                    data-state="closed" class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0
           group-hover:border-gray-300/100 hover:border-gray-300/100 group-hover:bg-white hover:!bg-gray-0
           group-hover:shadow-md hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow
           duration-100 ease-in-out z-50"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
@@ -285,7 +457,7 @@ function switchMagicDNS(newStatus) {
             </div>
           </div>
         </div>
-        <button
+        <button ref="addNSBtn" @click="AddNameserverShow = true; useScrollOff(true)"
           class="btn border border-base-300 hover:border-base-300 bg-base-200 hover:bg-base-300 text-black h-9 min-h-fit mt-8">
           添加域名服务器
           <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none"
@@ -319,7 +491,7 @@ function switchMagicDNS(newStatus) {
   <Teleport to="body">
     <!-- 停用幻域提示框显示 -->
     <template v-if="DisableMagicDNSShow">
-      <div @click.self="DisableMagicDNSShow = false"
+      <div @click.self="DisableMagicDNSShow = false; useScrollOff(false)"
         class="fixed overflow-y-auto inset-0 py-8 z-30 bg-gray-900 bg-opacity-[0.07]" style="pointer-events: auto;">
         <div
           class="bg-white rounded-lg relative p-4 md:p-6 text-gray-700 max-w-lg min-w-[19rem] my-8 mx-auto w-[97%] shadow-2xl"
@@ -330,14 +502,14 @@ function switchMagicDNS(newStatus) {
           <form @submit.prevent="switchMagicDNS('doOff')">
             <p class="text-gray-700 mb-4">你网络中的用户将无法继续使用短名称在蜃境中访问设备</p>
             <footer class="flex mt-10 justify-end space-x-4">
-              <button @click="DisableMagicDNSShow = false"
+              <button @click="DisableMagicDNSShow = false; useScrollOff(false)"
                 class="btn border border-base-300 hover:border-base-300 bg-base-200 hover:bg-base-300 text-black h-9 min-h-fit"
                 type="button">取消</button>
               <button class="btn border-0 bg-red-600 hover:bg-red-700 text-white h-9 min-h-fit"
                 type="submit">停用幻域</button>
             </footer>
           </form>
-          <button @click="DisableMagicDNSShow = false"
+          <button @click="DisableMagicDNSShow = false; useScrollOff(false)"
             class="btn btn-sm btn-ghost absolute top-5 right-5 px-2 py-2 border-0 bg-base-0 focus:bg-base-200 hover:bg-base-200"
             type="button"><svg xmlns="http://www.w3.org/2000/svg" width="1.25em" height="1.25em" viewBox="0 0 24 24"
               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -347,6 +519,42 @@ function switchMagicDNS(newStatus) {
         </div>
       </div>
     </template>
+    <!-- 添加域名服务器菜单显示 -->
+    <template v-if="AddNameserverShow">
+      <div @click.self="AddNameserverShow = false; useScrollOff(false)"
+        class="fixed overflow-y-auto inset-0 py-8 z-30 bg-opacity-0" style="pointer-events: auto;">
+        <div class="fixed min-w-max shadow-lg border border-stone-200 rounded-md z-20"
+          :style="'left: ' + addNSLeft + 'px; top: ' + addNSTop + 'px;'">
+          <div class="dropdown bg-white rounded-md py-1 z-20">
+            <div @click="AddNSShow = true; AddNameserverShow = false;"
+              class="block w-40 px-4 py-2 cursor-pointer hover:bg-stone-100 focus:outline-none focus:bg-stone-100">
+              自定义…</div>
+          </div>
+        </div>
+      </div>
+    </template>
+    <!-- 域名服务器操作菜单显示 -->
+    <template v-if="NSMenuShow">
+      <div @click.self="NSMenuShow = false; useScrollOff(false)"
+        class="fixed overflow-y-auto inset-0 py-8 z-30 bg-opacity-0" style="pointer-events: auto;">
+        <div class="fixed min-w-max shadow-lg border border-stone-200 rounded-md z-20"
+          :style="'left: ' + NSMenuLeft + 'px; top: ' + NSMenuTop + 'px;'">
+          <div class="dropdown bg-white rounded-md py-1 z-20">
+            <div @click="EditNSShow = true; NSMenuShow = false;"
+              class="block px-4 py-2 cursor-pointer hover:bg-stone-100 focus:outline-none focus:bg-stone-100">
+              编辑…</div>
+            <div class="my-1 border-b border-base-300"></div>
+            <div @click="removeNS"
+              class="block px-4 py-2 cursor-pointer hover:bg-stone-100 focus:outline-none focus:bg-stone-100 text-red-400">
+              删除</div>
+          </div>
+        </div>
+      </div>
+    </template>
+    <!-- 添加域名服务器提示框显示 -->
+    <AddNS v-if="AddNSShow" :currentDNS="DNSCfg" @nameserver-added="newNSAdded" @close="AddNSShow = false"></AddNS>
+    <EditNS v-if="EditNSShow" :currentDNS="DNSCfg" :OriDomain="currentDomain" :OriResolver="currentResolver"
+      @nameserver-edited="newNSEdited" @close="EditNSShow = false"></EditNS>
   </Teleport>
 </template>
 

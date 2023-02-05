@@ -2,8 +2,6 @@
 import { watch, ref, onMounted, computed } from 'vue';
 import { useDisScroll } from '../utils.js';
 
-const devMode = ref(true)
-
 useDisScroll()
 
 const machineMenu = ref(null)
@@ -37,10 +35,10 @@ const closeMe = (event) => {
             style="outline: none; --radix-dropdown-menu-content-transform-origin: var(--radix-popper-transform-origin); pointer-events: auto;">
             <div @click="$emit('showdialog-updatehostname')"
                 class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
-                :hidden="devMode">
+                >
                 编辑设备名称…</div>
             <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
-                :hidden="devMode">
+                >
                 分享…</div>
             <div @click="$emit('set-expires')"
                 class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
@@ -48,10 +46,10 @@ const closeMe = (event) => {
             <div class="my-1 border-b border-base-300"></div>
             <div @click="$emit('showdialog-setsubnet')"
                 class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
-                :hidden="devMode">
+                >
                 编辑子网转发…</div>
             <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
-                :hidden="devMode">
+                >
                 编辑ACL标签…</div>
             <div class="my-1 border-b border-base-300"></div>
             <div @click="$emit('showdialog-remove')"
