@@ -110,11 +110,12 @@ onMounted(() => {
                         currentMachine.value = response.data["mlist"][k];
                         currentMID.value = k;
                         let tailtwo = currentMachine.value["expirydesc"].slice(-2);
+                        let tailthree = currentMachine.value["expirydesc"].slice(-3);
                         if (
                             currentMachine.value["expirydesc"] == "马上就要过期" ||
                             tailtwo == "分钟" ||
                             tailtwo == "小时" ||
-                            tailtwo == "1天"
+                            tailtwo == "剩1天"
                         ) {
                             currentMachine.value["soonexpiry"] = true;
                         } else {
