@@ -326,25 +326,27 @@ func (h *Headscale) ConsoleMachinesAPI(
 		}
 		for _, route := range machineRoutes {
 			if route.isExitRoute() {
-				tmpMachine.AdvertisedExitNode = true
-				if route.Enabled {
-					tmpMachine.AllowedExitNode = true
+				if route.Advertised {
+					tmpMachine.AdvertisedExitNode = true
+					if route.Enabled {
+						tmpMachine.AllowedExitNode = true
+					}
 				}
 			} else {
-				tmpMachine.HasSubnets = true
-				routeV := netip.Prefix(route.Prefix).String()
-				if err != nil {
-					errRes := adminTemplateConfig{ErrorMsg: "子网路由地址转换失败"}
-					err = json.NewEncoder(writer).Encode(&errRes)
-					if err != nil {
-						log.Error().
-							Caller().
-							Err(err).
-							Msg("Failed to write response")
-					}
-					return
-				}
 				if route.Advertised {
+					tmpMachine.HasSubnets = true
+					routeV := netip.Prefix(route.Prefix).String()
+					if err != nil {
+						errRes := adminTemplateConfig{ErrorMsg: "子网路由地址转换失败"}
+						err = json.NewEncoder(writer).Encode(&errRes)
+						if err != nil {
+							log.Error().
+								Caller().
+								Err(err).
+								Msg("Failed to write response")
+						}
+						return
+					}
 					tmpMachine.AdvertisedIPs = append(tmpMachine.AdvertisedIPs, routeV)
 					if route.Enabled {
 						tmpMachine.AllowedIPs = append(tmpMachine.AllowedIPs, routeV)
@@ -581,18 +583,20 @@ func (h *Headscale) ConsoleMachinesUpdateAPI(
 			}
 			for _, route := range machineRoutes {
 				if route.isExitRoute() {
-					resData.AdvertisedExitNode = true
-					if route.Enabled {
-						resData.AllowedExitNode = true
+					if route.Advertised {
+						resData.AdvertisedExitNode = true
+						if route.Enabled {
+							resData.AllowedExitNode = true
+						}
 					}
 				} else {
-					resData.HasSubnets = true
-					routeV := netip.Prefix(route.Prefix).String()
-					if err != nil {
-						h.doAPIResponse(writer, "子网路由地址转换失败", nil)
-						return
-					}
 					if route.Advertised {
+						resData.HasSubnets = true
+						routeV := netip.Prefix(route.Prefix).String()
+						if err != nil {
+							h.doAPIResponse(writer, "子网路由地址转换失败", nil)
+							return
+						}
 						resData.AdvertisedIPs = append(resData.AdvertisedIPs, routeV)
 						if route.Enabled {
 							resData.AllowedIPs = append(resData.AllowedIPs, routeV)

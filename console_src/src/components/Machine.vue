@@ -115,7 +115,7 @@ onMounted(() => {
                             currentMachine.value["expirydesc"] == "马上就要过期" ||
                             tailtwo == "分钟" ||
                             tailtwo == "小时" ||
-                            tailtwo == "剩1天"
+                            tailthree == "剩1天"
                         ) {
                             currentMachine.value["soonexpiry"] = true;
                         } else {
