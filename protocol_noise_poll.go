@@ -9,7 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 	"tailscale.com/tailcfg"
-	"tailscale.com/types/key"
 )
 
 // NoisePollNetMapHandler takes care of /machine/:id/map using the Noise protocol
@@ -42,7 +41,8 @@ func (t *ts2021App) NoisePollNetMapHandler(
 	}
 
 	//machine, err := t.headscale.GetMachineByAnyKey(t.conn.Peer(), mapRequest.NodeKey, key.NodePublic{})
-	machine, err := t.headscale.GetMachineByAnyKey(key.MachinePublic{}, mapRequest.NodeKey, key.NodePublic{})
+	//cgao6: 因为MachineKey会用于多个用户，不具备unique特点，故此处应该只判断NodeKey！
+	machine, err := t.headscale.GetMachineByNodeKey(mapRequest.NodeKey)
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

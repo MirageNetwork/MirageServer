@@ -366,6 +366,58 @@ func (h *Headscale) ListMachinesByGivenName(givenName string) ([]Machine, error)
 	return machines, nil
 }
 
+// cgao6: 根据MachineKey和用户
+func (h *Headscale) GenMachineName(
+	referName string,
+	uid tailcfg.UserID,
+	machineKey key.MachinePublic,
+) string {
+	mkey := MachinePublicKeyStripPrefix(machineKey)
+	giveName := referName
+	suffix := 1
+	m, err := h.GetUserMachineByGivenName(giveName, uid)
+	if err == nil && m.MachineKey != mkey {
+		giveName = giveName + "-" + strconv.Itoa(suffix)
+		m, err = h.GetUserMachineByGivenName(giveName, uid)
+	}
+	for err == nil && m.MachineKey != mkey {
+		giveName = strings.TrimSuffix(giveName, "-"+strconv.Itoa(suffix))
+		suffix++
+		giveName = giveName + "-" + strconv.Itoa(suffix)
+		m, err = h.GetUserMachineByGivenName(giveName, uid)
+	}
+
+	return giveName
+}
+
+// cgao6: 根据Machine GivenName和用户查询机器
+func (h *Headscale) GetUserMachineByGivenName(
+	givenName string, uid tailcfg.UserID,
+) (*Machine, error) {
+	machine := Machine{}
+	if result := h.db.Preload("AuthKey").Preload("User").First(&machine, "given_name = ? AND user_id = ?",
+		givenName,
+		uid); result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &machine, nil
+}
+
+// cgao6: 根据MachineKey和用户查询机器
+func (h *Headscale) GetUserMachineByMachineKey(
+	machineKey key.MachinePublic, uid tailcfg.UserID,
+) (*Machine, error) {
+	machine := Machine{}
+	if result := h.db.Preload("AuthKey").Preload("User").First(&machine, "machine_key = ? AND user_id = ?",
+		MachinePublicKeyStripPrefix(machineKey),
+		uid); result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &machine, nil
+}
+
 // cgao6
 // GetMachine finds a Machine by user and backendlogid and returns the Machine struct.
 func (h *Headscale) GetMachineNSBLID(user string, backendlogid string) (*Machine, error) {

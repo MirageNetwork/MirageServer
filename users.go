@@ -154,6 +154,19 @@ func (h *Headscale) RenameUser(oldName, newName string) error {
 }
 
 // GetUser fetches a user by name.
+func (h *Headscale) GetUserByID(id tailcfg.UserID) (*User, error) {
+	user := User{}
+	if result := h.db.First(&user, "id = ?", id); errors.Is(
+		result.Error,
+		gorm.ErrRecordNotFound,
+	) {
+		return nil, ErrUserNotFound
+	}
+
+	return &user, nil
+}
+
+// GetUser fetches a user by name.
 func (h *Headscale) GetUser(name string) (*User, error) {
 	user := User{}
 	if result := h.db.First(&user, "name = ?", name); errors.Is(

@@ -98,10 +98,13 @@ type Headscale struct {
 	oidcProvider *oidc.Provider
 	oauth2Config *oauth2.Config
 
-	loginCache   *cache.Cache
 	smsCodeCache *cache.Cache
 
-	registrationCache *cache.Cache
+	registrationCache       *cache.Cache
+	aCodeCache              *cache.Cache
+	stateCodeCache          *cache.Cache
+	controlCodeCache        *cache.Cache
+	machineControlCodeCache *cache.Cache
 
 	ipAllocationMutex sync.Mutex
 
@@ -160,27 +163,46 @@ func NewHeadscale(cfg *Config) (*Headscale, error) {
 		registerCacheExpiration,
 		registerCacheCleanup,
 	)
-	loginCache := cache.New(
+
+	//cgao6: 注册机制探索
+	aCodeCache := cache.New(
 		registerCacheExpiration,
 		registerCacheCleanup,
 	)
+	stateCodeCache := cache.New(
+		registerCacheExpiration,
+		registerCacheCleanup,
+	)
+	controlCodeCache := cache.New(
+		registerCacheExpiration,
+		registerCacheCleanup,
+	)
+	machineControlCodeCache := cache.New(
+		registerCacheExpiration,
+		registerCacheCleanup,
+	)
+
 	smsCodeCache := cache.New(
 		smsCacheExpiration,
 		smsCacheCleanup,
 	)
 
 	app := Headscale{
-		cfg:                cfg,
-		dbType:             cfg.DBtype,
-		dbString:           dbString,
-		privateKey:         privateKey,
-		noisePrivateKey:    noisePrivateKey,
-		aclRules:           tailcfg.FilterAllowAll, // default allowall
-		loginCache:         loginCache,
-		smsCodeCache:       smsCodeCache,
-		registrationCache:  registrationCache,
-		pollNetMapStreamWG: sync.WaitGroup{},
-		lastStateChange:    xsync.NewMapOf[time.Time](),
+		cfg:             cfg,
+		dbType:          cfg.DBtype,
+		dbString:        dbString,
+		privateKey:      privateKey,
+		noisePrivateKey: noisePrivateKey,
+		aclRules:        tailcfg.FilterAllowAll, // default allowall
+
+		aCodeCache:              aCodeCache,
+		stateCodeCache:          stateCodeCache,
+		controlCodeCache:        controlCodeCache,
+		machineControlCodeCache: machineControlCodeCache,
+		smsCodeCache:            smsCodeCache,
+		registrationCache:       registrationCache,
+		pollNetMapStreamWG:      sync.WaitGroup{},
+		lastStateChange:         xsync.NewMapOf[time.Time](),
 	}
 
 	err = app.initDB()
@@ -532,10 +554,20 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 		log.Fatal().Msg(err.Error())
 	}
 
-	router.PathPrefix("/login").HandlerFunc(h.doLogin).Methods(http.MethodPost)
+	//注册
 	router.PathPrefix("/api/register").HandlerFunc(h.RegisterUserAPI).Methods(http.MethodPost)
+
+	//登录
+	router.PathPrefix("/login").HandlerFunc(h.doLogin).Methods(http.MethodPost)
 	login_router := router.PathPrefix("/login").Subrouter()
+	login_router.Use(h.loginMidware)
 	login_router.PathPrefix("").Handler(http.StripPrefix("/login", http.FileServer(http.FS(loginDir))))
+
+	//cgao6: APage也算是控制台中的一环，逻辑类似
+	//对于特殊路径"/a/oauth_response"是login到第三方后验证通过的回写token逻辑
+	router.HandleFunc("/a/oauth_response", h.oauthResponse).Methods(http.MethodGet)
+	router.HandleFunc("/a/{aCode}", h.deviceRegPortal).Methods(http.MethodGet)
+	router.HandleFunc("/a/{aCode}", h.deviceReg).Methods(http.MethodPost)
 
 	api_router := router.PathPrefix("/admin/api").Subrouter()
 	api_router.Use(h.APIAuth)
@@ -563,7 +595,7 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 
 	//console_router.HandleFunc("", h.ConsolePanel).Methods(http.MethodGet)
 
-	router.HandleFunc("/login/callback", h.ConsoleLogin).Methods(http.MethodGet)
+	//router.HandleFunc("/login/callback", h.ConsoleLogin).Methods(http.MethodGet)
 	//	router.HandleFunc("/logout/callback", h.ConsoleLogoutCallback).Methods(http.MethodGet)
 	//	router.HandleFunc("/", h.ConsoleWelcome).Methods(http.MethodGet)
 
@@ -571,7 +603,7 @@ func (h *Headscale) createRouter(grpcMux *runtime.ServeMux) *mux.Router {
 
 	router.HandleFunc("/health", h.HealthHandler).Methods(http.MethodGet)
 	router.HandleFunc("/key", h.KeyHandler).Methods(http.MethodGet)
-	router.HandleFunc("/register/{nkey}", h.RegisterWebAPI).Methods(http.MethodGet)
+	router.HandleFunc("/register/{nkey}", h.RegisterWebAPI).Methods(http.MethodGet) //TODO: 分析这个
 	h.addLegacyHandlers(router)
 
 	router.HandleFunc("/oidc/register/{nkey}", h.RegisterOIDC).Methods(http.MethodGet)

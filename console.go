@@ -114,12 +114,12 @@ func (h *Headscale) ConsoleSelfAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	tokenCookie, _ := req.Cookie("OIDC_Token")
-	rawToken := tokenCookie.Value
-	idToken, err := h.verifyIDTokenForOIDCCallback(req.Context(), writer, rawToken)
-	if err != nil {
+	controlCodeCookie, _ := req.Cookie("miragecontrol")
+	controlCode := controlCodeCookie.Value
+	controlCodeC, controlCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCode)
+	if !ok || controlCodeExpiration.Compare(time.Now()) != 1 {
 		errRes := adminTemplateConfig{ErrorMsg: "验证Token失败"}
-		err = json.NewEncoder(writer).Encode(&errRes)
+		err := json.NewEncoder(writer).Encode(&errRes)
 		if err != nil {
 			log.Error().
 				Caller().
@@ -128,9 +128,10 @@ func (h *Headscale) ConsoleSelfAPI(
 		}
 		return
 	}
-	claims, err := extractIDTokenClaims(writer, idToken)
+	controlCodeItem := controlCodeC.(ControlCacheItem)
+	user, err := h.GetUserByID(controlCodeItem.uid)
 	if err != nil {
-		errRes := adminTemplateConfig{ErrorMsg: "解析用户信息失败"}
+		errRes := adminTemplateConfig{ErrorMsg: "查询用户信息失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
 		if err != nil {
 			log.Error().
@@ -140,18 +141,8 @@ func (h *Headscale) ConsoleSelfAPI(
 		}
 		return
 	}
-	userName, _ /*UID*/, userDisName, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
-	if err != nil {
-		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
-		err = json.NewEncoder(writer).Encode(&errRes)
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
-		return
-	}
+	userName := user.Name
+	userDisName := user.Display_Name
 	userNameHead := string([]rune(userDisName)[0])
 
 	userOrgName := userName
@@ -183,10 +174,21 @@ func (h *Headscale) verifyTokenIDandGetUser(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) string {
-	tokenCookie, _ := req.Cookie("OIDC_Token")
-	rawToken := tokenCookie.Value
-	idToken, err := h.verifyIDTokenForOIDCCallback(req.Context(), writer, rawToken)
-	if err != nil {
+	controlCodeCookie, err := req.Cookie("miragecontrol")
+	if err == http.ErrNoCookie {
+		errRes := adminTemplateConfig{ErrorMsg: "Token不存在"}
+		err = json.NewEncoder(writer).Encode(&errRes)
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to write response")
+		}
+		return ""
+	}
+	controlCode := controlCodeCookie.Value
+	controlCodeC, concontrolCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCode)
+	if !ok || concontrolCodeExpiration.Compare(time.Now()) != 1 {
 		errRes := adminTemplateConfig{ErrorMsg: "验证Token失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
 		if err != nil {
@@ -197,19 +199,8 @@ func (h *Headscale) verifyTokenIDandGetUser(
 		}
 		return ""
 	}
-	claims, err := extractIDTokenClaims(writer, idToken)
-	if err != nil {
-		errRes := adminTemplateConfig{ErrorMsg: "解析用户信息失败"}
-		err = json.NewEncoder(writer).Encode(&errRes)
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
-		return ""
-	}
-	userName, _ /*UID*/, _ /*userDisName*/, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	controlCodeItem := controlCodeC.(ControlCacheItem)
+	user, err := h.GetUserByID(controlCodeItem.uid)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -221,6 +212,7 @@ func (h *Headscale) verifyTokenIDandGetUser(
 		}
 		return ""
 	}
+	userName := user.Name
 	return userName
 }
 
@@ -229,11 +221,9 @@ func (h *Headscale) ConsoleMachinesAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	tokenCookie, _ := req.Cookie("OIDC_Token")
-	rawToken := tokenCookie.Value
-	idToken, err := h.verifyIDTokenForOIDCCallback(req.Context(), writer, rawToken)
+	controlCodeCookie, err := req.Cookie("miragecontrol")
 	if err != nil {
-		errRes := adminTemplateConfig{ErrorMsg: "验证Token失败"}
+		errRes := adminTemplateConfig{ErrorMsg: "Token不存在"}
 		err = json.NewEncoder(writer).Encode(&errRes)
 		if err != nil {
 			log.Error().
@@ -243,9 +233,11 @@ func (h *Headscale) ConsoleMachinesAPI(
 		}
 		return
 	}
-	claims, err := extractIDTokenClaims(writer, idToken)
-	if err != nil {
-		errRes := adminTemplateConfig{ErrorMsg: "解析用户信息失败"}
+
+	controlCode := controlCodeCookie.Value
+	controlCodeC, controlCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCode)
+	if !ok || controlCodeExpiration.Compare(time.Now()) != 1 {
+		errRes := adminTemplateConfig{ErrorMsg: "解析Token失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
 		if err != nil {
 			log.Error().
@@ -255,7 +247,8 @@ func (h *Headscale) ConsoleMachinesAPI(
 		}
 		return
 	}
-	userName, _ /*UID*/, _ /*userDisName*/, err := getUserName(writer, claims, h.cfg.OIDC.StripEmaildomain)
+	controlCodeItem := controlCodeC.(ControlCacheItem)
+	user, err := h.GetUserByID(controlCodeItem.uid)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -267,6 +260,7 @@ func (h *Headscale) ConsoleMachinesAPI(
 		}
 		return
 	}
+	userName := user.Name
 
 	UserMachines, err := h.ListMachinesByUser(userName)
 	if err != nil {

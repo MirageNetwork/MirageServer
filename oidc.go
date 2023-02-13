@@ -259,6 +259,7 @@ func (h *Headscale) OIDCCallback(
 		return
 	}
 
+	//TODO：认证成功跳转
 	content, err := renderOIDCCallbackTemplate(writer, claims)
 	if err != nil {
 		return
@@ -587,6 +588,7 @@ func (h *Headscale) validateMachineForOIDCCallback(
 			Msg("successfully refreshed machine")
 		*/
 
+		//TODO：登录跳转
 		var content bytes.Buffer
 		if err := oidcCallbackTemplate.Execute(&content, oidcCallbackTemplateConfig{
 			User: claims.Name,

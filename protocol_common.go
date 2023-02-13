@@ -1,6 +1,9 @@
 package headscale
 
 import (
+	"crypto/rand"
+	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -94,7 +97,7 @@ func (h *Headscale) KeyHandler(
 // handleRegisterCommon is the common logic for registering a client in the legacy and Noise protocols
 //
 // When using Noise, the machineKey is Zero.
-func (h *Headscale) handleRegisterCommon(
+func (h *Headscale) handleRegisterCommon_DEPRECATED(
 	writer http.ResponseWriter,
 	req *http.Request,
 	registerRequest tailcfg.RegisterRequest,
@@ -288,6 +291,187 @@ func (h *Headscale) handleRegisterCommon(
 		)
 		return
 	}
+}
+
+// cgao6: HS原本版本中存在诸多不合理的处理，这里我们需要根据自己的理解使用自己的版本
+func (h *Headscale) handleRegisterCommon(
+	writer http.ResponseWriter,
+	req *http.Request,
+	registerRequest tailcfg.RegisterRequest,
+	machineKey key.MachinePublic,
+	isNoise bool,
+) {
+	now := time.Now().UTC()
+	// 这一步目前考虑不使用MachineKey
+	machine, _ := h.GetMachineByNodeKey(registerRequest.NodeKey)
+
+	// 机器已存在，意味着：
+	// - 正常使用(NodeKey一致、未过期、未设置要求过期)
+	// - NodeKey一致但设置过期
+	// - NodeKey一致但已过期（此时应该当做不一致处理，因为旧的过期的本该删除）
+	// - 无一致NodeKey
+	// 后两种当新的处理，后续认证过后我们会再将原先的同用户node替掉或者创建新的
+	if machine != nil {
+		if !registerRequest.Expiry.IsZero() &&
+			registerRequest.Expiry.UTC().Before(now) {
+			h.handleMachineLogOutCommon(writer, *machine, machineKey, isNoise)
+			return
+		}
+		if !machine.isExpired() {
+			h.handleMachineValidRegistrationCommon(writer, *machine, machineKey, isNoise)
+			return
+		}
+	}
+	//cgao6: 因为除去NodeKey一致（正常）和NodeKey一致（请求过期）两种外我们预计同样处理，故后续不用再判断
+
+	//cgao6: 授权密钥注册模式 //TODO: 后续需要对授权密钥注册进行检查
+	if registerRequest.Auth.AuthKey != "" {
+		h.handleAuthKeyCommon(writer, registerRequest, machineKey, isNoise)
+		return
+	}
+
+	// TODO: cgao6: 我们需要对Followup的使用要进一步思索
+	// 这里是非常有价值修复的问题所在
+	if registerRequest.Followup != "" {
+		aCode := registerRequest.Followup[len(registerRequest.Followup)-12:]
+		if _, ok := h.aCodeCache.Get(aCode); ok {
+			log.Debug().
+				Caller().
+				Str("machine", registerRequest.Hostinfo.Hostname).
+				Str("machine_key", machineKey.ShortString()).
+				Str("node_key", registerRequest.NodeKey.ShortString()).
+				Str("node_key_old", registerRequest.OldNodeKey.ShortString()).
+				Str("follow_up", registerRequest.Followup).
+				Bool("noise", isNoise).
+				Msg("Machine is waiting for interactive login")
+
+			ticker := time.NewTicker(registrationHoldoff)
+			select {
+			case <-req.Context().Done():
+				fmt.Println("DEBUG: 请求断了")
+				return
+			case <-ticker.C:
+				h.SendACode(writer, aCode, registerRequest, machineKey, isNoise)
+				return
+			}
+		}
+	}
+
+	log.Info().
+		Caller().
+		Str("machine", registerRequest.Hostinfo.Hostname).
+		Str("machine_key", machineKey.ShortString()).
+		Str("node_key", registerRequest.NodeKey.ShortString()).
+		Str("node_key_old", registerRequest.OldNodeKey.ShortString()).
+		Str("follow_up", registerRequest.Followup).
+		Bool("noise", isNoise).
+		Msg("New machine not yet in the database")
+
+	// TODO: 原本对机器的givenName的随机数模式并不优雅，要改成模仿TS的做法（即在后面加-<递增数字>的方法）
+	// 而且要在实际入库时做
+
+	// 创建aCode缓存用来后续注册使用
+	// 因为过期时间取决于用户的过期设置，故此处不必记录！
+	// TODO: 创建ACode时是否要记录MachineKey？？？
+	log.Debug().Caller().Bool("noise", isNoise).Str("machine", registerRequest.Hostinfo.Hostname).Msg("The node seems to be new, sending auth url")
+	aCode := h.GenACode()
+	stateCode := h.GenStateCode()
+	h.aCodeCache.Set(
+		aCode,
+		ACacheItem{
+			stateCode: stateCode,
+			uid:       -1,
+			mKey:      machineKey,
+			regReq:    registerRequest,
+		},
+		time.Now().AddDate(0, 1, 0).Sub(time.Now()),
+	)
+	h.stateCodeCache.Set(
+		stateCode,
+		StateCacheItem{
+			nextURL:    "/a/" + aCode,
+			uid:        -1,
+			machineKey: machineKey,
+		},
+		time.Now().AddDate(0, 1, 0).Sub(time.Now()),
+	)
+	// 创建新acode时，将原先机器对应的controlCode全部清除
+	if machineControlCodeC, ok := h.machineControlCodeCache.Get(machineKey.String()); ok {
+		for _, controlCode := range machineControlCodeC.(MachineControlCodeCacheItem).controlCodes {
+			h.controlCodeCache.Delete(controlCode)
+		}
+	}
+
+	h.SendACode(writer, aCode, registerRequest, machineKey, isNoise)
+
+	return
+}
+
+type ACacheItem struct {
+	stateCode string
+	mKey      key.MachinePublic
+	regReq    tailcfg.RegisterRequest
+	uid       tailcfg.UserID
+}
+
+func (h *Headscale) GenACode() string {
+	randomBlob := make([]byte, 6)
+	if _, err := rand.Read(randomBlob); err != nil {
+		log.Error().
+			Caller().
+			Msg("could not read 6 bytes from rand")
+		return ""
+	}
+	stateStr := hex.EncodeToString(randomBlob)[:12]
+	return stateStr
+}
+
+func (h *Headscale) GenStateCode() string {
+	const letterBytes = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	b := make([]byte, 25)
+	b[0] = 'm'
+	b[1] = 'n'
+	b[2] = '-'
+
+	index := make([]byte, 22)
+	rand.Read(index)
+	for i := 0; i < 22; i++ {
+		b[i+3] = letterBytes[index[i]&63]
+	}
+	return string(b)
+}
+
+// cgao6: 替代handleNewMachineCommon，处理新设备注册，变更了返回值
+func (h *Headscale) SendACode(
+	writer http.ResponseWriter,
+	aCode string,
+	registerRequest tailcfg.RegisterRequest,
+	machineKey key.MachinePublic,
+	isNoise bool,
+) {
+	resp := tailcfg.RegisterResponse{}
+
+	resp.AuthURL = fmt.Sprintf(
+		"%s/a/%s",
+		strings.TrimSuffix(h.cfg.ServerURL, "/"),
+		aCode,
+	)
+
+	respBody, err := h.marshalResponse(resp, machineKey, isNoise)
+	if err != nil {
+		log.Error().Caller().Bool("noise", isNoise).Err(err).Msg("Cannot encode message")
+		http.Error(writer, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+	writer.WriteHeader(http.StatusOK)
+	_, err = writer.Write(respBody)
+	if err != nil {
+		log.Error().Bool("noise", isNoise).Caller().Err(err).Msg("Failed to write response")
+	}
+
+	log.Info().Caller().Bool("noise", isNoise).Str("AuthURL", resp.AuthURL).Str("machine", registerRequest.Hostinfo.Hostname).Msg("Successfully sent auth url")
 }
 
 // handleAuthKeyCommon contains the logic to manage auth key client registration
