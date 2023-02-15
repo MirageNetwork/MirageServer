@@ -210,7 +210,7 @@ func (h *Headscale) deviceRegPortal(
 		newQuery := r.URL.Query()
 		newQuery.Add("next_url", "/a/"+aCode)
 		r.URL.RawQuery = newQuery.Encode()
-		http.Redirect(w, r, "/login?"+r.URL.RawQuery, http.StatusFound)
+		http.Redirect(w, r, "/login?refresh=true&"+r.URL.RawQuery, http.StatusFound)
 		return
 	}
 	//cookie中对应的control查不到，显示403授权过期
@@ -233,7 +233,7 @@ func (h *Headscale) deviceRegPortal(
 		newQuery := r.URL.Query()
 		newQuery.Add("next_url", "/a/"+aCode)
 		r.URL.RawQuery = newQuery.Encode()
-		http.Redirect(w, r, "/login?"+r.URL.RawQuery, http.StatusFound)
+		http.Redirect(w, r, "/login?refresh=true&"+r.URL.RawQuery, http.StatusFound)
 		return
 	}
 
