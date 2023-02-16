@@ -1,4 +1,5 @@
-<img src="./docs/logo/logo_withname@1024.png" width="30%" height="30%"/>     
+<img src="https://user-images.githubusercontent.com/7601383/219330724-55bc04e5-3f19-433b-98fe-6d19333af8b5.png" width="80%" height="80%">  
+
 
 基于Headscale实现的具有WebUI的Tailscale控制服务器       
     
