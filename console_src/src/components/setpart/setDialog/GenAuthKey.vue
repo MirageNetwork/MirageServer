@@ -204,14 +204,14 @@ function copyGenedKey() {
                         class="btn border-0 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/60 text-white disabled:text-white/60 h-9 min-h-fit">生成密钥</button>
                 </footer>
             </form>
-            <form v-if="KeyGened">
+            <form @submit.prevent="copyGenedKey" v-if="KeyGened">
                 <p class="text-gray-700 mb-3">关闭前请确保您已复制下面新生成的密钥，它之后将不会再次完整展示</p>
                 <div
                     class="flex border border-stone-200 hover:border-stone-400 rounded-md relative overflow-hidden min-w-0 mb-3 font-mono text-sm">
                     <input onclick="this.select()"
                         class="outline-none py-2 px-3 w-full h-full font-mono text-sm text-ellipsis" readonly
                         :value="genedKey.fullKey" />
-                    <button @click="copyGenedKey"
+                    <button type="submit"
                         class="flex justify-center py-2 pl-3 pr-4 rounded-md bg-white focus:outline-none font-sans text-blue-500 hover:text-blue-800 font-medium text-sm whitespace-nowrap">
                         {{ copyBtnText }}
                     </button>
