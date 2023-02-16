@@ -139,9 +139,6 @@ func LoadConfig(path string, isFile bool) error {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
-	viper.SetDefault("log.level", "info")
-	viper.SetDefault("log.format", TextLogFormat)
-
 	viper.SetDefault("dns_config", nil)
 	viper.SetDefault("dns_config.override_local_dns", true)
 
@@ -152,9 +149,6 @@ func LoadConfig(path string, isFile bool) error {
 	viper.SetDefault("oidc.only_start_if_oidc_is_available", true)
 	viper.SetDefault("oidc.expiry", "180d")
 	viper.SetDefault("oidc.use_expiry_from_token", false)
-
-	viper.SetDefault("logtail.enabled", false)
-	viper.SetDefault("randomize_client_port", false)
 
 	viper.SetDefault("ephemeral_node_inactivity_timeout", "120s")
 
@@ -175,11 +169,6 @@ func LoadConfig(path string, isFile bool) error {
 
 	if !viper.IsSet("noise") || viper.GetString("noise.private_key_path") == "" {
 		errorText += "Fatal config error: headscale now requires a new `noise.private_key_path` field in the config file for the Tailscale v2 protocol\n"
-	}
-
-	if !strings.HasPrefix(viper.GetString("server_url"), "http://") &&
-		!strings.HasPrefix(viper.GetString("server_url"), "https://") {
-		errorText += "Fatal config error: server_url must start with https:// or http://\n"
 	}
 
 	// Minimum inactivity time out is keepalive timeout (60s) plus a few seconds
