@@ -42,7 +42,6 @@ type Config struct {
 	NoisePrivateKeyPath            string
 	BaseDomain                     string
 	Log                            LogConfig
-	DisableUpdateCheck             bool
 
 	DERP DERPConfig
 
@@ -58,9 +57,6 @@ type Config struct {
 	DNSConfig *tailcfg.DNSConfig
 
 	OIDC OIDCConfig
-
-	LogTail             LogTailConfig
-	RandomizeClientPort bool
 
 	ACL ACLConfig
 
@@ -259,34 +255,6 @@ func GetACLConfig() ACLConfig {
 	}
 }
 
-func GetLogConfig() LogConfig {
-	logLevelStr := viper.GetString("log.level")
-	logLevel, err := zerolog.ParseLevel(logLevelStr)
-	if err != nil {
-		logLevel = zerolog.DebugLevel
-	}
-
-	logFormatOpt := viper.GetString("log.format")
-	var logFormat string
-	switch logFormatOpt {
-	case "json":
-		logFormat = JSONLogFormat
-	case "text":
-		logFormat = TextLogFormat
-	case "":
-		logFormat = TextLogFormat
-	default:
-		log.Error().
-			Str("func", "GetLogConfig").
-			Msgf("Could not parse log format: %s. Valid choices are 'json' or 'text'", logFormatOpt)
-	}
-
-	return LogConfig{
-		Format: logFormat,
-		Level:  logLevel,
-	}
-}
-
 func GetDNSConfig() (*tailcfg.DNSConfig, string) {
 	if viper.IsSet("dns_config") {
 		dnsConfig := &tailcfg.DNSConfig{}
@@ -409,8 +377,6 @@ func GetMirageConfig() (*Config, error) {
 
 	dnsConfig, baseDomain := GetDNSConfig()
 	derpConfig := GetDERPConfig()
-	logConfig := GetLogTailConfig()
-	randomizeClientPort := viper.GetBool("randomize_client_port")
 
 	configuredPrefixes := viper.GetStringSlice("ip_prefixes")
 	parsedPrefixes := make([]netip.Prefix, 0, len(configuredPrefixes)+1)
@@ -458,9 +424,8 @@ func GetMirageConfig() (*Config, error) {
 	}
 
 	return &Config{
-		ServerURL:          viper.GetString("server_url"),
-		Addr:               viper.GetString("listen_addr"),
-		DisableUpdateCheck: viper.GetBool("disable_check_updates"),
+		ServerURL: viper.GetString("server_url"),
+		Addr:      viper.GetString("listen_addr"),
 
 		IPPrefixes: prefixes,
 
@@ -523,12 +488,8 @@ func GetMirageConfig() (*Config, error) {
 			UseExpiryFromToken: viper.GetBool("oidc.use_expiry_from_token"),
 		},
 
-		LogTail:             logConfig,
-		RandomizeClientPort: randomizeClientPort,
-
 		ACL: GetACLConfig(),
 
-		Log: GetLogConfig(),
 		ali_IDaaS: ALIConfig{
 			ali_app_id:       viper.GetString("ali_app_id"),
 			ali_cli_id:       viper.GetString("ali_cli_id"),

@@ -262,8 +262,8 @@ func (h *Mirage) SendACode(
 	resp := tailcfg.RegisterResponse{}
 
 	resp.AuthURL = fmt.Sprintf(
-		"%s/a/%s",
-		strings.TrimSuffix(h.cfg.ServerURL, "/"),
+		"https://%s/a/%s",
+		h.cfg.ServerURL,
 		aCode,
 	)
 
@@ -643,67 +643,4 @@ func (h *Mirage) handleMachineRefreshKeyCommon(
 		Str("old_node_key", registerRequest.OldNodeKey.ShortString()).
 		Str("machine", machine.Hostname).
 		Msg("Node key successfully refreshed")
-}
-
-func (h *Mirage) handleMachineExpiredOrLoggedOutCommon(
-	writer http.ResponseWriter,
-	registerRequest tailcfg.RegisterRequest,
-	machine Machine,
-	machineKey key.MachinePublic,
-) {
-	resp := tailcfg.RegisterResponse{}
-
-	if registerRequest.Auth.AuthKey != "" {
-		h.handleAuthKeyCommon(writer, registerRequest, machineKey)
-
-		return
-	}
-
-	// The client has registered before, but has expired or logged out
-	log.Trace().
-		Caller().
-		Str("machine", machine.Hostname).
-		Str("machine_key", machineKey.ShortString()).
-		Str("node_key", registerRequest.NodeKey.ShortString()).
-		Str("node_key_old", registerRequest.OldNodeKey.ShortString()).
-		Msg("Machine registration has expired or logged out. Sending a auth url to register")
-
-	if h.oauth2Config != nil {
-		resp.AuthURL = fmt.Sprintf("%s/oidc/register/%s",
-			strings.TrimSuffix(h.cfg.ServerURL, "/"),
-			registerRequest.NodeKey)
-	} else {
-		resp.AuthURL = fmt.Sprintf("%s/register/%s",
-			strings.TrimSuffix(h.cfg.ServerURL, "/"),
-			registerRequest.NodeKey)
-	}
-
-	respBody, err := h.marshalResponse(resp, machineKey)
-	if err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Cannot encode message")
-		http.Error(writer, "Internal server error", http.StatusInternalServerError)
-
-		return
-	}
-
-	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-	_, err = writer.Write(respBody)
-	if err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Failed to write response")
-	}
-
-	log.Trace().
-		Caller().
-		Str("machine_key", machineKey.ShortString()).
-		Str("node_key", registerRequest.NodeKey.ShortString()).
-		Str("node_key_old", registerRequest.OldNodeKey.ShortString()).
-		Str("machine", machine.Hostname).
-		Msg("Machine logged out. Sent AuthURL for reauthentication")
 }

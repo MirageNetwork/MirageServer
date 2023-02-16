@@ -3,7 +3,6 @@ package Mirage
 import (
 	_ "embed"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -17,7 +16,7 @@ func (h *Mirage) ConsoleLogout(
 		h.controlCodeCache.Delete(controlCode)
 		delCookie := &http.Cookie{
 			Name:     "miragecontrol",
-			Domain:   strings.Split(h.cfg.ServerURL, "://")[1],
+			Domain:   h.cfg.ServerURL,
 			Expires:  time.Now().Add(time.Minute * 5),
 			MaxAge:   -1,
 			Secure:   true,

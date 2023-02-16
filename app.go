@@ -393,10 +393,6 @@ func (h *Mirage) createRouter() *mux.Router {
 	router.HandleFunc("/ts2021", h.NoiseUpgradeHandler).Methods(http.MethodPost)
 	router.HandleFunc("/key", h.KeyHandler).Methods(http.MethodGet)
 
-	// TODO: OIDC 注册部分，已经部分取代，亟需清理
-	router.HandleFunc("/oidc/register/{nkey}", h.RegisterOIDC).Methods(http.MethodGet)
-	router.HandleFunc("/oidc/callback", h.OIDCCallback).Methods(http.MethodGet)
-
 	// 资源目录们
 	router.PathPrefix("/img/").Handler(http.StripPrefix("/", http.FileServer(http.FS(mainpageDir))))
 	router.PathPrefix("/assets/").Handler(http.StripPrefix("/", http.FileServer(http.FS(mainpageDir))))

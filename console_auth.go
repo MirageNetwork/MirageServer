@@ -62,7 +62,7 @@ func (h *Mirage) doLogin(w http.ResponseWriter, r *http.Request) {
 	stateCodeCookie := &http.Cookie{
 		Name:     "mirage-authstate2",
 		Value:    stateCode,
-		Domain:   strings.Split(h.cfg.ServerURL, "://")[1],
+		Domain:   h.cfg.ServerURL,
 		Path:     "/",
 		Secure:   true,
 		HttpOnly: true,
@@ -82,24 +82,12 @@ func (h *Mirage) doAliLogin(w http.ResponseWriter, r *http.Request, stateCode st
 	}
 
 	log.Error().Msg("之后会跳转到：" + fmt.Sprintf(
-		"%s/%s",
-		strings.TrimSuffix(h.cfg.ServerURL, "/"),
+		"https://%s/%s",
+		h.cfg.ServerURL,
 		"a/oauth_response",
 	))
 
-	adminOauth2Config := &oauth2.Config{
-		ClientID:     h.cfg.OIDC.ClientID,
-		ClientSecret: h.cfg.OIDC.ClientSecret,
-		Endpoint:     h.oidcProvider.Endpoint(),
-		RedirectURL: fmt.Sprintf(
-			"%s/%s",
-			strings.TrimSuffix(h.cfg.ServerURL, "/"),
-			"a/oauth_response",
-		),
-		Scopes: h.cfg.OIDC.Scope,
-	}
-
-	authURL := adminOauth2Config.AuthCodeURL(stateCode, extras...)
+	authURL := h.oauth2Config.AuthCodeURL(stateCode, extras...)
 	log.Debug().Msgf("Redirecting to %s for authentication", authURL)
 	http.Redirect(w, r, authURL, http.StatusFound)
 }
@@ -256,8 +244,8 @@ func (h *Mirage) deviceRegPortal(
 
 	if aCodeItem.uid == -1 {
 		//未绑定用户，显示connectDevice
-		Hostname := aCodeItem.regReq.Hostinfo.Hostname
 		user, _ := h.GetUserByID(controlCodeItem.uid)
+		Hostname := aCodeItem.regReq.Hostinfo.Hostname
 		Netname := user.Name
 		Nodekey := aCodeItem.regReq.NodeKey.String()
 		OS := aCodeItem.regReq.Hostinfo.OS + "(" + aCodeItem.regReq.Hostinfo.OSVersion + ")"
@@ -426,15 +414,15 @@ func (h *Mirage) oauthResponse(
 		h.ErrMessage(w, r, 403, "三方登录认证解析用户错误")
 		return
 	}
-	userName, _ /*UID*/, _ /*userDisName*/, err := getUserName(w, claims, h.cfg.OIDC.StripEmaildomain)
-	if err != nil { // TODO: 后续这里理论上不会出错，因为会自动创建用户
-		h.ErrMessage(w, r, 500, "服务器用户查询出错")
+	userName, UID, userDisName, err := getUserName(w, claims, h.cfg.OIDC.StripEmaildomain)
+	if err != nil {
+		h.ErrMessage(w, r, 500, "三方登录用户信息解析出错")
 		return
 	}
 	// TODO:添加判断用户是否存在及自动创建逻辑
-	user, err := h.GetUser(userName)
+	user, err := h.findOrCreateNewUserForOIDCCallback(userName, UID, userDisName)
 	if err != nil { // TODO: 后续这里理论上不会出错，因为会自动创建用户
-		h.ErrMessage(w, r, 500, "服务器用户查询出错")
+		h.ErrMessage(w, r, 500, "服务器用户获取出错")
 		return
 	}
 	qStateItem.uid = user.toTailscaleUser().ID
@@ -465,7 +453,7 @@ func (h *Mirage) oauthResponse(
 	controlCodeCookie := &http.Cookie{
 		Name:     "miragecontrol",
 		Value:    controlCode,
-		Domain:   strings.Split(h.cfg.ServerURL, "://")[1],
+		Domain:   h.cfg.ServerURL,
 		Path:     "/",
 		Expires:  time.Now().AddDate(0, 1, 0),
 		Secure:   true,
