@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	"database/sql/driver"
@@ -10,10 +10,8 @@ import (
 	"strings"
 	"time"
 
-	v1 "github.com/juanfont/headscale/gen/go/headscale/v1"
 	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm"
 	"tailscale.com/tailcfg"
 	"tailscale.com/types/key"
@@ -39,7 +37,7 @@ const (
 	maxHostnameLength = 255
 )
 
-// Machine is a Headscale client.
+// Machine is a Mirage client.
 type Machine struct {
 	ID          uint64 `gorm:"primary_key"`
 	MachineKey  string `gorm:"type:varchar(64);"`
@@ -56,7 +54,7 @@ type Machine struct {
 	// a valid name set by the User
 	//
 	// GivenName is the name used in all DNS related
-	// parts of headscale.
+	// parts of mirage.
 	GivenName   string `gorm:"type:varchar(63)"`
 	AutoGenName bool   `gorm:"default:true"`
 	UserID      uint
@@ -140,7 +138,7 @@ func (machine Machine) isExpired() bool {
 	return time.Now().UTC().After(*machine.Expiry)
 }
 
-// isOnline returns if the machine is connected to Headscale.
+// isOnline returns if the machine is connected to Mirage.
 // This is really a naive implementation, as we don't really see
 // if there is a working connection between the client and the server.
 func (machine *Machine) isOnline() bool {
@@ -268,7 +266,7 @@ func getFilteredByACLPeers(
 	return authorizedPeers, invalidNodeIDs
 }
 
-func (h *Headscale) ListPeers(machine *Machine) (Machines, error) {
+func (h *Mirage) ListPeers(machine *Machine) (Machines, error) {
 	log.Trace().
 		Caller().
 		Str("machine", machine.Hostname).
@@ -292,7 +290,7 @@ func (h *Headscale) ListPeers(machine *Machine) (Machines, error) {
 	return machines, nil
 }
 
-func (h *Headscale) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) {
+func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) {
 	var peers Machines
 	var invalidNodeIDs []tailcfg.NodeID
 	var err error
@@ -331,7 +329,7 @@ func (h *Headscale) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, erro
 	return peers, invalidNodeIDs, nil
 }
 
-func (h *Headscale) getValidPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) {
+func (h *Mirage) getValidPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) {
 	validPeers := make(Machines, 0)
 
 	peers, nodeIDs, err := h.getPeers(machine)
@@ -348,7 +346,7 @@ func (h *Headscale) getValidPeers(machine *Machine) (Machines, []tailcfg.NodeID,
 	return validPeers, nodeIDs, nil
 }
 
-func (h *Headscale) ListMachines() ([]Machine, error) {
+func (h *Mirage) ListMachines() ([]Machine, error) {
 	machines := []Machine{}
 	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Find(&machines).Error; err != nil {
 		return nil, err
@@ -357,7 +355,7 @@ func (h *Headscale) ListMachines() ([]Machine, error) {
 	return machines, nil
 }
 
-func (h *Headscale) ListMachinesByGivenName(givenName string) ([]Machine, error) {
+func (h *Mirage) ListMachinesByGivenName(givenName string) ([]Machine, error) {
 	machines := []Machine{}
 	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Where("given_name = ?", givenName).Find(&machines).Error; err != nil {
 		return nil, err
@@ -367,7 +365,7 @@ func (h *Headscale) ListMachinesByGivenName(givenName string) ([]Machine, error)
 }
 
 // cgao6: 根据MachineKey和用户
-func (h *Headscale) GenMachineName(
+func (h *Mirage) GenMachineName(
 	referName string,
 	uid tailcfg.UserID,
 	machineKey key.MachinePublic,
@@ -391,7 +389,7 @@ func (h *Headscale) GenMachineName(
 }
 
 // cgao6: 根据Machine GivenName和用户查询机器
-func (h *Headscale) GetUserMachineByGivenName(
+func (h *Mirage) GetUserMachineByGivenName(
 	givenName string, uid tailcfg.UserID,
 ) (*Machine, error) {
 	machine := Machine{}
@@ -405,7 +403,7 @@ func (h *Headscale) GetUserMachineByGivenName(
 }
 
 // cgao6: 根据MachineKey和用户查询机器
-func (h *Headscale) GetUserMachineByMachineKey(
+func (h *Mirage) GetUserMachineByMachineKey(
 	machineKey key.MachinePublic, uid tailcfg.UserID,
 ) (*Machine, error) {
 	machine := Machine{}
@@ -420,7 +418,7 @@ func (h *Headscale) GetUserMachineByMachineKey(
 
 // cgao6
 // GetMachine finds a Machine by user and backendlogid and returns the Machine struct.
-func (h *Headscale) GetMachineNSBLID(user string, backendlogid string) (*Machine, error) {
+func (h *Mirage) GetMachineNSBLID(user string, backendlogid string) (*Machine, error) {
 	machines, err := h.ListMachinesByUser(user)
 	if err != nil {
 		return nil, err
@@ -436,7 +434,7 @@ func (h *Headscale) GetMachineNSBLID(user string, backendlogid string) (*Machine
 }
 
 // GetMachine finds a Machine by name and user and returns the Machine struct.
-func (h *Headscale) GetMachine(user string, name string) (*Machine, error) {
+func (h *Mirage) GetMachine(user string, name string) (*Machine, error) {
 	machines, err := h.ListMachinesByUser(user)
 	if err != nil {
 		return nil, err
@@ -452,7 +450,7 @@ func (h *Headscale) GetMachine(user string, name string) (*Machine, error) {
 }
 
 // GetMachineByGivenName finds a Machine by given name and user and returns the Machine struct.
-func (h *Headscale) GetMachineByGivenName(user string, givenName string) (*Machine, error) {
+func (h *Mirage) GetMachineByGivenName(user string, givenName string) (*Machine, error) {
 	machines, err := h.ListMachinesByUser(user)
 	if err != nil {
 		return nil, err
@@ -468,7 +466,7 @@ func (h *Headscale) GetMachineByGivenName(user string, givenName string) (*Machi
 }
 
 // GetMachineByID finds a Machine by ID and returns the Machine struct.
-func (h *Headscale) GetMachineByID(id uint64) (*Machine, error) {
+func (h *Mirage) GetMachineByID(id uint64) (*Machine, error) {
 	m := Machine{}
 	if result := h.db.Preload("AuthKey").Preload("User").Find(&Machine{ID: id}).First(&m); result.Error != nil {
 		return nil, result.Error
@@ -478,7 +476,7 @@ func (h *Headscale) GetMachineByID(id uint64) (*Machine, error) {
 }
 
 // GetMachineByMachineKey finds a Machine by its MachineKey and returns the Machine struct.
-func (h *Headscale) GetMachineByMachineKey(
+func (h *Mirage) GetMachineByMachineKey(
 	machineKey key.MachinePublic,
 ) (*Machine, error) {
 	m := Machine{}
@@ -490,7 +488,7 @@ func (h *Headscale) GetMachineByMachineKey(
 }
 
 // GetMachineByNodeKey finds a Machine by its current NodeKey.
-func (h *Headscale) GetMachineByNodeKey(
+func (h *Mirage) GetMachineByNodeKey(
 	nodeKey key.NodePublic,
 ) (*Machine, error) {
 	machine := Machine{}
@@ -503,7 +501,7 @@ func (h *Headscale) GetMachineByNodeKey(
 }
 
 // GetMachineByAnyNodeKey finds a Machine by its MachineKey, its current NodeKey or the old one, and returns the Machine struct.
-func (h *Headscale) GetMachineByAnyKey(
+func (h *Mirage) GetMachineByAnyKey(
 	machineKey key.MachinePublic, nodeKey key.NodePublic, oldNodeKey key.NodePublic,
 ) (*Machine, error) {
 	machine := Machine{}
@@ -519,7 +517,7 @@ func (h *Headscale) GetMachineByAnyKey(
 
 // UpdateMachineFromDatabase takes a Machine struct pointer (typically already loaded from database
 // and updates it with the latest data from the database.
-func (h *Headscale) UpdateMachineFromDatabase(machine *Machine) error {
+func (h *Mirage) UpdateMachineFromDatabase(machine *Machine) error {
 	if result := h.db.Find(machine).First(&machine); result.Error != nil {
 		return result.Error
 	}
@@ -528,7 +526,7 @@ func (h *Headscale) UpdateMachineFromDatabase(machine *Machine) error {
 }
 
 // SetTags takes a Machine struct pointer and update the forced tags.
-func (h *Headscale) SetTags(machine *Machine, tags []string) error {
+func (h *Mirage) SetTags(machine *Machine, tags []string) error {
 	newTags := []string{}
 	for _, tag := range tags {
 		if !contains(newTags, tag) {
@@ -549,7 +547,7 @@ func (h *Headscale) SetTags(machine *Machine, tags []string) error {
 }
 
 // ExpireMachine takes a Machine struct and sets the expire field to now.
-func (h *Headscale) ExpireMachine(machine *Machine) error {
+func (h *Mirage) ExpireMachine(machine *Machine) error {
 	now := time.Now()
 	machine.Expiry = &now
 	machine.DiscoKey = ""
@@ -565,7 +563,7 @@ func (h *Headscale) ExpireMachine(machine *Machine) error {
 
 // setAutoGenName can set whether a machine should use hostname as its given name
 // (will generated if there's already same hostname node). will return new givenname when success.
-func (h *Headscale) setAutoGenName(machine *Machine, newName string) (string, error) {
+func (h *Mirage) setAutoGenName(machine *Machine, newName string) (string, error) {
 	isAutoGen := false
 	if newName == "" {
 		isAutoGen = true
@@ -605,7 +603,7 @@ func (h *Headscale) setAutoGenName(machine *Machine, newName string) (string, er
 
 // RenameMachine takes a Machine struct and a new GivenName for the machines
 // and renames it.
-func (h *Headscale) RenameMachine(machine *Machine, newName string) error {
+func (h *Mirage) RenameMachine(machine *Machine, newName string) error {
 	err := CheckForFQDNRules(
 		newName,
 	)
@@ -631,7 +629,7 @@ func (h *Headscale) RenameMachine(machine *Machine, newName string) error {
 }
 
 // RefreshMachine takes a Machine struct and sets the expire field to now.
-func (h *Headscale) RefreshMachine(machine *Machine, expiry time.Time) error {
+func (h *Mirage) RefreshMachine(machine *Machine, expiry time.Time) error {
 	now := time.Now()
 
 	machine.LastSuccessfulUpdate = &now
@@ -650,7 +648,7 @@ func (h *Headscale) RefreshMachine(machine *Machine, expiry time.Time) error {
 }
 
 // RestructMachine takes a Machine struct and sets its new keys.
-func (h *Headscale) RestructMachine(machine *Machine, expiry time.Time) error {
+func (h *Mirage) RestructMachine(machine *Machine, expiry time.Time) error {
 	now := time.Now()
 
 	machine.LastSuccessfulUpdate = &now
@@ -669,7 +667,7 @@ func (h *Headscale) RestructMachine(machine *Machine, expiry time.Time) error {
 }
 
 // DeleteMachine softs deletes a Machine from the database.
-func (h *Headscale) DeleteMachine(machine *Machine) error {
+func (h *Mirage) DeleteMachine(machine *Machine) error {
 	if err := h.db.Delete(&machine).Error; err != nil {
 		return err
 	}
@@ -677,7 +675,7 @@ func (h *Headscale) DeleteMachine(machine *Machine) error {
 	return nil
 }
 
-func (h *Headscale) TouchMachine(machine *Machine) error {
+func (h *Mirage) TouchMachine(machine *Machine) error {
 	return h.db.Updates(Machine{
 		ID:                   machine.ID,
 		LastSeen:             machine.LastSeen,
@@ -686,7 +684,7 @@ func (h *Headscale) TouchMachine(machine *Machine) error {
 }
 
 // HardDeleteMachine hard deletes a Machine from the database.
-func (h *Headscale) HardDeleteMachine(machine *Machine) error {
+func (h *Mirage) HardDeleteMachine(machine *Machine) error {
 	if err := h.db.Unscoped().Delete(&machine).Error; err != nil {
 		return err
 	}
@@ -699,14 +697,14 @@ func (machine *Machine) GetHostInfo() tailcfg.Hostinfo {
 	return tailcfg.Hostinfo(machine.HostInfo)
 }
 
-func (h *Headscale) isOutdated(machine *Machine) bool {
+func (h *Mirage) isOutdated(machine *Machine) bool {
 	if err := h.UpdateMachineFromDatabase(machine); err != nil {
 		// It does not seem meaningful to propagate this error as the end result
 		// will have to be that the machine has to be considered outdated.
 		return true
 	}
 
-	// Get the last update from all headscale users to compare with our nodes
+	// Get the last update from all mirage users to compare with our nodes
 	// last update.
 	// TODO(kradalby): Only request updates from users where we can talk to nodes
 	// This would mostly be for a bit of performance, and can be calculated based on
@@ -751,7 +749,7 @@ func (machines MachinesP) String() string {
 	return fmt.Sprintf("[ %s ](%d)", strings.Join(temp, ", "), len(temp))
 }
 
-func (h *Headscale) toNodes(
+func (h *Mirage) toNodes(
 	machines Machines,
 	// baseDomain string,
 	// dnsConfig *tailcfg.DNSConfig,
@@ -772,7 +770,7 @@ func (h *Headscale) toNodes(
 
 // toNode converts a Machine into a Tailscale Node. includeRoutes is false for shared nodes
 // as per the expected behaviour in the official SaaS.
-func (h *Headscale) toNode(
+func (h *Mirage) toNode(
 	machine Machine,
 	// baseDomain string,
 	// dnsConfig *tailcfg.DNSConfig,
@@ -882,7 +880,7 @@ func (h *Headscale) toNode(
 		ID: tailcfg.NodeID(machine.ID), // this is the actual ID
 		StableID: tailcfg.StableNodeID(
 			strconv.FormatUint(machine.ID, Base10),
-		), // in headscale, unlike tailcontrol server, IDs are permanent
+		), // in mirage, unlike tailcontrol server, IDs are permanent
 		Name: hostname,
 
 		User: tailcfg.UserID(machine.UserID),
@@ -916,47 +914,6 @@ func (h *Headscale) toNode(
 	}
 
 	return &node, nil
-}
-
-func (machine *Machine) toProto() *v1.Machine {
-	machineProto := &v1.Machine{
-		Id:         machine.ID,
-		MachineKey: machine.MachineKey,
-
-		NodeKey:     machine.NodeKey,
-		DiscoKey:    machine.DiscoKey,
-		IpAddresses: machine.IPAddresses.ToStringSlice(),
-		Name:        machine.Hostname,
-		GivenName:   machine.GivenName,
-		User:        machine.User.toProto(),
-		ForcedTags:  machine.ForcedTags,
-		Online:      machine.isOnline(),
-
-		// TODO(kradalby): Implement register method enum converter
-		// RegisterMethod: ,
-
-		CreatedAt: timestamppb.New(machine.CreatedAt),
-	}
-
-	if machine.AuthKey != nil {
-		machineProto.PreAuthKey = machine.AuthKey.toProto()
-	}
-
-	if machine.LastSeen != nil {
-		machineProto.LastSeen = timestamppb.New(*machine.LastSeen)
-	}
-
-	if machine.LastSuccessfulUpdate != nil {
-		machineProto.LastSuccessfulUpdate = timestamppb.New(
-			*machine.LastSuccessfulUpdate,
-		)
-	}
-
-	if machine.Expiry != nil {
-		machineProto.Expiry = timestamppb.New(*machine.Expiry)
-	}
-
-	return machineProto
 }
 
 // getTags will return the tags of the current machine.
@@ -1003,7 +960,7 @@ func getTags(
 	return validTags, invalidTags
 }
 
-func (h *Headscale) RegisterMachineFromAuthCallback(
+func (h *Mirage) RegisterMachineFromAuthCallback(
 	nodeKeyStr string,
 	userName string,
 	machineExpiry *time.Time,
@@ -1103,7 +1060,7 @@ func (h *Headscale) RegisterMachineFromAuthCallback(
 }
 
 // RegisterMachine is executed from the CLI to register a new Machine using its MachineKey.
-func (h *Headscale) RegisterMachine(machine Machine,
+func (h *Mirage) RegisterMachine(machine Machine,
 ) (*Machine, error) {
 	log.Debug().
 		Str("machine", machine.Hostname).
@@ -1161,7 +1118,7 @@ func (h *Headscale) RegisterMachine(machine Machine,
 }
 
 // GetAdvertisedRoutes returns the routes that are be advertised by the given machine.
-func (h *Headscale) GetAdvertisedRoutes(machine *Machine) ([]netip.Prefix, error) {
+func (h *Mirage) GetAdvertisedRoutes(machine *Machine) ([]netip.Prefix, error) {
 	routes := []Route{}
 
 	err := h.db.
@@ -1186,7 +1143,7 @@ func (h *Headscale) GetAdvertisedRoutes(machine *Machine) ([]netip.Prefix, error
 }
 
 // GetEnabledRoutes returns the routes that are enabled for the machine.
-func (h *Headscale) GetEnabledRoutes(machine *Machine) ([]netip.Prefix, error) {
+func (h *Mirage) GetEnabledRoutes(machine *Machine) ([]netip.Prefix, error) {
 	routes := []Route{}
 
 	err := h.db.
@@ -1211,7 +1168,7 @@ func (h *Headscale) GetEnabledRoutes(machine *Machine) ([]netip.Prefix, error) {
 	return prefixes, nil
 }
 
-func (h *Headscale) IsRoutesEnabled(machine *Machine, routeStr string) bool {
+func (h *Mirage) IsRoutesEnabled(machine *Machine, routeStr string) bool {
 	route, err := netip.ParsePrefix(routeStr)
 	if err != nil {
 		return false
@@ -1234,7 +1191,7 @@ func (h *Headscale) IsRoutesEnabled(machine *Machine, routeStr string) bool {
 }
 
 // enableRoutes enables new routes based on a list of new routes.
-func (h *Headscale) enableRoutes(machine *Machine, routeStrs ...string) error {
+func (h *Mirage) enableRoutes(machine *Machine, routeStrs ...string) error {
 	newRoutes := make([]netip.Prefix, len(routeStrs))
 	for index, routeStr := range routeStrs {
 		route, err := netip.ParsePrefix(routeStr)
@@ -1290,7 +1247,7 @@ func (h *Headscale) enableRoutes(machine *Machine, routeStrs ...string) error {
 }
 
 // EnableAutoApprovedRoutes enables any routes advertised by a machine that match the ACL autoApprovers policy.
-func (h *Headscale) EnableAutoApprovedRoutes(machine *Machine) error {
+func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 	if len(machine.IPAddresses) == 0 {
 		return nil // This machine has no IPAddresses, so can't possibly match any autoApprovers ACLs
 	}
@@ -1362,7 +1319,7 @@ func (h *Headscale) EnableAutoApprovedRoutes(machine *Machine) error {
 	return nil
 }
 
-func (h *Headscale) generateGivenName(suppliedName string, randomSuffix bool) (string, error) {
+func (h *Mirage) generateGivenName(suppliedName string, randomSuffix bool) (string, error) {
 	normalizedHostname, err := NormalizeToFQDNRules(
 		suppliedName,
 		h.cfg.OIDC.StripEmaildomain,
@@ -1389,7 +1346,7 @@ func (h *Headscale) generateGivenName(suppliedName string, randomSuffix bool) (s
 	return normalizedHostname, nil
 }
 
-func (h *Headscale) GenerateGivenName(backendLogID string, suppliedName string) (string, error) {
+func (h *Mirage) GenerateGivenName(backendLogID string, suppliedName string) (string, error) {
 	givenName, err := h.generateGivenName(suppliedName, false)
 	if err != nil {
 		return "", err

@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	"context"
@@ -30,7 +30,7 @@ type KV struct {
 	Value string
 }
 
-func (h *Headscale) initDB() error {
+func (h *Mirage) initDB() error {
 	db, err := h.openDB()
 	if err != nil {
 		return err
@@ -54,105 +54,9 @@ func (h *Headscale) initDB() error {
 	_ = db.Migrator().RenameColumn(&Machine{}, "ip_address", "ip_addresses")
 	_ = db.Migrator().RenameColumn(&Machine{}, "name", "hostname")
 
-	// GivenName is used as the primary source of DNS names, make sure
-	// the field is populated and normalized if it was not when the
-	// machine was registered.
-	_ = db.Migrator().RenameColumn(&Machine{}, "nickname", "given_name")
-
-	// If the Machine table has a column for registered,
-	// find all occourences of "false" and drop them. Then
-	// remove the column.
-	if db.Migrator().HasColumn(&Machine{}, "registered") {
-		log.Info().
-			Msg(`Database has legacy "registered" column in machine, removing...`)
-
-		machines := Machines{}
-		if err := h.db.Not("registered").Find(&machines).Error; err != nil {
-			log.Error().Err(err).Msg("Error accessing db")
-		}
-
-		for _, machine := range machines {
-			log.Info().
-				Str("machine", machine.Hostname).
-				Str("machine_key", machine.MachineKey).
-				Msg("Deleting unregistered machine")
-			if err := h.db.Delete(&Machine{}, machine.ID).Error; err != nil {
-				log.Error().
-					Err(err).
-					Str("machine", machine.Hostname).
-					Str("machine_key", machine.MachineKey).
-					Msg("Error deleting unregistered machine")
-			}
-		}
-
-		err := db.Migrator().DropColumn(&Machine{}, "registered")
-		if err != nil {
-			log.Error().Err(err).Msg("Error dropping registered column")
-		}
-	}
-
 	err = db.AutoMigrate(&Route{})
 	if err != nil {
 		return err
-	}
-
-	if db.Migrator().HasColumn(&Machine{}, "enabled_routes") {
-		log.Info().Msgf("Database has legacy enabled_routes column in machine, migrating...")
-
-		type MachineAux struct {
-			ID            uint64
-			EnabledRoutes IPPrefixes
-		}
-
-		machinesAux := []MachineAux{}
-		err := db.Table("machines").Select("id, enabled_routes").Scan(&machinesAux).Error
-		if err != nil {
-			log.Fatal().Err(err).Msg("Error accessing db")
-		}
-		for _, machine := range machinesAux {
-			for _, prefix := range machine.EnabledRoutes {
-				if err != nil {
-					log.Error().
-						Err(err).
-						Str("enabled_route", prefix.String()).
-						Msg("Error parsing enabled_route")
-
-					continue
-				}
-
-				err = db.Preload("Machine").
-					Where("machine_id = ? AND prefix = ?", machine.ID, IPPrefix(prefix)).
-					First(&Route{}).
-					Error
-				if err == nil {
-					log.Info().
-						Str("enabled_route", prefix.String()).
-						Msg("Route already migrated to new table, skipping")
-
-					continue
-				}
-
-				route := Route{
-					MachineID:  machine.ID,
-					Advertised: true,
-					Enabled:    true,
-					Prefix:     IPPrefix(prefix),
-				}
-				if err := h.db.Create(&route).Error; err != nil {
-					log.Error().Err(err).Msg("Error creating route")
-				} else {
-					log.Info().
-						Uint64("machine_id", route.MachineID).
-						Str("prefix", prefix.String()).
-						Msg("Route migrated")
-				}
-			}
-		}
-
-		err = db.Migrator().DropColumn(&Machine{}, "enabled_routes")
-		if err != nil {
-			log.Error().Err(err).Msg("Error dropping enabled_routes column")
-		}
 	}
 
 	err = db.AutoMigrate(&Machine{})
@@ -209,17 +113,12 @@ func (h *Headscale) initDB() error {
 
 	_ = db.Migrator().DropTable("shared_machines")
 
-	err = db.AutoMigrate(&APIKey{})
-	if err != nil {
-		return err
-	}
-
 	err = h.setValue("db_version", dbVersion)
 
 	return err
 }
 
-func (h *Headscale) openDB() (*gorm.DB, error) {
+func (h *Mirage) openDB() (*gorm.DB, error) {
 	var db *gorm.DB
 	var err error
 
@@ -265,7 +164,7 @@ func (h *Headscale) openDB() (*gorm.DB, error) {
 }
 
 // getValue returns the value for the given key in KV.
-func (h *Headscale) getValue(key string) (string, error) {
+func (h *Mirage) getValue(key string) (string, error) {
 	var row KV
 	if result := h.db.First(&row, "key = ?", key); errors.Is(
 		result.Error,
@@ -278,7 +177,7 @@ func (h *Headscale) getValue(key string) (string, error) {
 }
 
 // setValue sets value for the given key in KV.
-func (h *Headscale) setValue(key string, value string) error {
+func (h *Mirage) setValue(key string, value string) error {
 	keyValue := KV{
 		Key:   key,
 		Value: value,
@@ -297,7 +196,7 @@ func (h *Headscale) setValue(key string, value string) error {
 	return nil
 }
 
-func (h *Headscale) pingDB(ctx context.Context) error {
+func (h *Mirage) pingDB(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 	db, err := h.db.DB()

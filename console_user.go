@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	_ "embed"
@@ -35,7 +35,7 @@ func CreateIDaaSClient() (_result *eiam_developerapi20220225.Client, _err error)
 }
 
 // 调用阿里云IDaaS接口创建用户
-func (h *Headscale) AddUserToIDaaS(
+func (h *Mirage) AddUserToIDaaS(
 	name string, mobile string,
 ) (_result *eiam_developerapi20220225.CreateUserResponse, _err error) {
 	generateTokenRequest := &eiam_developerapi20220225.GenerateTokenRequest{
@@ -68,7 +68,7 @@ func (h *Headscale) AddUserToIDaaS(
 }
 
 // 用户注册处理，提交信息和校验验证码两步均在此处处理
-func (h *Headscale) RegisterUserAPI(
+func (h *Mirage) RegisterUserAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {

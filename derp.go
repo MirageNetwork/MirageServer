@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	"context"
@@ -133,7 +133,7 @@ func GetDERPMap(cfg DERPConfig) *tailcfg.DERPMap {
 	return derpMap
 }
 
-func (h *Headscale) scheduledDERPMapUpdateWorker(cancelChan <-chan struct{}) {
+func (h *Mirage) scheduledDERPMapUpdateWorker(cancelChan <-chan struct{}) {
 	log.Info().
 		Dur("frequency", h.cfg.DERP.UpdateFrequency).
 		Msg("Setting up a DERPMap update worker")
@@ -147,9 +147,6 @@ func (h *Headscale) scheduledDERPMapUpdateWorker(cancelChan <-chan struct{}) {
 		case <-ticker.C:
 			log.Info().Msg("Fetching DERPMap updates")
 			h.DERPMap = GetDERPMap(h.cfg.DERP)
-			if h.cfg.DERP.ServerEnabled {
-				h.DERPMap.Regions[h.DERPServer.region.RegionID] = &h.DERPServer.region
-			}
 
 			h.setLastStateChangeToNow()
 		}

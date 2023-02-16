@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	"bytes"
@@ -18,7 +18,19 @@ import (
 	"tailscale.com/types/key"
 )
 
-func (h *Headscale) doLogin(w http.ResponseWriter, r *http.Request) {
+const (
+	// TODO(juan): remove this once https://github.com/juanfont/headscale/issues/727 is fixed.
+	registrationHoldoff                      = time.Second * 5
+	reservedResponseHeaderSize               = 4
+	RegisterMethodAuthKey                    = "authkey"
+	RegisterMethodOIDC                       = "oidc"
+	RegisterMethodCLI                        = "cli"
+	ErrRegisterMethodCLIDoesNotSupportExpire = Error(
+		"machines registered with CLI does not support expire",
+	)
+)
+
+func (h *Mirage) doLogin(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	provider := r.Form["provider"][0]
 	nextURL := r.Form["next_url"][0]
@@ -63,7 +75,7 @@ func (h *Headscale) doLogin(w http.ResponseWriter, r *http.Request) {
 		h.doAliLogin(w, r, stateCode)
 	}
 }
-func (h *Headscale) doAliLogin(w http.ResponseWriter, r *http.Request, stateCode string) {
+func (h *Mirage) doAliLogin(w http.ResponseWriter, r *http.Request, stateCode string) {
 	extras := make([]oauth2.AuthCodeOption, 0, len(h.cfg.OIDC.ExtraParams))
 	for k, v := range h.cfg.OIDC.ExtraParams {
 		extras = append(extras, oauth2.SetAuthURLParam(k, v))
@@ -92,7 +104,7 @@ func (h *Headscale) doAliLogin(w http.ResponseWriter, r *http.Request, stateCode
 	http.Redirect(w, r, authURL, http.StatusFound)
 }
 
-func (h *Headscale) loginMidware(next http.Handler) http.Handler {
+func (h *Mirage) loginMidware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nextURL := r.URL.Query().Get("next_url")
 		refresh := r.URL.Query().Get("refresh")
@@ -112,7 +124,7 @@ func (h *Headscale) loginMidware(next http.Handler) http.Handler {
 }
 
 // WebUI控制台鉴权中间件
-func (h *Headscale) ConsoleAuth(next http.Handler) http.Handler {
+func (h *Mirage) ConsoleAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "admin/api") {
 			h.APIAuth(next).ServeHTTP(w, r)
@@ -151,7 +163,7 @@ type APICheckRes struct {
 }
 
 // API鉴权中间件
-func (h *Headscale) APIAuth(next http.Handler) http.Handler {
+func (h *Mirage) APIAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		controlCodeCookie, err := r.Cookie("miragecontrol")
 		if err == http.ErrNoCookie {
@@ -183,7 +195,7 @@ func (h *Headscale) APIAuth(next http.Handler) http.Handler {
 	})
 }
 
-func (h *Headscale) deviceRegPortal(
+func (h *Mirage) deviceRegPortal(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -277,7 +289,7 @@ func (h *Headscale) deviceRegPortal(
 }
 
 // 处理connectDevice页面的POST请求，用于真正注册设备
-func (h *Headscale) deviceReg(
+func (h *Mirage) deviceReg(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -352,6 +364,9 @@ func (h *Headscale) deviceReg(
 		h.ErrMessage(w, r, 500, "注册设备信息出错")
 		return
 	}
+
+	h.longPollChanPool[aCode] <- "ok" // longpoll的救赎
+
 	Hostname := machine.GivenName
 	Netname := machine.User.Name
 	MIP := machine.IPAddresses[0].String()
@@ -362,7 +377,7 @@ func (h *Headscale) deviceReg(
 }
 
 // 接受OIDC认证返回的GET，进行跳转和Token写入
-func (h *Headscale) oauthResponse(
+func (h *Mirage) oauthResponse(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -481,7 +496,7 @@ type MachineControlCodeCacheItem struct {
 var errTemplate string
 
 // cgao6: 用这个向前端返回错误页面
-func (h *Headscale) ErrMessage(
+func (h *Mirage) ErrMessage(
 	w http.ResponseWriter,
 	r *http.Request,
 	code int,
@@ -528,7 +543,7 @@ func (h *Headscale) ErrMessage(
 var connectDeviceTemplate string
 
 // 接入设备页面
-func (h *Headscale) sendConnectDevicePage(
+func (h *Mirage) sendConnectDevicePage(
 	w http.ResponseWriter,
 	r *http.Request,
 	Hostname, Netname, Nodekey, OS, ClientVer, NextURL string,
@@ -578,7 +593,7 @@ func (h *Headscale) sendConnectDevicePage(
 var deviceRedirectTemplate string
 
 // 接入设备页面
-func (h *Headscale) sendDeviceRedirectPage(
+func (h *Mirage) sendDeviceRedirectPage(
 	w http.ResponseWriter,
 	r *http.Request,
 	Hostname, Netname, MIP string,
@@ -621,7 +636,7 @@ func (h *Headscale) sendDeviceRedirectPage(
 	}
 }
 
-func (h *Headscale) registerMachineFromConsole(
+func (h *Mirage) registerMachineFromConsole(
 	aCodeItem ACacheItem,
 ) (*Machine, error) {
 	nodeKey := aCodeItem.regReq.NodeKey

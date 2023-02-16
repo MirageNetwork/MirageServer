@@ -1,16 +1,13 @@
-package headscale
+package Mirage
 
 import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
-	v1 "github.com/juanfont/headscale/gen/go/headscale/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm"
 )
 
@@ -45,7 +42,7 @@ type PreAuthKeyACLTag struct {
 }
 
 // CreatePreAuthKey creates a new PreAuthKey in a user, and returns it.
-func (h *Headscale) CreatePreAuthKey(
+func (h *Mirage) CreatePreAuthKey(
 	userName string,
 	reusable bool,
 	ephemeral bool,
@@ -111,7 +108,7 @@ func (h *Headscale) CreatePreAuthKey(
 }
 
 // ListPreAuthKeys returns the list of PreAuthKeys for a user.
-func (h *Headscale) ListPreAuthKeys(userName string) ([]PreAuthKey, error) {
+func (h *Mirage) ListPreAuthKeys(userName string) ([]PreAuthKey, error) {
 	user, err := h.GetUser(userName)
 	if err != nil {
 		return nil, err
@@ -126,7 +123,7 @@ func (h *Headscale) ListPreAuthKeys(userName string) ([]PreAuthKey, error) {
 }
 
 // GetPreAuthKey returns a PreAuthKey for a given key.
-func (h *Headscale) GetPreAuthKey(user string, key string) (*PreAuthKey, error) {
+func (h *Mirage) GetPreAuthKey(user string, key string) (*PreAuthKey, error) {
 	pak, err := h.checkKeyValidity(key)
 	if err != nil {
 		return nil, err
@@ -141,7 +138,7 @@ func (h *Headscale) GetPreAuthKey(user string, key string) (*PreAuthKey, error) 
 
 // DestroyPreAuthKey destroys a preauthkey. Returns error if the PreAuthKey
 // does not exist.
-func (h *Headscale) DestroyPreAuthKey(pak PreAuthKey) error {
+func (h *Mirage) DestroyPreAuthKey(pak PreAuthKey) error {
 	return h.db.Transaction(func(db *gorm.DB) error {
 		if result := db.Unscoped().Where(PreAuthKeyACLTag{PreAuthKeyID: pak.ID}).Delete(&PreAuthKeyACLTag{}); result.Error != nil {
 			return result.Error
@@ -156,7 +153,7 @@ func (h *Headscale) DestroyPreAuthKey(pak PreAuthKey) error {
 }
 
 // MarkExpirePreAuthKey marks a PreAuthKey as expired.
-func (h *Headscale) ExpirePreAuthKey(k *PreAuthKey) error {
+func (h *Mirage) ExpirePreAuthKey(k *PreAuthKey) error {
 	if err := h.db.Model(&k).Update("Expiration", time.Now()).Error; err != nil {
 		return err
 	}
@@ -165,7 +162,7 @@ func (h *Headscale) ExpirePreAuthKey(k *PreAuthKey) error {
 }
 
 // UsePreAuthKey marks a PreAuthKey as used.
-func (h *Headscale) UsePreAuthKey(k *PreAuthKey) error {
+func (h *Mirage) UsePreAuthKey(k *PreAuthKey) error {
 	k.Used = true
 	if err := h.db.Save(k).Error; err != nil {
 		return fmt.Errorf("failed to update key used status in the database: %w", err)
@@ -176,7 +173,7 @@ func (h *Headscale) UsePreAuthKey(k *PreAuthKey) error {
 
 // checkKeyValidity does the heavy lifting for validation of the PreAuthKey coming from a node
 // If returns no error and a PreAuthKey, it can be used.
-func (h *Headscale) checkKeyValidity(k string) (*PreAuthKey, error) {
+func (h *Mirage) checkKeyValidity(k string) (*PreAuthKey, error) {
 	pak := PreAuthKey{}
 	if result := h.db.Preload("User").Preload("ACLTags").First(&pak, "key = ?", k); errors.Is(
 		result.Error,
@@ -205,7 +202,7 @@ func (h *Headscale) checkKeyValidity(k string) (*PreAuthKey, error) {
 	return &pak, nil
 }
 
-func (h *Headscale) generateKey() (string, error) {
+func (h *Mirage) generateKey() (string, error) {
 	size := 24
 	bytes := make([]byte, size)
 	if _, err := rand.Read(bytes); err != nil {
@@ -215,28 +212,10 @@ func (h *Headscale) generateKey() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func (key *PreAuthKey) toProto() *v1.PreAuthKey {
-	protoKey := v1.PreAuthKey{
-		User:      key.User.Name,
-		Id:        strconv.FormatUint(key.ID, Base10),
-		Key:       key.Key,
-		Ephemeral: key.Ephemeral,
-		Reusable:  key.Reusable,
-		Used:      key.Used,
-		AclTags:   make([]string, len(key.ACLTags)),
-	}
-
-	if key.Expiration != nil {
-		protoKey.Expiration = timestamppb.New(*key.Expiration)
-	}
-
-	if key.CreatedAt != nil {
-		protoKey.CreatedAt = timestamppb.New(*key.CreatedAt)
-	}
-
+func (key *PreAuthKey) GetAclTags() []string {
+	aclTags := make([]string, len(key.ACLTags))
 	for idx := range key.ACLTags {
-		protoKey.AclTags[idx] = key.ACLTags[idx].Tag
+		aclTags[idx] = key.ACLTags[idx].Tag
 	}
-
-	return &protoKey
+	return aclTags
 }

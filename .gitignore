@@ -15,7 +15,7 @@ __debug_bin
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-/headscale
+/Mirage
 config.json
 config.yaml
 derp.yaml

@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	_ "embed"
@@ -19,7 +19,7 @@ type DNSData struct {
 }
 
 // 接受/admin/api/dns的Get请求，用于查询DNS
-func (h *Headscale) CAPIGetDNS(
+func (h *Mirage) CAPIGetDNS(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -74,7 +74,7 @@ func (h *Headscale) CAPIGetDNS(
 
 // 请求报文：同DNSData查询报文
 // 接受/admin/api/dns的Post请求，用于修改DNS设置
-func (h *Headscale) CAPIPostDNS(
+func (h *Mirage) CAPIPostDNS(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -100,7 +100,7 @@ func (h *Headscale) CAPIPostDNS(
 }
 
 // 注销Key执行DELETE方法api/keys/:Id
-func (h *Headscale) CAPIDelDNS(
+func (h *Mirage) CAPIDelDNS(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {

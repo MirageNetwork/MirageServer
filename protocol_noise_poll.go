@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	"encoding/json"
@@ -42,7 +42,7 @@ func (t *ts2021App) NoisePollNetMapHandler(
 
 	//machine, err := t.headscale.GetMachineByAnyKey(t.conn.Peer(), mapRequest.NodeKey, key.NodePublic{})
 	//cgao6: 因为MachineKey会用于多个用户，不具备unique特点，故此处应该只判断NodeKey！
-	machine, err := t.headscale.GetMachineByNodeKey(mapRequest.NodeKey)
+	machine, err := t.mirage.GetMachineByNodeKey(mapRequest.NodeKey)
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -65,5 +65,5 @@ func (t *ts2021App) NoisePollNetMapHandler(
 		Str("machine", machine.Hostname).
 		Msg("A machine is entering polling via the Noise protocol")
 
-	t.headscale.handlePollCommon(writer, req.Context(), machine, mapRequest, true)
+	t.mirage.handlePollCommon(writer, req.Context(), machine, mapRequest)
 }

@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	"context"
@@ -18,14 +18,13 @@ type contextKey string
 
 const machineNameContextKey = contextKey("machineName")
 
-// handlePollCommon is the common code for the legacy and Noise protocols to
+// handlePollCommon is the common code for the Noise protocols to
 // managed the poll loop.
-func (h *Headscale) handlePollCommon(
+func (h *Mirage) handlePollCommon(
 	writer http.ResponseWriter,
 	ctx context.Context,
 	machine *Machine,
 	mapRequest tailcfg.MapRequest,
-	isNoise bool,
 ) {
 	machine.Hostname = mapRequest.Hostinfo.Hostname
 	machine.HostInfo = HostInfo(*mapRequest.Hostinfo)
@@ -47,7 +46,6 @@ func (h *Headscale) handlePollCommon(
 		if err != nil {
 			log.Error().
 				Caller().
-				Bool("noise", isNoise).
 				Str("machine", machine.Hostname).
 				Err(err)
 		}
@@ -57,7 +55,6 @@ func (h *Headscale) handlePollCommon(
 		if err != nil {
 			log.Error().
 				Caller().
-				Bool("noise", isNoise).
 				Str("machine", machine.Hostname).
 				Err(err).
 				Msg("Error running auto approved routes")
@@ -81,7 +78,6 @@ func (h *Headscale) handlePollCommon(
 		if err != nil {
 			log.Error().
 				Str("handler", "PollNetMap").
-				Bool("noise", isNoise).
 				Str("node_key", machine.NodeKey).
 				Str("machine", machine.Hostname).
 				Err(err).
@@ -92,11 +88,10 @@ func (h *Headscale) handlePollCommon(
 		}
 	}
 
-	mapResp, err := h.getMapResponseData(mapRequest, machine, isNoise)
+	mapResp, err := h.getMapResponseData(mapRequest, machine)
 	if err != nil {
 		log.Error().
 			Str("handler", "PollNetMap").
-			Bool("noise", isNoise).
 			Str("node_key", machine.NodeKey).
 			Str("machine", machine.Hostname).
 			Err(err).
@@ -113,7 +108,6 @@ func (h *Headscale) handlePollCommon(
 	// Details on the protocol can be found in https://github.com/tailscale/tailscale/blob/main/tailcfg/tailcfg.go#L696
 	log.Debug().
 		Str("handler", "PollNetMap").
-		Bool("noise", isNoise).
 		Str("machine", machine.Hostname).
 		Bool("readOnly", mapRequest.ReadOnly).
 		Bool("omitPeers", mapRequest.OmitPeers).
@@ -123,7 +117,6 @@ func (h *Headscale) handlePollCommon(
 	if mapRequest.ReadOnly {
 		log.Info().
 			Str("handler", "PollNetMap").
-			Bool("noise", isNoise).
 			Str("machine", machine.Hostname).
 			Msg("Client is starting up. Probably interested in a DERP map")
 
@@ -154,7 +147,6 @@ func (h *Headscale) handlePollCommon(
 	// Only create update channel if it has not been created
 	log.Trace().
 		Caller().
-		Bool("noise", isNoise).
 		Str("machine", machine.Hostname).
 		Msg("Loading or creating update channel")
 
@@ -169,7 +161,6 @@ func (h *Headscale) handlePollCommon(
 	if mapRequest.OmitPeers && !mapRequest.Stream {
 		log.Info().
 			Str("handler", "PollNetMap").
-			Bool("noise", isNoise).
 			Str("machine", machine.Hostname).
 			Msg("Client sent endpoint update and is ok with a response without peer list")
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -183,15 +174,12 @@ func (h *Headscale) handlePollCommon(
 		}
 		// It sounds like we should update the nodes when we have received a endpoint update
 		// even tho the comments in the tailscale code dont explicitly say so.
-		updateRequestsFromNode.WithLabelValues(machine.User.Name, machine.Hostname, "endpoint-update").
-			Inc()
 		updateChan <- struct{}{}
 
 		return
 	} else if mapRequest.OmitPeers && mapRequest.Stream {
 		log.Warn().
 			Str("handler", "PollNetMap").
-			Bool("noise", isNoise).
 			Str("machine", machine.Hostname).
 			Msg("Ignoring request, don't know how to handle it")
 		http.Error(writer, "", http.StatusBadRequest)
@@ -201,23 +189,18 @@ func (h *Headscale) handlePollCommon(
 
 	log.Info().
 		Str("handler", "PollNetMap").
-		Bool("noise", isNoise).
 		Str("machine", machine.Hostname).
 		Msg("Client is ready to access the tailnet")
 	log.Info().
 		Str("handler", "PollNetMap").
-		Bool("noise", isNoise).
 		Str("machine", machine.Hostname).
 		Msg("Sending initial map")
 	pollDataChan <- mapResp
 
 	log.Info().
 		Str("handler", "PollNetMap").
-		Bool("noise", isNoise).
 		Str("machine", machine.Hostname).
 		Msg("Notifying peers")
-	updateRequestsFromNode.WithLabelValues(machine.User.Name, machine.Hostname, "full-update").
-		Inc()
 	updateChan <- struct{}{}
 
 	h.pollNetMapStream(
@@ -228,19 +211,17 @@ func (h *Headscale) handlePollCommon(
 		pollDataChan,
 		keepAliveChan,
 		updateChan,
-		isNoise,
 	)
 
 	log.Trace().
 		Str("handler", "PollNetMap").
-		Bool("noise", isNoise).
 		Str("machine", machine.Hostname).
 		Msg("Finished stream, closing PollNetMap session")
 }
 
 // pollNetMapStream stream logic for /machine/map,
 // ensuring we communicate updates and data to the connected clients.
-func (h *Headscale) pollNetMapStream(
+func (h *Mirage) pollNetMapStream(
 	writer http.ResponseWriter,
 	ctxReq context.Context,
 	machine *Machine,
@@ -248,7 +229,6 @@ func (h *Headscale) pollNetMapStream(
 	pollDataChan chan []byte,
 	keepAliveChan chan []byte,
 	updateChan chan struct{},
-	isNoise bool,
 ) {
 	h.pollNetMapStreamWG.Add(1)
 	defer h.pollNetMapStreamWG.Done()
@@ -264,18 +244,15 @@ func (h *Headscale) pollNetMapStream(
 		keepAliveChan,
 		mapRequest,
 		machine,
-		isNoise,
 	)
 
 	log.Trace().
 		Str("handler", "pollNetMapStream").
-		Bool("noise", isNoise).
 		Str("machine", machine.Hostname).
 		Msg("Waiting for data to stream...")
 
 	log.Trace().
 		Str("handler", "pollNetMapStream").
-		Bool("noise", isNoise).
 		Str("machine", machine.Hostname).
 		Msgf("pollData is %#v, keepAliveChan is %#v, updateChan is %#v", pollDataChan, keepAliveChan, updateChan)
 
@@ -284,7 +261,6 @@ func (h *Headscale) pollNetMapStream(
 		case data := <-pollDataChan:
 			log.Trace().
 				Str("handler", "PollNetMapStream").
-				Bool("noise", isNoise).
 				Str("machine", machine.Hostname).
 				Str("channel", "pollData").
 				Int("bytes", len(data)).
@@ -293,7 +269,6 @@ func (h *Headscale) pollNetMapStream(
 			if err != nil {
 				log.Error().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "pollData").
 					Err(err).
@@ -307,7 +282,6 @@ func (h *Headscale) pollNetMapStream(
 				log.Error().
 					Caller().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "pollData").
 					Msg("Cannot cast writer to http.Flusher")
@@ -317,7 +291,6 @@ func (h *Headscale) pollNetMapStream(
 
 			log.Trace().
 				Str("handler", "PollNetMapStream").
-				Bool("noise", isNoise).
 				Str("machine", machine.Hostname).
 				Str("channel", "pollData").
 				Int("bytes", len(data)).
@@ -329,7 +302,6 @@ func (h *Headscale) pollNetMapStream(
 			if err != nil {
 				log.Error().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "pollData").
 					Err(err).
@@ -342,15 +314,12 @@ func (h *Headscale) pollNetMapStream(
 			now := time.Now().UTC()
 			machine.LastSeen = &now
 
-			lastStateUpdate.WithLabelValues(machine.User.Name, machine.Hostname).
-				Set(float64(now.Unix()))
 			machine.LastSuccessfulUpdate = &now
 
 			err = h.TouchMachine(machine)
 			if err != nil {
 				log.Error().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "pollData").
 					Err(err).
@@ -361,7 +330,6 @@ func (h *Headscale) pollNetMapStream(
 
 			log.Trace().
 				Str("handler", "PollNetMapStream").
-				Bool("noise", isNoise).
 				Str("machine", machine.Hostname).
 				Str("channel", "pollData").
 				Int("bytes", len(data)).
@@ -378,7 +346,6 @@ func (h *Headscale) pollNetMapStream(
 			if err != nil {
 				log.Error().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "keepAlive").
 					Err(err).
@@ -391,7 +358,6 @@ func (h *Headscale) pollNetMapStream(
 				log.Error().
 					Caller().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "keepAlive").
 					Msg("Cannot cast writer to http.Flusher")
@@ -401,7 +367,6 @@ func (h *Headscale) pollNetMapStream(
 
 			log.Trace().
 				Str("handler", "PollNetMapStream").
-				Bool("noise", isNoise).
 				Str("machine", machine.Hostname).
 				Str("channel", "keepAlive").
 				Int("bytes", len(data)).
@@ -413,7 +378,6 @@ func (h *Headscale) pollNetMapStream(
 			if err != nil {
 				log.Error().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "keepAlive").
 					Err(err).
@@ -429,7 +393,6 @@ func (h *Headscale) pollNetMapStream(
 			if err != nil {
 				log.Error().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "keepAlive").
 					Err(err).
@@ -440,7 +403,6 @@ func (h *Headscale) pollNetMapStream(
 
 			log.Trace().
 				Str("handler", "PollNetMapStream").
-				Bool("noise", isNoise).
 				Str("machine", machine.Hostname).
 				Str("channel", "keepAlive").
 				Int("bytes", len(data)).
@@ -449,12 +411,9 @@ func (h *Headscale) pollNetMapStream(
 		case <-updateChan:
 			log.Trace().
 				Str("handler", "PollNetMapStream").
-				Bool("noise", isNoise).
 				Str("machine", machine.Hostname).
 				Str("channel", "update").
 				Msg("Received a request for update")
-			updateRequestsReceivedOnChannel.WithLabelValues(machine.User.Name, machine.Hostname).
-				Inc()
 
 			if h.isOutdated(machine) {
 				var lastUpdate time.Time
@@ -463,16 +422,14 @@ func (h *Headscale) pollNetMapStream(
 				}
 				log.Debug().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Time("last_successful_update", lastUpdate).
 					Time("last_state_change", h.getLastStateChange(machine.User)).
 					Msgf("There has been updates since the last successful update to %s", machine.Hostname)
-				data, err := h.getMapResponseData(mapRequest, machine, isNoise)
+				data, err := h.getMapResponseData(mapRequest, machine)
 				if err != nil {
 					log.Error().
 						Str("handler", "PollNetMapStream").
-						Bool("noise", isNoise).
 						Str("machine", machine.Hostname).
 						Str("channel", "update").
 						Err(err).
@@ -484,13 +441,10 @@ func (h *Headscale) pollNetMapStream(
 				if err != nil {
 					log.Error().
 						Str("handler", "PollNetMapStream").
-						Bool("noise", isNoise).
 						Str("machine", machine.Hostname).
 						Str("channel", "update").
 						Err(err).
 						Msg("Could not write the map response")
-					updateRequestsSentToNode.WithLabelValues(machine.User.Name, machine.Hostname, "failed").
-						Inc()
 
 					return
 				}
@@ -500,7 +454,6 @@ func (h *Headscale) pollNetMapStream(
 					log.Error().
 						Caller().
 						Str("handler", "PollNetMapStream").
-						Bool("noise", isNoise).
 						Str("machine", machine.Hostname).
 						Str("channel", "update").
 						Msg("Cannot cast writer to http.Flusher")
@@ -510,12 +463,9 @@ func (h *Headscale) pollNetMapStream(
 
 				log.Trace().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "update").
 					Msg("Updated Map has been sent")
-				updateRequestsSentToNode.WithLabelValues(machine.User.Name, machine.Hostname, "success").
-					Inc()
 
 				// Keep track of the last successful update,
 				// we sometimes end in a state were the update
@@ -528,7 +478,6 @@ func (h *Headscale) pollNetMapStream(
 				if err != nil {
 					log.Error().
 						Str("handler", "PollNetMapStream").
-						Bool("noise", isNoise).
 						Str("machine", machine.Hostname).
 						Str("channel", "update").
 						Err(err).
@@ -540,15 +489,12 @@ func (h *Headscale) pollNetMapStream(
 				}
 				now := time.Now().UTC()
 
-				lastStateUpdate.WithLabelValues(machine.User.Name, machine.Hostname).
-					Set(float64(now.Unix()))
 				machine.LastSuccessfulUpdate = &now
 
 				err = h.TouchMachine(machine)
 				if err != nil {
 					log.Error().
 						Str("handler", "PollNetMapStream").
-						Bool("noise", isNoise).
 						Str("machine", machine.Hostname).
 						Str("channel", "update").
 						Err(err).
@@ -563,7 +509,6 @@ func (h *Headscale) pollNetMapStream(
 				}
 				log.Trace().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Time("last_successful_update", lastUpdate).
 					Time("last_state_change", h.getLastStateChange(machine.User)).
@@ -582,7 +527,6 @@ func (h *Headscale) pollNetMapStream(
 			if err != nil {
 				log.Error().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "Done").
 					Err(err).
@@ -603,7 +547,6 @@ func (h *Headscale) pollNetMapStream(
 			if err != nil {
 				log.Error().
 					Str("handler", "PollNetMapStream").
-					Bool("noise", isNoise).
 					Str("machine", machine.Hostname).
 					Str("channel", "Done").
 					Err(err).
@@ -619,7 +562,6 @@ func (h *Headscale) pollNetMapStream(
 		case <-h.shutdownChan:
 			log.Info().
 				Str("handler", "PollNetMapStream").
-				Bool("noise", isNoise).
 				Str("machine", machine.Hostname).
 				Msg("The long-poll handler is shutting down")
 
@@ -628,13 +570,12 @@ func (h *Headscale) pollNetMapStream(
 	}
 }
 
-func (h *Headscale) scheduledPollWorker(
+func (h *Mirage) scheduledPollWorker(
 	ctx context.Context,
 	updateChan chan struct{},
 	keepAliveChan chan []byte,
 	mapRequest tailcfg.MapRequest,
 	machine *Machine,
-	isNoise bool,
 ) {
 	keepAliveTicker := time.NewTicker(keepAliveInterval)
 	updateCheckerTicker := time.NewTicker(h.cfg.NodeUpdateCheckInterval)
@@ -656,11 +597,10 @@ func (h *Headscale) scheduledPollWorker(
 			return
 
 		case <-keepAliveTicker.C:
-			data, err := h.getMapKeepAliveResponseData(mapRequest, machine, isNoise)
+			data, err := h.getMapKeepAliveResponseData(mapRequest, machine)
 			if err != nil {
 				log.Error().
 					Str("func", "keepAlive").
-					Bool("noise", isNoise).
 					Err(err).
 					Msg("Error generating the keep alive msg")
 
@@ -670,7 +610,6 @@ func (h *Headscale) scheduledPollWorker(
 			log.Debug().
 				Str("func", "keepAlive").
 				Str("machine", machine.Hostname).
-				Bool("noise", isNoise).
 				Msg("Sending keepalive")
 			select {
 			case keepAliveChan <- data:
@@ -682,10 +621,7 @@ func (h *Headscale) scheduledPollWorker(
 			log.Debug().
 				Str("func", "scheduledPollWorker").
 				Str("machine", machine.Hostname).
-				Bool("noise", isNoise).
 				Msg("Sending update request")
-			updateRequestsFromNode.WithLabelValues(machine.User.Name, machine.Hostname, "scheduled-update").
-				Inc()
 			select {
 			case updateChan <- struct{}{}:
 			case <-ctx.Done():

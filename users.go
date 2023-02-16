@@ -1,18 +1,15 @@
-package headscale
+package Mirage
 
 import (
 	"errors"
 	"fmt"
 	"net/netip"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
-	v1 "github.com/juanfont/headscale/gen/go/headscale/v1"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm"
 	"tailscale.com/tailcfg"
 	"tailscale.com/types/dnstype"
@@ -32,7 +29,7 @@ const (
 
 var invalidCharsInUserRegex = regexp.MustCompile("[^a-z0-9-.]+")
 
-// User is the way Headscale implements the concept of users in Tailscale
+// User is the way Mirage implements the concept of users in Tailscale
 //
 // At the end of the day, users in Tailscale are some kind of 'bubbles' or users
 // that contain our machines.
@@ -50,7 +47,7 @@ type User struct {
 
 // CreateUser creates a new User. Returns error if could not be created
 // or another user already exists.
-func (h *Headscale) CreateUser(name string, UID string, DisName string) (*User, error) {
+func (h *Mirage) CreateUser(name string, UID string, DisName string) (*User, error) {
 	err := CheckForFQDNRules(name)
 	if err != nil {
 		return nil, err
@@ -77,7 +74,7 @@ func (h *Headscale) CreateUser(name string, UID string, DisName string) (*User, 
 
 // DestroyUser destroys a User. Returns error if the User does
 // not exist or if there are machines associated with it.
-func (h *Headscale) DestroyUser(name string) error {
+func (h *Mirage) DestroyUser(name string) error {
 	user, err := h.GetUser(name)
 	if err != nil {
 		return ErrUserNotFound
@@ -110,7 +107,7 @@ func (h *Headscale) DestroyUser(name string) error {
 }
 
 // Update User's node key expiry duration.
-func (h *Headscale) UpdateUserKeyExpiry(name string, newDuration uint) error {
+func (h *Mirage) UpdateUserKeyExpiry(name string, newDuration uint) error {
 	var err error
 	user, err := h.GetUser(name)
 	if err != nil {
@@ -126,7 +123,7 @@ func (h *Headscale) UpdateUserKeyExpiry(name string, newDuration uint) error {
 
 // RenameUser renames a User. Returns error if the User does
 // not exist or if another User exists with the new name.
-func (h *Headscale) RenameUser(oldName, newName string) error {
+func (h *Mirage) RenameUser(oldName, newName string) error {
 	var err error
 	oldUser, err := h.GetUser(oldName)
 	if err != nil {
@@ -154,7 +151,7 @@ func (h *Headscale) RenameUser(oldName, newName string) error {
 }
 
 // GetUser fetches a user by name.
-func (h *Headscale) GetUserByID(id tailcfg.UserID) (*User, error) {
+func (h *Mirage) GetUserByID(id tailcfg.UserID) (*User, error) {
 	user := User{}
 	if result := h.db.First(&user, "id = ?", id); errors.Is(
 		result.Error,
@@ -167,7 +164,7 @@ func (h *Headscale) GetUserByID(id tailcfg.UserID) (*User, error) {
 }
 
 // GetUser fetches a user by name.
-func (h *Headscale) GetUser(name string) (*User, error) {
+func (h *Mirage) GetUser(name string) (*User, error) {
 	user := User{}
 	if result := h.db.First(&user, "name = ?", name); errors.Is(
 		result.Error,
@@ -180,7 +177,7 @@ func (h *Headscale) GetUser(name string) (*User, error) {
 }
 
 // ListUsers gets all the existing users.
-func (h *Headscale) ListUsers() ([]User, error) {
+func (h *Mirage) ListUsers() ([]User, error) {
 	users := []User{}
 	if err := h.db.Find(&users).Error; err != nil {
 		return nil, err
@@ -190,7 +187,7 @@ func (h *Headscale) ListUsers() ([]User, error) {
 }
 
 // ListMachinesByUser gets all the nodes in a given user.
-func (h *Headscale) ListMachinesByUser(name string) ([]Machine, error) {
+func (h *Mirage) ListMachinesByUser(name string) ([]Machine, error) {
 	err := CheckForFQDNRules(name)
 	if err != nil {
 		return nil, err
@@ -209,7 +206,7 @@ func (h *Headscale) ListMachinesByUser(name string) ([]Machine, error) {
 }
 
 // SetMachineUser assigns a Machine to a user.
-func (h *Headscale) SetMachineUser(machine *Machine, username string) error {
+func (h *Mirage) SetMachineUser(machine *Machine, username string) error {
 	err := CheckForFQDNRules(username)
 	if err != nil {
 		return err
@@ -252,7 +249,7 @@ func (n *User) toTailscaleLogin() *tailcfg.Login {
 	return &login
 }
 
-func (h *Headscale) getMapResponseUserProfiles(
+func (h *Mirage) getMapResponseUserProfiles(
 	machine Machine,
 	peers Machines,
 ) []tailcfg.UserProfile {
@@ -281,14 +278,6 @@ func (h *Headscale) getMapResponseUserProfiles(
 	}
 
 	return profiles
-}
-
-func (n *User) toProto() *v1.User {
-	return &v1.User{
-		Id:        strconv.FormatUint(uint64(n.ID), Base10),
-		Name:      n.Name,
-		CreatedAt: timestamppb.New(n.CreatedAt),
-	}
 }
 
 // NormalizeToFQDNRules will replace forbidden chars in user
@@ -460,7 +449,7 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 	return dnsConfig, baseDomain
 }
 
-func (h *Headscale) UpdateDNSConfig(userName string, newDNSCfg DNSData) error {
+func (h *Mirage) UpdateDNSConfig(userName string, newDNSCfg DNSData) error {
 	var err error
 	user, err := h.GetUser(userName)
 	if err != nil {

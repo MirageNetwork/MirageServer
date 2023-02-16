@@ -1,9 +1,10 @@
-package headscale
+package Mirage
 
 import (
 	"encoding/binary"
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/rs/zerolog/log"
@@ -12,65 +13,147 @@ import (
 	"tailscale.com/types/key"
 )
 
-func (h *Headscale) getMapResponseData(
+func (h *Mirage) generateMapResponse(
 	mapRequest tailcfg.MapRequest,
 	machine *Machine,
-	isNoise bool,
+) (*tailcfg.MapResponse, error) {
+	log.Trace().
+		Str("func", "generateMapResponse").
+		Str("machine", mapRequest.Hostinfo.Hostname).
+		Msg("Creating Map response")
+
+	//cgao6: change to use User's DNSConfig
+	node, err := h.toNode(*machine) //h.cfg.BaseDomain, h.cfg.DNSConfig)
+	if err != nil {
+		log.Error().
+			Caller().
+			Str("func", "generateMapResponse").
+			Err(err).
+			Msg("Cannot convert to node")
+
+		return nil, err
+	}
+
+	peers, invalidNodeIDs, err := h.getValidPeers(machine)
+	if invalidNodeIDs != nil {
+		//log.Info().Msg("Should ignore invalidNodeIDs for current")
+	}
+	if err != nil {
+		log.Error().
+			Caller().
+			Str("func", "generateMapResponse").
+			Err(err).
+			Msg("Cannot fetch peers")
+
+		return nil, err
+	}
+
+	profiles := h.getMapResponseUserProfiles(*machine, peers)
+
+	//cgao6: change to use User's DNSConfig
+	nodePeers, err := h.toNodes(peers) //, h.cfg.BaseDomain, h.cfg.DNSConfig)
+	if err != nil {
+		log.Error().
+			Caller().
+			Str("func", "generateMapResponse").
+			Err(err).
+			Msg("Failed to convert peers to Tailscale nodes")
+
+		return nil, err
+	}
+
+	//cgao6: use User's DNSconfig instead
+	dnsConfig := getMapResponseDNSConfig(
+		h.cfg.IPPrefixes, //
+		//		h.cfg.DNSConfig,
+		//		h.cfg.BaseDomain,
+		*machine,
+		peers,
+	)
+
+	now := time.Now()
+
+	resp := tailcfg.MapResponse{
+		KeepAlive: false,
+		Node:      node,
+
+		// TODO: Only send if updated
+		DERPMap: h.DERPMap,
+
+		// TODO: Only send if updated
+		Peers: nodePeers,
+
+		// TODO(kradalby): Implement:
+		// https://github.com/tailscale/tailscale/blob/main/tailcfg/tailcfg.go#L1351-L1374
+		// PeersChanged
+		// PeersRemoved
+		// PeersChangedPatch
+		// PeerSeenChange
+		// OnlineChange
+
+		// TODO: Only send if updated
+		DNSConfig: dnsConfig,
+
+		// TODO: Only send if updated
+		Domain: h.cfg.BaseDomain,
+
+		// Do not instruct clients to collect services, we do not
+		// support or do anything with them
+		CollectServices: "false",
+
+		// TODO: Only send if updated
+		PacketFilter: h.aclRules,
+
+		UserProfiles: profiles,
+
+		// TODO: Only send if updated
+		SSHPolicy: h.sshPolicy,
+
+		ControlTime: &now,
+
+		Debug: &tailcfg.Debug{
+			DisableLogTail:      !h.cfg.LogTail.Enabled,
+			RandomizeClientPort: h.cfg.RandomizeClientPort,
+		},
+	}
+
+	log.Trace().
+		Str("func", "generateMapResponse").
+		Str("machine", mapRequest.Hostinfo.Hostname).
+		// Interface("payload", resp).
+		Msgf("Generated map response: %s", tailMapResponseToString(resp))
+
+	return &resp, nil
+}
+
+func (h *Mirage) getMapResponseData(
+	mapRequest tailcfg.MapRequest,
+	machine *Machine,
 ) ([]byte, error) {
 	mapResponse, err := h.generateMapResponse(mapRequest, machine)
 	if err != nil {
 		return nil, err
 	}
 
-	if isNoise {
-		return h.marshalMapResponse(mapResponse, key.MachinePublic{}, mapRequest.Compress, isNoise)
-	}
+	return h.marshalMapResponse(mapResponse, key.MachinePublic{}, mapRequest.Compress)
 
-	var machineKey key.MachinePublic
-	err = machineKey.UnmarshalText([]byte(MachinePublicKeyEnsurePrefix(machine.MachineKey)))
-	if err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Cannot parse client key")
-
-		return nil, err
-	}
-
-	return h.marshalMapResponse(mapResponse, machineKey, mapRequest.Compress, isNoise)
 }
 
-func (h *Headscale) getMapKeepAliveResponseData(
+func (h *Mirage) getMapKeepAliveResponseData(
 	mapRequest tailcfg.MapRequest,
 	machine *Machine,
-	isNoise bool,
 ) ([]byte, error) {
 	keepAliveResponse := tailcfg.MapResponse{
 		KeepAlive: true,
 	}
 
-	if isNoise {
-		return h.marshalMapResponse(keepAliveResponse, key.MachinePublic{}, mapRequest.Compress, isNoise)
-	}
+	return h.marshalMapResponse(keepAliveResponse, key.MachinePublic{}, mapRequest.Compress)
 
-	var machineKey key.MachinePublic
-	err := machineKey.UnmarshalText([]byte(MachinePublicKeyEnsurePrefix(machine.MachineKey)))
-	if err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Cannot parse client key")
-
-		return nil, err
-	}
-
-	return h.marshalMapResponse(keepAliveResponse, machineKey, mapRequest.Compress, isNoise)
 }
 
-func (h *Headscale) marshalResponse(
+func (h *Mirage) marshalResponse(
 	resp interface{},
 	machineKey key.MachinePublic,
-	isNoise bool,
 ) ([]byte, error) {
 	jsonBody, err := json.Marshal(resp)
 	if err != nil {
@@ -82,18 +165,14 @@ func (h *Headscale) marshalResponse(
 		return nil, err
 	}
 
-	if isNoise {
-		return jsonBody, nil
-	}
+	return jsonBody, nil
 
-	return h.privateKey.SealTo(machineKey, jsonBody), nil
 }
 
-func (h *Headscale) marshalMapResponse(
+func (h *Mirage) marshalMapResponse(
 	resp interface{},
 	machineKey key.MachinePublic,
 	compression string,
-	isNoise bool,
 ) ([]byte, error) {
 	jsonBody, err := json.Marshal(resp)
 	if err != nil {
@@ -106,15 +185,8 @@ func (h *Headscale) marshalMapResponse(
 	var respBody []byte
 	if compression == ZstdCompression {
 		respBody = zstdEncode(jsonBody)
-		if !isNoise { // if legacy protocol
-			respBody = h.privateKey.SealTo(machineKey, respBody)
-		}
 	} else {
-		if !isNoise { // if legacy protocol
-			respBody = h.privateKey.SealTo(machineKey, jsonBody)
-		} else {
-			respBody = jsonBody
-		}
+		respBody = jsonBody
 	}
 
 	data := make([]byte, reservedResponseHeaderSize)

@@ -1,13 +1,11 @@
-package headscale
+package Mirage
 
 import (
 	"errors"
 	"fmt"
 	"net/netip"
 
-	v1 "github.com/juanfont/headscale/gen/go/headscale/v1"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm"
 )
 
@@ -51,7 +49,7 @@ func (rs Routes) toPrefixes() []netip.Prefix {
 	return prefixes
 }
 
-func (h *Headscale) GetRoutes() ([]Route, error) {
+func (h *Mirage) GetRoutes() ([]Route, error) {
 	var routes []Route
 	err := h.db.Preload("Machine").Find(&routes).Error
 	if err != nil {
@@ -61,7 +59,7 @@ func (h *Headscale) GetRoutes() ([]Route, error) {
 	return routes, nil
 }
 
-func (h *Headscale) GetMachineRoutes(m *Machine) ([]Route, error) {
+func (h *Mirage) GetMachineRoutes(m *Machine) ([]Route, error) {
 	var routes []Route
 	err := h.db.
 		Preload("Machine").
@@ -74,7 +72,7 @@ func (h *Headscale) GetMachineRoutes(m *Machine) ([]Route, error) {
 	return routes, nil
 }
 
-func (h *Headscale) GetRoute(id uint64) (*Route, error) {
+func (h *Mirage) GetRoute(id uint64) (*Route, error) {
 	var route Route
 	err := h.db.Preload("Machine").First(&route, id).Error
 	if err != nil {
@@ -84,7 +82,7 @@ func (h *Headscale) GetRoute(id uint64) (*Route, error) {
 	return &route, nil
 }
 
-func (h *Headscale) EnableRoute(id uint64) error {
+func (h *Mirage) EnableRoute(id uint64) error {
 	route, err := h.GetRoute(id)
 	if err != nil {
 		return err
@@ -100,7 +98,7 @@ func (h *Headscale) EnableRoute(id uint64) error {
 	return h.enableRoutes(&route.Machine, netip.Prefix(route.Prefix).String())
 }
 
-func (h *Headscale) DisableRoute(id uint64) error {
+func (h *Mirage) DisableRoute(id uint64) error {
 	route, err := h.GetRoute(id)
 	if err != nil {
 		return err
@@ -117,7 +115,7 @@ func (h *Headscale) DisableRoute(id uint64) error {
 }
 
 // isUniquePrefix returns if there is another machine providing the same route already.
-func (h *Headscale) isUniquePrefix(route Route) bool {
+func (h *Mirage) isUniquePrefix(route Route) bool {
 	var count int64
 	h.db.
 		Model(&Route{}).
@@ -129,7 +127,7 @@ func (h *Headscale) isUniquePrefix(route Route) bool {
 	return count == 0
 }
 
-func (h *Headscale) getPrimaryRoute(prefix netip.Prefix) (*Route, error) {
+func (h *Mirage) getPrimaryRoute(prefix netip.Prefix) (*Route, error) {
 	var route Route
 	err := h.db.
 		Preload("Machine").
@@ -148,7 +146,7 @@ func (h *Headscale) getPrimaryRoute(prefix netip.Prefix) (*Route, error) {
 
 // getMachinePrimaryRoutes returns the routes that are enabled and marked as primary (for subnet failover)
 // Exit nodes are not considered for this, as they are never marked as Primary.
-func (h *Headscale) getMachinePrimaryRoutes(m *Machine) ([]Route, error) {
+func (h *Mirage) getMachinePrimaryRoutes(m *Machine) ([]Route, error) {
 	var routes []Route
 	err := h.db.
 		Preload("Machine").
@@ -161,7 +159,7 @@ func (h *Headscale) getMachinePrimaryRoutes(m *Machine) ([]Route, error) {
 	return routes, nil
 }
 
-func (h *Headscale) processMachineRoutes(machine *Machine) error {
+func (h *Mirage) processMachineRoutes(machine *Machine) error {
 	currentRoutes := []Route{}
 	err := h.db.Where("machine_id = ?", machine.ID).Find(&currentRoutes).Error
 	if err != nil {
@@ -211,7 +209,7 @@ func (h *Headscale) processMachineRoutes(machine *Machine) error {
 	return nil
 }
 
-func (h *Headscale) handlePrimarySubnetFailover() error {
+func (h *Mirage) handlePrimarySubnetFailover() error {
 	// first, get all the enabled routes
 	var routes []Route
 	err := h.db.
@@ -326,29 +324,4 @@ func (h *Headscale) handlePrimarySubnetFailover() error {
 	}
 
 	return nil
-}
-
-func (rs Routes) toProto() []*v1.Route {
-	protoRoutes := []*v1.Route{}
-
-	for _, route := range rs {
-		protoRoute := v1.Route{
-			Id:         uint64(route.ID),
-			Machine:    route.Machine.toProto(),
-			Prefix:     netip.Prefix(route.Prefix).String(),
-			Advertised: route.Advertised,
-			Enabled:    route.Enabled,
-			IsPrimary:  route.IsPrimary,
-			CreatedAt:  timestamppb.New(route.CreatedAt),
-			UpdatedAt:  timestamppb.New(route.UpdatedAt),
-		}
-
-		if route.DeletedAt.Valid {
-			protoRoute.DeletedAt = timestamppb.New(route.DeletedAt.Time)
-		}
-
-		protoRoutes = append(protoRoutes, &protoRoute)
-	}
-
-	return protoRoutes
 }

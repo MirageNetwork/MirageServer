@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	"net/http"
@@ -18,14 +18,14 @@ const (
 )
 
 type ts2021App struct {
-	headscale *Headscale
+	mirage *Mirage
 
 	conn *controlbase.Conn
 }
 
 // NoiseUpgradeHandler is to upgrade the connection and hijack the net.Conn
 // in order to use the Noise-based TS2021 protocol. Listens in /ts2021.
-func (h *Headscale) NoiseUpgradeHandler(
+func (h *Mirage) NoiseUpgradeHandler(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -53,8 +53,8 @@ func (h *Headscale) NoiseUpgradeHandler(
 	}
 
 	ts2021App := ts2021App{
-		headscale: h,
-		conn:      noiseConn,
+		mirage: h,
+		conn:   noiseConn,
 	}
 
 	// This router is served only over the Noise connection, and exposes only the new API.

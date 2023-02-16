@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	"bytes"
@@ -41,7 +41,7 @@ type IDTokenClaims struct {
 	Username string   `json:"preferred_username,omitempty"`
 }
 
-func (h *Headscale) initOIDC() error {
+func (h *Mirage) initOIDC() error {
 	var err error
 	// grab oidc config if it hasn't been already
 	if h.oauth2Config == nil {
@@ -71,7 +71,7 @@ func (h *Headscale) initOIDC() error {
 	return nil
 }
 
-func (h *Headscale) determineTokenExpiration(idTokenExpiration time.Time) time.Time {
+func (h *Mirage) determineTokenExpiration(idTokenExpiration time.Time) time.Time {
 	if h.cfg.OIDC.UseExpiryFromToken {
 		return idTokenExpiration
 	}
@@ -82,7 +82,7 @@ func (h *Headscale) determineTokenExpiration(idTokenExpiration time.Time) time.T
 // RegisterOIDC redirects to the OIDC provider for authentication
 // Puts NodeKey in cache so the callback can retrieve it using the oidc state param
 // Listens in /oidc/register/:nKey.
-func (h *Headscale) RegisterOIDC(
+func (h *Mirage) RegisterOIDC(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -186,7 +186,7 @@ var oidcCallbackTemplate = template.Must(
 // TODO: A confirmation page for new machines should be added to avoid phishing vulnerabilities
 // TODO: Add groups information from OIDC tokens into machine HostInfo
 // Listens in /oidc/callback.
-func (h *Headscale) OIDCCallback(
+func (h *Mirage) OIDCCallback(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -299,7 +299,7 @@ func validateOIDCCallbackParams(
 	return code, state, nil
 }
 
-func (h *Headscale) getIDTokenForOIDCCallback(
+func (h *Mirage) getIDTokenForOIDCCallback(
 	ctx context.Context,
 	writer http.ResponseWriter,
 	code, state string,
@@ -347,7 +347,7 @@ func (h *Headscale) getIDTokenForOIDCCallback(
 	return rawIDToken, nil
 }
 
-func (h *Headscale) verifyIDTokenForOIDCCallback(
+func (h *Mirage) verifyIDTokenForOIDCCallback(
 	ctx context.Context,
 	writer http.ResponseWriter,
 	rawIDToken string,
@@ -492,7 +492,7 @@ func validateOIDCAllowedUsers(
 // The error is not important, because if it does not
 // exist, then this is a new machine and we will move
 // on to registration.
-func (h *Headscale) validateMachineForOIDCCallback(
+func (h *Mirage) validateMachineForOIDCCallback(
 	writer http.ResponseWriter,
 	state string,
 	claims *IDTokenClaims,
@@ -661,7 +661,7 @@ func getUserName(
 	return userName, UID, userDisName, nil
 }
 
-func (h *Headscale) findOrCreateNewUserForOIDCCallback(
+func (h *Mirage) findOrCreateNewUserForOIDCCallback(
 	writer http.ResponseWriter,
 	userName string,
 	UID string,
@@ -710,7 +710,7 @@ func (h *Headscale) findOrCreateNewUserForOIDCCallback(
 	return user, nil
 }
 
-func (h *Headscale) registerMachineForOIDCCallback(
+func (h *Mirage) registerMachineForOIDCCallback(
 	writer http.ResponseWriter,
 	user *User,
 	nodeKey *key.NodePublic,

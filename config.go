@@ -1,9 +1,8 @@
-package headscale
+package Mirage
 
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"net/netip"
 	"net/url"
 	"os"
@@ -21,9 +20,6 @@ import (
 )
 
 const (
-	tlsALPN01ChallengeType = "TLS-ALPN-01"
-	http01ChallengeType    = "HTTP-01"
-
 	JSONLogFormat = "json"
 	TextLogFormat = "text"
 
@@ -35,13 +31,10 @@ var errOidcMutuallyExclusive = errors.New(
 	"oidc_client_secret and oidc_client_secret_path are mutually exclusive",
 )
 
-// Config contains the initial Headscale configuration.
+// Config contains the initial Mirage configuration.
 type Config struct {
 	ServerURL                      string
 	Addr                           string
-	MetricsAddr                    string
-	GRPCAddr                       string
-	GRPCAllowInsecure              bool
 	EphemeralNodeInactivityTimeout time.Duration
 	NodeUpdateCheckInterval        time.Duration
 	IPPrefixes                     []netip.Prefix
@@ -62,22 +55,12 @@ type Config struct {
 	DBpass string
 	DBssl  string
 
-	TLS TLSConfig
-
-	ACMEURL   string
-	ACMEEmail string
-
 	DNSConfig *tailcfg.DNSConfig
-
-	UnixSocket           string
-	UnixSocketPermission fs.FileMode
 
 	OIDC OIDCConfig
 
 	LogTail             LogTailConfig
 	RandomizeClientPort bool
-
-	CLI CLIConfig
 
 	ACL ACLConfig
 
@@ -95,20 +78,6 @@ type ALIConfig struct {
 	ali_access_key   string
 	ali_sms_sign     string
 	ali_sms_template string
-}
-
-type TLSConfig struct {
-	CertPath string
-	KeyPath  string
-
-	LetsEncrypt LetsEncryptConfig
-}
-
-type LetsEncryptConfig struct {
-	Listen        string
-	Hostname      string
-	CacheDir      string
-	ChallengeType string
 }
 
 type OIDCConfig struct {
@@ -129,15 +98,10 @@ type OIDCConfig struct {
 }
 
 type DERPConfig struct {
-	ServerEnabled    bool
-	ServerRegionID   int
-	ServerRegionCode string
-	ServerRegionName string
-	STUNAddr         string
-	URLs             []url.URL
-	Paths            []string
-	AutoUpdate       bool
-	UpdateFrequency  time.Duration
+	URLs            []url.URL
+	Paths           []string
+	AutoUpdate      bool
+	UpdateFrequency time.Duration
 }
 
 type LogTailConfig struct {
@@ -166,8 +130,8 @@ func LoadConfig(path string, isFile bool) error {
 	} else {
 		viper.SetConfigName("config")
 		if path == "" {
-			viper.AddConfigPath("/etc/headscale/")
-			viper.AddConfigPath("$HOME/.headscale")
+			viper.AddConfigPath("/etc/mirage/")
+			viper.AddConfigPath("$HOME/.mirage")
 			viper.AddConfigPath(".")
 		} else {
 			// For testing
@@ -175,30 +139,15 @@ func LoadConfig(path string, isFile bool) error {
 		}
 	}
 
-	viper.SetEnvPrefix("headscale")
+	viper.SetEnvPrefix("mirage")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
-
-	viper.SetDefault("tls_letsencrypt_cache_dir", "/var/www/.cache")
-	viper.SetDefault("tls_letsencrypt_challenge_type", http01ChallengeType)
 
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", TextLogFormat)
 
 	viper.SetDefault("dns_config", nil)
 	viper.SetDefault("dns_config.override_local_dns", true)
-
-	viper.SetDefault("derp.server.enabled", false)
-	viper.SetDefault("derp.server.stun.enabled", true)
-
-	viper.SetDefault("unix_socket", "/var/run/headscale.sock")
-	viper.SetDefault("unix_socket_permission", "0o770")
-
-	viper.SetDefault("grpc_listen_addr", ":50443")
-	viper.SetDefault("grpc_allow_insecure", false)
-
-	viper.SetDefault("cli.timeout", "5s")
-	viper.SetDefault("cli.insecure", false)
 
 	viper.SetDefault("db_ssl", false)
 
@@ -227,26 +176,9 @@ func LoadConfig(path string, isFile bool) error {
 
 	// Collect any validation errors and return them all at once
 	var errorText string
-	if (viper.GetString("tls_letsencrypt_hostname") != "") &&
-		((viper.GetString("tls_cert_path") != "") || (viper.GetString("tls_key_path") != "")) {
-		errorText += "Fatal config error: set either tls_letsencrypt_hostname or tls_cert_path/tls_key_path, not both\n"
-	}
 
 	if !viper.IsSet("noise") || viper.GetString("noise.private_key_path") == "" {
 		errorText += "Fatal config error: headscale now requires a new `noise.private_key_path` field in the config file for the Tailscale v2 protocol\n"
-	}
-
-	if (viper.GetString("tls_letsencrypt_hostname") != "") &&
-		(viper.GetString("tls_letsencrypt_challenge_type") == tlsALPN01ChallengeType) &&
-		(!strings.HasSuffix(viper.GetString("listen_addr"), ":443")) {
-		// this is only a warning because there could be something sitting in front of headscale that redirects the traffic (e.g. an iptables rule)
-		log.Warn().
-			Msg("Warning: when using tls_letsencrypt_hostname with TLS-ALPN-01 as challenge type, headscale must be reachable on port 443, i.e. listen_addr should probably end in :443")
-	}
-
-	if (viper.GetString("tls_letsencrypt_challenge_type") != http01ChallengeType) &&
-		(viper.GetString("tls_letsencrypt_challenge_type") != tlsALPN01ChallengeType) {
-		errorText += "Fatal config error: the only supported values for tls_letsencrypt_challenge_type are HTTP-01 and TLS-ALPN-01\n"
 	}
 
 	if !strings.HasPrefix(viper.GetString("server_url"), "http://") &&
@@ -282,37 +214,7 @@ func LoadConfig(path string, isFile bool) error {
 	}
 }
 
-func GetTLSConfig() TLSConfig {
-	return TLSConfig{
-		LetsEncrypt: LetsEncryptConfig{
-			Hostname: viper.GetString("tls_letsencrypt_hostname"),
-			Listen:   viper.GetString("tls_letsencrypt_listen"),
-			CacheDir: AbsolutePathFromConfigPath(
-				viper.GetString("tls_letsencrypt_cache_dir"),
-			),
-			ChallengeType: viper.GetString("tls_letsencrypt_challenge_type"),
-		},
-		CertPath: AbsolutePathFromConfigPath(
-			viper.GetString("tls_cert_path"),
-		),
-		KeyPath: AbsolutePathFromConfigPath(
-			viper.GetString("tls_key_path"),
-		),
-	}
-}
-
 func GetDERPConfig() DERPConfig {
-	serverEnabled := viper.GetBool("derp.server.enabled")
-	serverRegionID := viper.GetInt("derp.server.region_id")
-	serverRegionCode := viper.GetString("derp.server.region_code")
-	serverRegionName := viper.GetString("derp.server.region_name")
-	stunAddr := viper.GetString("derp.server.stun_listen_addr")
-
-	if serverEnabled && stunAddr == "" {
-		log.Fatal().
-			Msg("derp.server.stun_listen_addr must be set if derp.server.enabled is true")
-	}
-
 	urlStrs := viper.GetStringSlice("derp.urls")
 
 	urls := make([]url.URL, len(urlStrs))
@@ -334,15 +236,10 @@ func GetDERPConfig() DERPConfig {
 	updateFrequency := viper.GetDuration("derp.update_frequency")
 
 	return DERPConfig{
-		ServerEnabled:    serverEnabled,
-		ServerRegionID:   serverRegionID,
-		ServerRegionCode: serverRegionCode,
-		ServerRegionName: serverRegionName,
-		STUNAddr:         stunAddr,
-		URLs:             urls,
-		Paths:            paths,
-		AutoUpdate:       autoUpdate,
-		UpdateFrequency:  updateFrequency,
+		URLs:            urls,
+		Paths:           paths,
+		AutoUpdate:      autoUpdate,
+		UpdateFrequency: updateFrequency,
 	}
 }
 
@@ -508,17 +405,7 @@ func GetDNSConfig() (*tailcfg.DNSConfig, string) {
 	return nil, ""
 }
 
-func GetHeadscaleConfig() (*Config, error) {
-	if IsCLIConfigured() {
-		return &Config{
-			CLI: CLIConfig{
-				Address:  viper.GetString("cli.address"),
-				APIKey:   viper.GetString("cli.api_key"),
-				Timeout:  viper.GetDuration("cli.timeout"),
-				Insecure: viper.GetBool("cli.insecure"),
-			},
-		}, nil
-	}
+func GetMirageConfig() (*Config, error) {
 
 	dnsConfig, baseDomain := GetDNSConfig()
 	derpConfig := GetDERPConfig()
@@ -573,15 +460,10 @@ func GetHeadscaleConfig() (*Config, error) {
 	return &Config{
 		ServerURL:          viper.GetString("server_url"),
 		Addr:               viper.GetString("listen_addr"),
-		MetricsAddr:        viper.GetString("metrics_listen_addr"),
-		GRPCAddr:           viper.GetString("grpc_listen_addr"),
-		GRPCAllowInsecure:  viper.GetBool("grpc_allow_insecure"),
 		DisableUpdateCheck: viper.GetBool("disable_check_updates"),
 
 		IPPrefixes: prefixes,
-		PrivateKeyPath: AbsolutePathFromConfigPath(
-			viper.GetString("private_key_path"),
-		),
+
 		NoisePrivateKeyPath: AbsolutePathFromConfigPath(
 			viper.GetString("noise.private_key_path"),
 		),
@@ -606,15 +488,7 @@ func GetHeadscaleConfig() (*Config, error) {
 		DBpass: viper.GetString("db_pass"),
 		DBssl:  viper.GetString("db_ssl"),
 
-		TLS: GetTLSConfig(),
-
 		DNSConfig: dnsConfig,
-
-		ACMEEmail: viper.GetString("acme_email"),
-		ACMEURL:   viper.GetString("acme_url"),
-
-		UnixSocket:           viper.GetString("unix_socket"),
-		UnixSocketPermission: GetFileMode("unix_socket_permission"),
 
 		OIDC: OIDCConfig{
 			OnlyStartIfOIDCIsAvailable: viper.GetBool(
@@ -653,13 +527,6 @@ func GetHeadscaleConfig() (*Config, error) {
 		RandomizeClientPort: randomizeClientPort,
 
 		ACL: GetACLConfig(),
-
-		CLI: CLIConfig{
-			Address:  viper.GetString("cli.address"),
-			APIKey:   viper.GetString("cli.api_key"),
-			Timeout:  viper.GetDuration("cli.timeout"),
-			Insecure: viper.GetBool("cli.insecure"),
-		},
 
 		Log: GetLogConfig(),
 		ali_IDaaS: ALIConfig{

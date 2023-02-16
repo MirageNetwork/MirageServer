@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	_ "embed"
@@ -52,7 +52,7 @@ type GenKeyData struct {
 }
 
 // 接受/admin/api/keys的Get请求，用于查询AuthKey
-func (h *Headscale) CAPIGetKeys(
+func (h *Mirage) CAPIGetKeys(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -99,7 +99,7 @@ type REQKeyData struct {
 }
 
 // 接受/admin/api/keys的Post请求，用于创建AuthKey
-func (h *Headscale) CAPIPostKeys(
+func (h *Mirage) CAPIPostKeys(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -135,7 +135,7 @@ func (h *Headscale) CAPIPostKeys(
 }
 
 // 注销Key执行DELETE方法api/keys/:Id
-func (h *Headscale) CAPIDelKeys(
+func (h *Mirage) CAPIDelKeys(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {

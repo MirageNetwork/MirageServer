@@ -3,22 +3,18 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package headscale
+package Mirage
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/fs"
-	"net"
 	"net/netip"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -139,7 +135,7 @@ func decode(
 	return nil
 }
 
-func (h *Headscale) getAvailableIPs() (MachineAddresses, error) {
+func (h *Mirage) getAvailableIPs() (MachineAddresses, error) {
 	var ips MachineAddresses
 	var err error
 	ipPrefixes := h.cfg.IPPrefixes
@@ -164,7 +160,7 @@ func GetIPPrefixEndpoints(na netip.Prefix) (netip.Addr, netip.Addr) {
 	return network, broadcast
 }
 
-func (h *Headscale) getAvailableIP(ipPrefix netip.Prefix) (*netip.Addr, error) {
+func (h *Mirage) getAvailableIP(ipPrefix netip.Prefix) (*netip.Addr, error) {
 	usedIps, err := h.getUsedIPs()
 	if err != nil {
 		return nil, err
@@ -196,7 +192,7 @@ func (h *Headscale) getAvailableIP(ipPrefix netip.Prefix) (*netip.Addr, error) {
 	}
 }
 
-func (h *Headscale) getUsedIPs() (*netipx.IPSet, error) {
+func (h *Mirage) getUsedIPs() (*netipx.IPSet, error) {
 	// FIXME: This really deserves a better data model,
 	// but this was quick to get running and it should be enough
 	// to begin experimenting with a dual stack tailnet.
@@ -246,12 +242,6 @@ func tailMapResponseToString(resp tailcfg.MapResponse) string {
 		resp.Node.Name,
 		tailNodesToString(resp.Peers),
 	)
-}
-
-func GrpcSocketDialer(ctx context.Context, addr string) (net.Conn, error) {
-	var d net.Dialer
-
-	return d.DialContext(ctx, "unix", addr)
 }
 
 func stringToIPPrefix(prefixes []string) ([]netip.Prefix, error) {
@@ -357,15 +347,4 @@ func AbsolutePathFromConfigPath(path string) string {
 	}
 
 	return path
-}
-
-func GetFileMode(key string) fs.FileMode {
-	modeStr := viper.GetString(key)
-
-	mode, err := strconv.ParseUint(modeStr, Base8, BitSize64)
-	if err != nil {
-		return PermissionFallback
-	}
-
-	return fs.FileMode(mode)
 }

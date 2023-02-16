@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	_ "embed"
@@ -110,7 +110,7 @@ type adminTemplateConfig struct {
 }
 
 // 提供获取用户信息的API
-func (h *Headscale) ConsoleSelfAPI(
+func (h *Mirage) ConsoleSelfAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -170,7 +170,7 @@ func (h *Headscale) ConsoleSelfAPI(
 }
 
 // 验证Token并获取用户信息
-func (h *Headscale) verifyTokenIDandGetUser(
+func (h *Mirage) verifyTokenIDandGetUser(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) string {
@@ -217,7 +217,7 @@ func (h *Headscale) verifyTokenIDandGetUser(
 }
 
 // 控制台获取设备信息列表的API
-func (h *Headscale) ConsoleMachinesAPI(
+func (h *Mirage) ConsoleMachinesAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -423,7 +423,7 @@ type NetSettingResData struct {
 }
 
 // 查询网络设置API
-func (h *Headscale) getNetSettingAPI(
+func (h *Mirage) getNetSettingAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -451,7 +451,7 @@ func (h *Headscale) getNetSettingAPI(
 }
 
 // 更新用户网络密钥过期时长
-func (h *Headscale) ConsoleUpdateKeyExpiryAPI(
+func (h *Mirage) ConsoleUpdateKeyExpiryAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -481,7 +481,7 @@ func (h *Headscale) ConsoleUpdateKeyExpiryAPI(
 	h.doAPIResponse(writer, "", uint(newExpiryDuration))
 }
 
-func (h *Headscale) ConsoleMachinesUpdateAPI(
+func (h *Mirage) ConsoleMachinesUpdateAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -611,7 +611,7 @@ type removeMachineRes struct {
 	ErrMsg string `json:"errmsg"`
 }
 
-func (h *Headscale) ConsoleRemoveMachineAPI(
+func (h *Mirage) ConsoleRemoveMachineAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -711,7 +711,7 @@ func (h *Headscale) ConsoleRemoveMachineAPI(
 // API调用的统一响应发报
 // @msg 响应状态：成功时data不为nil则忽略，自动设置为success，否则拼接error-{msg}
 // @data 响应数据：key值为data的json对象
-func (h *Headscale) doAPIResponse(writer http.ResponseWriter, msg string, data interface{}) {
+func (h *Mirage) doAPIResponse(writer http.ResponseWriter, msg string, data interface{}) {
 	res := APIResponse{}
 	if data != nil {
 		res.Status = "success"
@@ -731,7 +731,7 @@ func (h *Headscale) doAPIResponse(writer http.ResponseWriter, msg string, data i
 }
 
 // 切换设备密钥是否禁用过期
-func (h *Headscale) setMachineExpiry(machine *Machine) (string, error) {
+func (h *Mirage) setMachineExpiry(machine *Machine) (string, error) {
 	if (*machine.Expiry != time.Time{}) {
 		err := h.RefreshMachine(machine, time.Time{})
 		if err != nil {
@@ -752,7 +752,7 @@ func (h *Headscale) setMachineExpiry(machine *Machine) (string, error) {
 }
 
 // 三个返回值：msg、nowName、err
-func (h *Headscale) setMachineName(machine *Machine, newName string) (string, string, error) {
+func (h *Mirage) setMachineName(machine *Machine, newName string) (string, string, error) {
 	newGiveName, err := h.setAutoGenName(machine, newName)
 	if err != nil {
 		return "设置主机名失败", "", err
@@ -760,7 +760,7 @@ func (h *Headscale) setMachineName(machine *Machine, newName string) (string, st
 	return "", newGiveName, nil
 }
 
-func (h *Headscale) setMachineSubnet(machine *Machine, ExitNodeEnable bool, allowedIPs []string) (string, error) {
+func (h *Mirage) setMachineSubnet(machine *Machine, ExitNodeEnable bool, allowedIPs []string) (string, error) {
 	machineRoutes, err := h.GetMachineRoutes(machine)
 	if err != nil {
 		return "获取设备路由设置失败", err

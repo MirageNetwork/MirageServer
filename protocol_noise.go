@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	"encoding/json"
@@ -27,11 +27,10 @@ func (t *ts2021App) NoiseRegistrationHandler(
 			Caller().
 			Err(err).
 			Msg("Cannot parse RegisterRequest")
-		machineRegistrations.WithLabelValues("unknown", "web", "error", "unknown").Inc()
 		http.Error(writer, "Internal error", http.StatusInternalServerError)
 
 		return
 	}
 
-	t.headscale.handleRegisterCommon(writer, req, registerRequest, t.conn.Peer(), true)
+	t.mirage.handleRegisterCommon(writer, req, registerRequest, t.conn.Peer())
 }

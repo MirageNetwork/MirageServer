@@ -1,4 +1,4 @@
-package headscale
+package Mirage
 
 import (
 	"encoding/json"
@@ -58,7 +58,7 @@ const (
 )
 
 // Test ACL update possibility by PingPong sequence.
-func (h *Headscale) ACLPingPong(PingMsg string) string {
+func (h *Mirage) ACLPingPong(PingMsg string) string {
 	if PingMsg != "ping" {
 		return "error"
 	}
@@ -85,10 +85,10 @@ func (h *Headscale) ACLPingPong(PingMsg string) string {
 	return "pong"
 }
 
-var featureEnableSSH = envknob.RegisterBool("HEADSCALE_EXPERIMENTAL_FEATURE_SSH")
+var featureEnableSSH = envknob.RegisterBool("MIRAGE_EXPERIMENTAL_FEATURE_SSH")
 
 // LoadACLPolicy loads the ACL policy from the specify path, and generates the ACL rules.
-func (h *Headscale) LoadACLPolicy(path string) error {
+func (h *Mirage) LoadACLPolicy(path string) error {
 	log.Debug().
 		Str("func", "LoadACLPolicy").
 		Str("path", path).
@@ -145,7 +145,7 @@ func (h *Headscale) LoadACLPolicy(path string) error {
 	return h.UpdateACLRules()
 }
 
-func (h *Headscale) UpdateACLRules() error {
+func (h *Mirage) UpdateACLRules() error {
 	machines, err := h.ListMachines()
 	if err != nil {
 		return err
@@ -173,7 +173,7 @@ func (h *Headscale) UpdateACLRules() error {
 		}
 		h.sshPolicy.Rules = sshRules
 	} else if h.aclPolicy != nil && len(h.aclPolicy.SSHs) > 0 {
-		log.Info().Msg("SSH ACLs has been defined, but HEADSCALE_EXPERIMENTAL_FEATURE_SSH is not enabled, this is a unstable feature, check docs before activating")
+		log.Info().Msg("SSH ACLs has been defined, but MIRAGE_EXPERIMENTAL_FEATURE_SSH is not enabled, this is a unstable feature, check docs before activating")
 	}
 
 	return nil
@@ -239,7 +239,7 @@ func generateACLRules(
 	return rules, nil
 }
 
-func (h *Headscale) generateSSHRules() ([]*tailcfg.SSHRule, error) {
+func (h *Mirage) generateSSHRules() ([]*tailcfg.SSHRule, error) {
 	rules := []*tailcfg.SSHRule{}
 
 	if h.aclPolicy == nil {
