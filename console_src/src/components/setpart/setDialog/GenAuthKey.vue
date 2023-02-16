@@ -103,7 +103,7 @@ function copyGenedKey() {
             <header class="flex items-center justify-between space-x-4 mb-5 mr-8">
                 <div class="font-semibold text-lg truncate">生成授权密钥</div>
             </header>
-            <form v-if="!KeyGened">
+            <form @submit.prevent="doKeyGen" v-if="!KeyGened">
                 <div class="flex justify-between">
                     <div>
                         <h4 class="font-medium mb-1">可重用</h4>
@@ -200,7 +200,7 @@ function copyGenedKey() {
                 <footer class="flex mt-10 justify-end space-x-4">
                     <button @click.self="$emit('close')"
                         class="btn border border-stone-300 hover:border-stone-300 disabled:border-stone-300 bg-base-200 hover:bg-base-300 disabled:bg-base-200/60 text-black disabled:text-black/30 h-9 min-h-fit">取消</button>
-                    <button @click="doKeyGen"
+                    <button type="submit"
                         class="btn border-0 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/60 text-white disabled:text-white/60 h-9 min-h-fit">生成密钥</button>
                 </footer>
             </form>
