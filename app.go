@@ -152,6 +152,8 @@ func NewMirage(cfg *Config) (*Mirage, error) {
 	)
 	longPollChanPool := make(map[string]chan string, 0)
 
+	InitESLogger(cfg)
+
 	app := Mirage{
 		cfg:             cfg,
 		dbType:          cfg.DBtype,

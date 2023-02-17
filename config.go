@@ -45,6 +45,9 @@ type Config struct {
 
 	DERP DERPConfig
 
+	ESURL string
+	ESKey string
+
 	DBtype string
 	DBpath string
 	DBhost string
@@ -432,6 +435,9 @@ func GetMirageConfig() (*Config, error) {
 		NodeUpdateCheckInterval: viper.GetDuration(
 			"node_update_check_interval",
 		),
+
+		ESURL: viper.GetString("es_url"),
+		ESKey: viper.GetString("es_apikey"),
 
 		DBtype: viper.GetString("db_type"),
 		DBpath: AbsolutePathFromConfigPath(viper.GetString("db_path")),

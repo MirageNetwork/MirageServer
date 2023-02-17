@@ -37,6 +37,7 @@ require (
 	github.com/aliyun/credentials-go v1.2.6 // indirect
 	github.com/clbanning/mxj/v2 v2.5.7 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.0.0-20211216131617-bbee439d559c // indirect
 	github.com/go-jose/go-jose/v3 v3.0.0 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
@@ -55,6 +56,7 @@ require (
 	github.com/alibabacloud-go/dysmsapi-20170525/v3 v3.0.5
 	github.com/alibabacloud-go/eiam-developerapi-20220225/v2 v2.0.1
 	github.com/efekarakus/termcolor v1.0.1
+	github.com/elastic/go-elasticsearch/v8 v8.6.0
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/glebarez/go-sqlite v1.20.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
