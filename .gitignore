@@ -37,3 +37,6 @@ result
 integration_test/etc/config.dump.yaml
 
 /admin/node_modules/
+
+#config directory
+/.mirage
