@@ -112,8 +112,8 @@ func (h *Mirage) generateMapResponse(
 		ControlTime: &now,
 
 		Debug: &tailcfg.Debug{
-			DisableLogTail:      true,
-			RandomizeClientPort: true,
+			DisableLogTail:         true,
+			SetRandomizeClientPort: "true",
 		},
 	}
 
