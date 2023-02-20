@@ -438,8 +438,8 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 	}
 
 	var baseDomain string
-	if viper.IsSet("dns_config.base_domain") {
-		baseDomain = viper.GetString("dns_config.base_domain")
+	if viper.IsSet("base_domain") {
+		baseDomain = viper.GetString("base_domain")
 	} else {
 		baseDomain = "headscale.net" // does not really matter when MagicDNS is not enabled
 	}
