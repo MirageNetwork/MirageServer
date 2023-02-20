@@ -9,10 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/server/mirage.go",
-            "args": [
-                "serve"
-            ]
+            "program": "${workspaceFolder}",
         },
     ]
 }
