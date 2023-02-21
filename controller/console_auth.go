@@ -414,13 +414,13 @@ func (h *Mirage) oauthResponse(
 		h.ErrMessage(w, r, 403, "三方登录认证解析用户错误")
 		return
 	}
-	userName, UID, userDisName, err := getUserName(w, claims, h.cfg.OIDC.StripEmaildomain)
+	userName, userDisName, err := getUserName(w, claims, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		h.ErrMessage(w, r, 500, "三方登录用户信息解析出错")
 		return
 	}
 	// TODO:添加判断用户是否存在及自动创建逻辑
-	user, err := h.findOrCreateNewUserForOIDCCallback(userName, UID, userDisName)
+	user, err := h.findOrCreateNewUserForOIDCCallback(userName, userDisName)
 	if err != nil { // TODO: 后续这里理论上不会出错，因为会自动创建用户
 		h.ErrMessage(w, r, 500, "服务器用户获取出错")
 		return

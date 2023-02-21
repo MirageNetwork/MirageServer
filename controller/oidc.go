@@ -286,7 +286,7 @@ func getUserName(
 	writer http.ResponseWriter,
 	claims *IDTokenClaims,
 	stripEmaildomain bool,
-) (string, string, string, error) {
+) (string, string, error) {
 	/* cgao6 change to use phone
 
 	userName, err := NormalizeToFQDNRules(
@@ -309,19 +309,17 @@ func getUserName(
 	}
 	*/
 	userName := strings.ReplaceAll(strings.TrimPrefix(claims.Phone, "+86"), " ", "")
-	UID := claims.Username
 	userDisName := claims.Name
-	return userName, UID, userDisName, nil
+	return userName, userDisName, nil
 }
 
 func (h *Mirage) findOrCreateNewUserForOIDCCallback(
 	userName string,
-	UID string,
 	userDisName string,
 ) (*User, error) {
 	user, err := h.GetUser(userName)
 	if errors.Is(err, ErrUserNotFound) {
-		user, err = h.CreateUser(userName, UID, userDisName)
+		user, err = h.CreateUser(userName, userDisName)
 		if err != nil {
 			log.Error().
 				Err(err).

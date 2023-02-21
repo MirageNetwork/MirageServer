@@ -46,7 +46,7 @@ type User struct {
 
 // CreateUser creates a new User. Returns error if could not be created
 // or another user already exists.
-func (h *Mirage) CreateUser(name string, UID string, DisName string) (*User, error) {
+func (h *Mirage) CreateUser(name string, DisName string) (*User, error) {
 	err := CheckForFQDNRules(name)
 	if err != nil {
 		return nil, err
