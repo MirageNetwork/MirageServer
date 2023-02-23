@@ -228,13 +228,6 @@ onMounted(() => {
   <router-view v-if="!needReauth"></router-view>
   <main v-if="needReauth" class="container mx-auto pb-20 md:pb-24">
     <section class="mb-24">
-      <header class="mb-8">
-        <div class="flex justify-between items-center">
-          <div class="flex items-center">
-            <h1 class="text-3xl font-semibold tracking-tight leading-tight mb-2">错误</h1>
-          </div>
-        </div>
-      </header>
       <div class="w-full p-3 flex items-center justify-center text-sm">
         <div class="flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"

@@ -88,6 +88,7 @@ function showSetSubnet() {
 //数据填充控制部分
 const currentMachine = ref({});
 const currentMID = ref("");
+const mipNotFound = ref(false);
 const basedomain = ref("");
 onMounted(() => {
     watchWindowChange()
@@ -123,6 +124,9 @@ onMounted(() => {
                         }
                         break;
                     }
+                }
+                if (currentMID.value == "") {
+                    mipNotFound.value = true
                 }
             }
         })
@@ -215,7 +219,23 @@ function subnetUpdateFail(msg) {
 </script>
 
 <template>
-    <main class="container mx-auto pb-20 md:pb-24">
+    <main v-if="mipNotFound" class="container mx-auto pb-20 md:pb-24">
+        <section class="mb-24">
+            <div class="w-full p-3 flex items-center justify-center text-sm">
+                <div class="flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="mr-3 text-red-400 h-5 w-5">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                        </path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <div><strong>错误：</strong> 没发现IP为 {{ route.params.mip }} 的设备</div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <main v-if="!mipNotFound" class="container mx-auto pb-20 md:pb-24">
         <section class="mb-24">
             <header class="pb-4 mb-8">
                 <div class="font-medium space-x-2 mb-5 truncate flex">
@@ -238,10 +258,10 @@ function subnetUpdateFail(msg) {
                                         <circle cx="12" cy="12" r="3"></circle>
                                         <path
                                             d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                                        </path>
-                                    </svg>设备设置
-                                </div>
-                            </button>
+                                    </path>
+                                </svg>设备设置
+                            </div>
+                        </button>
                         </div>
                     </div>
                 </div>
@@ -300,9 +320,9 @@ function subnetUpdateFail(msg) {
                                     子网转发
                                     <div v-if="currentMachine.hasSubnets && currentMachine.extraIPs && currentMachine.extraIPs.length > 0"
                                         class="tooltip" data-tip="该设备存在未批准子网转发，请在设备菜单的“编辑子网转发…”中检查">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.35"
-                                            stroke-linecap="round" stroke-linejoin="round" class="ml-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"
+                                            fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"
+                                            stroke-linejoin="round" class="ml-1">
                                             <circle cx="12" cy="12" r="10"></circle>
                                             <line x1="12" y1="8" x2="12" y2="12"></line>
                                             <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -316,9 +336,9 @@ function subnetUpdateFail(msg) {
                                     出口节点
                                     <div v-if="!currentMachine.allowedExitNode" class="tooltip"
                                         data-tip="该设备申请被用作出口节点，请在设备菜单的“编辑子网转发…”中检查">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.35"
-                                            stroke-linecap="round" stroke-linejoin="round" class="ml-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"
+                                            fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"
+                                            stroke-linejoin="round" class="ml-1">
                                             <circle cx="12" cy="12" r="10"></circle>
                                             <line x1="12" y1="8" x2="12" y2="12"></line>
                                             <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -379,8 +399,7 @@ function subnetUpdateFail(msg) {
                     <h3 class="text-xl font-semibold tracking-tight mb-2">设备信息</h3>
                     <p class="text-gray-600">关于该设备网络的信息，用于调试连接问题</p>
                 </header>
-                <div
-                    class="p-4 md:p-6 border border-gray-200 rounded-md grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-2">
+                <div class="p-4 md:p-6 border border-gray-200 rounded-md grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-2">
                     <div class="space-y-2">
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">创建者</dt>
@@ -459,10 +478,10 @@ function subnetUpdateFail(msg) {
                                         <span>{{ ep }}</span>
                                     </li>
                                     <!--
-                                    <li class="select-all">
-                                        <span>172.17.0.1</span><wbr />:<span>41641</span>
-                                    </li>
-                                    -->
+                                        <li class="select-all">
+                                            <span>172.17.0.1</span><wbr />:<span>41641</span>
+                                        </li>
+                                        -->
                                 </ul>
                             </dd>
                         </dl>
@@ -477,10 +496,9 @@ function subnetUpdateFail(msg) {
                                 <ul v-else>
                                     <li v-for="(latency, derpname) in currentMachine.derps">
                                         <strong class="font-medium">{{ derpname }} 号中继</strong>: {{ latency }}&nbsp;ms
-                                        <svg v-if="currentMachine.usederp == derpname"
-                                            xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round"
+                                        <svg v-if="currentMachine.usederp == derpname" xmlns="http://www.w3.org/2000/svg"
+                                            width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                                             class="relative inline-block ml-1 -top-px">
                                             <polyline points="20 6 9 17 4 12"></polyline>
                                         </svg>
@@ -560,10 +578,9 @@ function subnetUpdateFail(msg) {
 
     <!--设备配置菜单显示-->
     <Teleport to="body">
-        <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop"
-            :neverExpires="currentMachine.neverExpires" @close="closeMachineMenu" @set-expires="setExpires"
-            @showdialog-remove="showDelConfirm" @showdialog-updatehostname="showUpdateHostname"
-            @showdialog-setsubnet="showSetSubnet"></MachineMenu>
+        <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" :neverExpires="currentMachine.neverExpires"
+            @close="closeMachineMenu" @set-expires="setExpires" @showdialog-remove="showDelConfirm"
+            @showdialog-updatehostname="showUpdateHostname" @showdialog-setsubnet="showSetSubnet"></MachineMenu>
     </Teleport>
 
     <!-- 菜单弹出提示框显示 -->
@@ -577,8 +594,8 @@ function subnetUpdateFail(msg) {
             @close="updateHostnameShow = false" @update-done="hostnameUpdateDone" @update-fail="hostnameUpdateFail">
         </UpdateHostname>
         <!-- 设置子网转发提示框显示 -->
-        <SetSubnet v-if="setSubnetShow" :id="currentMID" :current-machine="currentMachine"
-            @close="setSubnetShow = false" @update-done="subnetUpdateDone" @update-fail="subnetUpdateFail"></SetSubnet>
+        <SetSubnet v-if="setSubnetShow" :id="currentMID" :current-machine="currentMachine" @close="setSubnetShow = false"
+            @update-done="subnetUpdateDone" @update-fail="subnetUpdateFail"></SetSubnet>
     </Teleport>
 </template>
 
