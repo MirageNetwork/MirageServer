@@ -57,25 +57,28 @@ type machineData struct {
 	LastSeen               string   `json:"lastSeen"`               //未实现
 	ConnectedToControl     bool     `json:"connectedToControl"`     //未实现
 	AutomaticNameMode      bool     `json:"automaticNameMode"`
-	TailnetLockKey         string   `json:"tailnetLockKey"` //未实现
+	TailnetLockKey         string   `json:"tailnetLockKey"`     //未实现
+	ShareID                string   `json:"shareID"`            //未实现
+	AcceptedShareCount     int      `json:"acceptedShareCount"` //未实现
+	ParsedLinuxVersion     string   `json:"parsedLinuxVersion"` //未实现
 }
 
 type machineItem struct {
-	Name         string `json:"name"`
-	UserAccount  string `json:"useraccount"`
-	UserNameHead string `json:"usernamehead"`
-	MIPv4        string `json:"mipv4"`
-	MIPv6        string `json:"mipv6"`
-	OS           string `json:"os"`
-	Hostname     string `json:"hostname"`
-	Version      string `json:"version"`
-	IfOnline     bool   `json:"ifonline"`
-	LastSeen     string `json:"lastseen"`
-	CreateAt     string `json:"createat"`
+	Name               string   `json:"name"`               //done
+	User               string   `json:"user"`               //done
+	UserNameHead       string   `json:"usernamehead"`       // TODO
+	Addresses          []string `json:"addresses"`          //done
+	Os                 string   `json:"os"`                 //done
+	Hostname           string   `json:"hostname"`           //done
+	IpnVersion         string   `json:"ipnVersion"`         //done
+	ConnectedToControl bool     `json:"connectedToControl"` //done
+	LastSeen           string   `json:"lastSeen"`           //done
+	Created            string   `json:"created"`            //done
 
-	IsSharedIn   bool `json:"issharedin"`
+	IsExternal   bool `json:"isExternal"`
+	IsEphemeral  bool `json:"isEphemeral"`
 	IsSharedOut  bool `json:"issharedout"`
-	NeverExpires bool `json:"neverExpires"`
+	NeverExpires bool `json:"neverExpires"` //done
 
 	AllowedIPs         []string `json:"allowedIPs"`
 	ExtraIPs           []string `json:"extraIPs"`
@@ -284,16 +287,16 @@ func (h *Mirage) ConsoleMachinesAPI(
 		tz, _ := time.LoadLocation("Asia/Shanghai")
 
 		tmpMachine := machineItem{
-			Name:         machine.GivenName,
-			UserAccount:  machine.User.Name,
-			UserNameHead: string([]rune(machine.User.Display_Name)[0]),
-			OS:           machine.HostInfo.OS,
-			Hostname:     machine.HostInfo.Hostname,
-			Version:      IPNver,
-			CreateAt:     machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
-			LastSeen:     machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
-			IfOnline:     machine.isOnline(),
-			NeverExpires: *machine.Expiry == time.Time{},
+			Name:               machine.GivenName,
+			User:               machine.User.Name,
+			UserNameHead:       string([]rune(machine.User.Display_Name)[0]),
+			Os:                 machine.HostInfo.OS,
+			Hostname:           machine.HostInfo.Hostname,
+			IpnVersion:         IPNver,
+			Created:            machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
+			LastSeen:           machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
+			ConnectedToControl: machine.isOnline(),
+			NeverExpires:       *machine.Expiry == time.Time{},
 
 			Varies:            machine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
 			HairPinning:       machine.HostInfo.NetInfo.HairPinning.EqualBool(true),
@@ -386,13 +389,15 @@ func (h *Mirage) ConsoleMachinesAPI(
 			tmpMachine.ExpiryDesc = convExpiryToStr(ExpiryDuration)
 		}
 		if machine.IPAddresses[0].Is4() {
-			tmpMachine.MIPv4 = machine.IPAddresses[0].String()
-			tmpMachine.MIPv6 = machine.IPAddresses[1].String()
+			tmpMachine.Addresses = []string{
+				machine.IPAddresses[0].String(),
+				machine.IPAddresses[1].String()}
 		} else if machine.IPAddresses[1].Is4() {
-			tmpMachine.MIPv6 = machine.IPAddresses[0].String()
-			tmpMachine.MIPv4 = machine.IPAddresses[1].String()
+			tmpMachine.Addresses = []string{
+				machine.IPAddresses[1].String(),
+				machine.IPAddresses[0].String()}
 		}
-		mlist[strconv.FormatUint(machine.ID, 10)] = tmpMachine
+		mlist[strconv.FormatInt(machine.ID, 10)] = tmpMachine
 	}
 
 	renderData := adminTemplateConfig{
@@ -502,7 +507,7 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 		h.doAPIResponse(writer, "用户请求mid解析失败", nil)
 		return
 	}
-	MachineID, err := strconv.ParseUint(reqMID, 0, 64)
+	MachineID, err := strconv.ParseInt(reqMID, 0, 64)
 	if err != nil {
 		h.doAPIResponse(writer, "用户请求mid处理失败", nil)
 		return
@@ -665,7 +670,7 @@ func (h *Mirage) ConsoleRemoveMachineAPI(
 	json.NewDecoder(req.Body).Decode(&reqData)
 	wantRemoveID := reqData["mid"]
 	for _, machine := range UserMachines {
-		if strconv.FormatUint(machine.ID, 10) == wantRemoveID {
+		if strconv.FormatInt(machine.ID, 10) == wantRemoveID {
 			err = h.HardDeleteMachine(&machine)
 			if err != nil {
 				resData.Status = "Error"

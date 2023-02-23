@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
@@ -19,15 +20,17 @@ var (
 )
 
 type Route struct {
-	gorm.Model
-
-	MachineID uint64
+	ID        uint64 `gorm:"primaryKey"`
+	MachineID int64
 	Machine   Machine
 	Prefix    IPPrefix
 
 	Advertised bool
 	Enabled    bool
 	IsPrimary  bool
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type Routes []Route

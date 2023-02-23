@@ -23,7 +23,7 @@ watch(toastShow, () => {
 
 const hasSpecialStatus = computed(() => {
     return (
-        currentMachine.value["issharedin"] ||
+        currentMachine.value["isExternal"] ||
         currentMachine.value["issharedout"] ||
         currentMachine.value["expirydesc"] == "已过期" ||
         currentMachine.value["neverExpires"] ||
@@ -106,7 +106,7 @@ onMounted(() => {
             if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
                 basedomain.value = response.data["basedomain"];
                 for (var k in response.data["mlist"]) {
-                    if (response.data["mlist"][k]["mipv4"] === route.params.mip) {
+                    if (response.data["mlist"][k]["addresses"][0] === route.params.mip) {
                         currentMachine.value = response.data["mlist"][k];
                         currentMID.value = k;
                         let tailtwo = currentMachine.value["expirydesc"].slice(-2);
@@ -220,7 +220,7 @@ function subnetUpdateFail(msg) {
             <header class="pb-4 mb-8">
                 <div class="font-medium space-x-2 mb-5 truncate flex">
                     <router-link to="/machines" class="text-blue-500">全部设备</router-link><span
-                        class="text-gray-400">/</span><span>{{ currentMachine.mipv4 }}</span>
+                        class="text-gray-400">/</span><span>{{ currentMachine.addresses[0] }}</span>
                 </div>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h1 class="text-2xl font-semibold tracking-tight leading-tight truncate flex-shrink-0 max-w-full"
@@ -256,14 +256,14 @@ function subnetUpdateFail(msg) {
                                         {{ currentMachine.usernamehead }}
                                     </div>
                                 </div>
-                                <span data-state="closed">{{ currentMachine.useraccount }}</span>
+                                <span data-state="closed">{{ currentMachine.user }}</span>
                             </div>
                         </div>
                     </div>
                     <div v-if="hasSpecialStatus" class="max-w-sm border-l border-gray-200 ml-4 pl-4">
                         <p class="text-gray-500 mb-2">状态</p>
                         <div>
-                            <span v-if="currentMachine.issharedin">
+                            <span v-if="currentMachine.isExternal">
                                 <div
                                     class="inline-flex items-center align-middle justify-center font-medium border border-orange-50 bg-orange-50 text-orange-600 rounded-sm px-1 text-xs mr-1">
                                     外部共享
@@ -357,7 +357,7 @@ function subnetUpdateFail(msg) {
                         </template>
                     </ul>
                 </div>
-                <div v-if="!currentMachine.hasSubnets && !currentMachine.issharedin"
+                <div v-if="!currentMachine.hasSubnets && !currentMachine.isExternal"
                     class="p-4 md:p-6 border border-gray-200 rounded-md flex items-center justify-center text-gray-500 text-center">
                     <div class="flex justify-center">
                         <div class="w-full text-center max-w-xl text-gray-500">
@@ -365,7 +365,7 @@ function subnetUpdateFail(msg) {
                         </div>
                     </div>
                 </div>
-                <div v-if="currentMachine.issharedin"
+                <div v-if="currentMachine.isExternal"
                     class="p-4 md:p-6 border border-gray-200 rounded-md flex items-center justify-center text-gray-500 text-center">
                     <div class="flex justify-center">
                         <div class="w-full text-center max-w-xl text-gray-500">
@@ -384,7 +384,7 @@ function subnetUpdateFail(msg) {
                     <div class="space-y-2">
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">创建者</dt>
-                            <dd class="min-w-0 truncate">{{ currentMachine.useraccount }}</dd>
+                            <dd class="min-w-0 truncate">{{ currentMachine.user }}</dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">设备名称</dt>
@@ -400,7 +400,7 @@ function subnetUpdateFail(msg) {
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
                                     <div class="truncate">
-                                        {{ currentMachine.name }}.{{ currentMachine.useraccount }}.{{
+                                        {{ currentMachine.name }}.{{ currentMachine.user }}.{{
                                             basedomain
                                         }}
                                     </div>
@@ -419,7 +419,7 @@ function subnetUpdateFail(msg) {
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">蜃境客户端版本</dt>
                             <dd class="min-w-0 truncate">
-                                <div class="flex items-center">{{ currentMachine.version }}</div>
+                                <div class="flex items-center">{{ currentMachine.ipnVersion }}</div>
                             </dd>
                         </dl>
                         <dl class="flex text-sm">
@@ -427,7 +427,7 @@ function subnetUpdateFail(msg) {
                             <dd class="min-w-0">
                                 <div class="flex relative min-w-0">
                                     <div class="truncate">
-                                        <span>{{ currentMachine.mipv4 }}</span>
+                                        <span>{{ currentMachine.addresses[0] }}</span>
                                     </div>
                                     <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
                                 </div>
@@ -440,7 +440,7 @@ function subnetUpdateFail(msg) {
                                     <div class="truncate">
                                         <span class="inline-flex justify-start min-w-0 max-w-full"><span
                                                 class="truncate w-fit flex-shrink">{{
-                                                    currentMachine.mipv6
+                                                    currentMachine.addresses[1]
                                                 }}</span></span>
                                     </div>
                                     <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
@@ -492,11 +492,11 @@ function subnetUpdateFail(msg) {
                     <div class="space-y-2">
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">创建于</dt>
-                            <dd class="min-w-0 truncate">{{ currentMachine.createat }}</dd>
+                            <dd class="min-w-0 truncate">{{ currentMachine.created }}</dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">最近更新</dt>
-                            <dd class="min-w-0 truncate">{{ currentMachine.lastseen }}</dd>
+                            <dd class="min-w-0 truncate">{{ currentMachine.lastSeen }}</dd>
                         </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">密钥过期</dt>

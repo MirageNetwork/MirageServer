@@ -42,6 +42,7 @@ func (h *Mirage) doLogin(w http.ResponseWriter, r *http.Request) {
 	stateCode := h.GenStateCode()
 	stateCodeItem := StateCacheItem{
 		nextURL:    nextURL,
+		provider:   provider,
 		uid:        -1,
 		machineKey: key.MachinePublic{},
 	}
@@ -56,6 +57,7 @@ func (h *Mirage) doLogin(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			stateCodeItem = stateCodeC.(StateCacheItem)
+			stateCodeItem.provider = provider
 		}
 	}
 	h.stateCodeCache.Set(stateCode, stateCodeItem, time.Now().AddDate(0, 1, 0).Sub(time.Now()))
@@ -73,6 +75,8 @@ func (h *Mirage) doLogin(w http.ResponseWriter, r *http.Request) {
 	switch provider {
 	case "Ali":
 		h.doAliLogin(w, r, stateCode)
+	case "WXScan":
+		h.doWXScanLogin(w, r, stateCode)
 	}
 }
 func (h *Mirage) doAliLogin(w http.ResponseWriter, r *http.Request, stateCode string) {
@@ -90,6 +94,56 @@ func (h *Mirage) doAliLogin(w http.ResponseWriter, r *http.Request, stateCode st
 	authURL := h.oauth2Config.AuthCodeURL(stateCode, extras...)
 	log.Debug().Msgf("Redirecting to %s for authentication", authURL)
 	http.Redirect(w, r, authURL, http.StatusFound)
+}
+
+func (h *Mirage) checkWXMini(w http.ResponseWriter, r *http.Request) {
+	reqData := make(map[string]string)
+	json.NewDecoder(r.Body).Decode(&reqData)
+
+	h.doWXScanLogin(w, r, reqData["state"])
+}
+
+func (h *Mirage) doWXScanLogin(w http.ResponseWriter, r *http.Request, stateCode string) {
+	url := h.cfg.wxScanURL + "/fetchQR"
+	message := map[string]string{"state": stateCode}
+
+	// 将 message 转换为 JSON 格式
+	requestBody, err := json.Marshal(message)
+	if err != nil {
+		log.Error().Caller().Msgf("创建微信小程序码拉取请求结构体出错")
+	}
+
+	// 创建一个新的请求
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+	if err != nil {
+		log.Error().Caller().Msgf("创建微信小程序码拉取请求出错")
+	}
+
+	// 设置请求的 Content-Type
+	req.Header.Set("Content-Type", "application/json")
+
+	// 发送请求
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Error().Caller().Msgf("发送微信小程序码拉取请求出错")
+	}
+	defer resp.Body.Close()
+
+	resData := make(map[string]string)
+	json.NewDecoder(resp.Body).Decode(&resData)
+	resData["state"] = stateCode
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(&resData)
+	if err != nil {
+		log.Error().
+			Caller().
+			Err(err).
+			Msg("Failed to write response")
+	}
+	return
 }
 
 func (h *Mirage) loginMidware(next http.Handler) http.Handler {
@@ -394,31 +448,66 @@ func (h *Mirage) oauthResponse(
 		return
 	}
 	// TODO: 后续多Provider时从state码中读取对应的校验器
-	oauth2Token, err := h.oauth2Config.Exchange(r.Context(), code)
-	if err != nil {
-		h.ErrMessage(w, r, 403, "三方登录认证错误")
-		return
+	userName := ""
+	userDisName := ""
+	switch qStateItem.provider {
+	case "Ali":
+		oauth2Token, err := h.oauth2Config.Exchange(r.Context(), code)
+		if err != nil {
+			h.ErrMessage(w, r, 403, "三方登录认证错误")
+			return
+		}
+		rawIDToken, rawIDTokenOK := oauth2Token.Extra("id_token").(string)
+		if !rawIDTokenOK {
+			h.ErrMessage(w, r, 403, "三方登录认证解析错误1")
+			return
+		}
+		idToken, err := h.verifyIDTokenForOIDCCallback(r.Context(), w, rawIDToken)
+		if err != nil {
+			h.ErrMessage(w, r, 403, "三方登录认证解析错误2")
+			return
+		}
+		claims, err := extractIDTokenClaims(w, idToken)
+		if err != nil {
+			h.ErrMessage(w, r, 403, "三方登录认证解析用户错误")
+			return
+		}
+		userName, userDisName, err = getUserName(w, claims, h.cfg.OIDC.StripEmaildomain)
+		if err != nil {
+			h.ErrMessage(w, r, 500, "三方登录用户信息解析出错")
+			return
+		}
+	case "WXScan":
+		url := h.cfg.wxScanURL + "/verify"
+		message := map[string]string{"code": code}
+		// 将 message 转换为 JSON 格式
+		requestBody, err := json.Marshal(message)
+		if err != nil {
+			log.Error().Caller().Msgf("创建微信小程序码验证请求结构体出错")
+		}
+		// 创建一个新的请求
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+		if err != nil {
+			log.Error().Caller().Msgf("创建微信小程序码验证请求出错")
+		}
+		// 设置请求的 Content-Type
+		req.Header.Set("Content-Type", "application/json")
+		// 发送请求
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Error().Caller().Msgf("发送微信小程序码验证请求出错")
+		}
+		defer resp.Body.Close()
+
+		resData := make(map[string]string)
+		json.NewDecoder(resp.Body).Decode(&resData)
+		if resData["status"] == "OK" {
+			userName = resData["user_name"]
+			userDisName = resData["display_name"]
+		}
 	}
-	rawIDToken, rawIDTokenOK := oauth2Token.Extra("id_token").(string)
-	if !rawIDTokenOK {
-		h.ErrMessage(w, r, 403, "三方登录认证解析错误1")
-		return
-	}
-	idToken, err := h.verifyIDTokenForOIDCCallback(r.Context(), w, rawIDToken)
-	if err != nil {
-		h.ErrMessage(w, r, 403, "三方登录认证解析错误2")
-		return
-	}
-	claims, err := extractIDTokenClaims(w, idToken)
-	if err != nil {
-		h.ErrMessage(w, r, 403, "三方登录认证解析用户错误")
-		return
-	}
-	userName, userDisName, err := getUserName(w, claims, h.cfg.OIDC.StripEmaildomain)
-	if err != nil {
-		h.ErrMessage(w, r, 500, "三方登录用户信息解析出错")
-		return
-	}
+
 	// TODO:添加判断用户是否存在及自动创建逻辑
 	user, err := h.findOrCreateNewUserForOIDCCallback(userName, userDisName)
 	if err != nil { // TODO: 后续这里理论上不会出错，因为会自动创建用户

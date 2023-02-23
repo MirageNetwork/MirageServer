@@ -23,7 +23,7 @@ const (
 type PreAuthKey struct {
 	ID        uint64 `gorm:"primary_key"`
 	Key       string
-	UserID    uint
+	UserID    int64
 	User      User
 	Reusable  bool
 	Ephemeral bool `gorm:"default:false"`

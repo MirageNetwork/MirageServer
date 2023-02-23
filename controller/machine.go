@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bwmarrin/snowflake"
 	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
@@ -39,7 +40,7 @@ const (
 
 // Machine is a Mirage client.
 type Machine struct {
-	ID          uint64 `gorm:"primary_key"`
+	ID          int64  `gorm:"primary_key;unique;not null"`
 	MachineKey  string `gorm:"type:varchar(64);"`
 	NodeKey     string
 	DiscoKey    string
@@ -57,7 +58,7 @@ type Machine struct {
 	// parts of mirage.
 	GivenName   string `gorm:"type:varchar(63)"`
 	AutoGenName bool   `gorm:"default:true"`
-	UserID      uint
+	UserID      int64
 	User        User `gorm:"foreignKey:UserID"`
 
 	RegisterMethod string
@@ -77,7 +78,18 @@ type Machine struct {
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	DeletedAt *time.Time
+}
+
+func (machine *Machine) BeforeCreate(tx *gorm.DB) error {
+	if machine.ID == 0 {
+		flakeID, err := snowflake.NewNode(1)
+		if err != nil {
+			return err
+		}
+		id := flakeID.Generate().Int64()
+		machine.ID = id
+	}
+	return nil
 }
 
 type (
@@ -191,7 +203,7 @@ func getFilteredByACLPeers(
 		Str("machine", machine.Hostname).
 		Msg("Finding peers filtered by ACLs")
 
-	peers := make(map[uint64]Machine)
+	peers := make(map[int64]Machine)
 	var invalidNodeIDs []tailcfg.NodeID
 	// Aclfilter peers here. We are itering through machines in all users and search through the computed aclRules
 	// for match between rule SrcIPs and DstPorts. If the rule is a match we allow the machine to be viewable.
@@ -466,7 +478,7 @@ func (h *Mirage) GetMachineByGivenName(user string, givenName string) (*Machine,
 }
 
 // GetMachineByID finds a Machine by ID and returns the Machine struct.
-func (h *Mirage) GetMachineByID(id uint64) (*Machine, error) {
+func (h *Mirage) GetMachineByID(id int64) (*Machine, error) {
 	m := Machine{}
 	if result := h.db.Preload("AuthKey").Preload("User").Find(&Machine{ID: id}).First(&m); result.Error != nil {
 		return nil, result.Error
@@ -879,7 +891,7 @@ func (h *Mirage) toNode(
 	node := tailcfg.Node{
 		ID: tailcfg.NodeID(machine.ID), // this is the actual ID
 		StableID: tailcfg.StableNodeID(
-			strconv.FormatUint(machine.ID, Base10),
+			strconv.FormatInt(machine.ID, Base10),
 		), // in mirage, unlike tailcontrol server, IDs are permanent
 		Name: hostname,
 
@@ -1177,7 +1189,7 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 		if err != nil {
 			log.Err(err).
 				Str("advertisedRoute", advertisedRoute.String()).
-				Uint64("machineId", machine.ID).
+				Int64("machineId", machine.ID).
 				Msg("Failed to resolve autoApprovers for advertised route")
 
 			return err
@@ -1210,7 +1222,7 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 		if err != nil {
 			log.Err(err).
 				Str("approvedRoute", approvedRoute.String()).
-				Uint64("machineId", machine.ID).
+				Int64("machineId", machine.ID).
 				Msg("Failed to enable approved route")
 
 			return err

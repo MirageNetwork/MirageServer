@@ -40,6 +40,8 @@ type Config struct {
 
 	OIDC OIDCConfig
 
+	wxScanURL string
+
 	ali_IDaaS ALIConfig
 
 	org_name string
@@ -144,6 +146,8 @@ func GetMirageConfig() (*Config, error) {
 			Msgf("'ip_prefixes' not configured, falling back to default: %v", prefixes)
 	}
 
+	wxScanAdapterURL := viper.GetString("wxscan.url")
+
 	oidcClientSecret := viper.GetString("oidc.client_secret")
 	oidcClientSecretPath := viper.GetString("oidc.client_secret_path")
 	if oidcClientSecretPath != "" && oidcClientSecret != "" {
@@ -178,6 +182,7 @@ func GetMirageConfig() (*Config, error) {
 			ExtraParams:      viper.GetStringMapString("oidc.extra_params"),
 			StripEmaildomain: viper.GetBool("oidc.strip_email_domain"),
 		},
+		wxScanURL: wxScanAdapterURL,
 
 		ali_IDaaS: ALIConfig{
 			ali_app_id:       viper.GetString("ali_app_id"),

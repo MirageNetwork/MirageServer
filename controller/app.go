@@ -286,6 +286,7 @@ func (h *Mirage) createRouter() *mux.Router {
 
 	//登录
 	router.PathPrefix("/login").HandlerFunc(h.doLogin).Methods(http.MethodPost)
+	router.PathPrefix("/wxmini").HandlerFunc(h.checkWXMini).Methods(http.MethodPost)
 	login_router := router.PathPrefix("/login").Subrouter()
 	login_router.Use(h.loginMidware)
 	login_router.PathPrefix("").Handler(http.StripPrefix("/login", http.FileServer(http.FS(loginDir))))

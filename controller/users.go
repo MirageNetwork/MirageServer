@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bwmarrin/snowflake"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
@@ -34,7 +35,8 @@ var invalidCharsInUserRegex = regexp.MustCompile("[^a-z0-9-.]+")
 // At the end of the day, users in Tailscale are some kind of 'bubbles' or users
 // that contain our machines.
 type User struct {
-	gorm.Model
+	ID             int64  `gorm:"primary_key;unique;not null"`
+	StableID       string `gorm:"unique"`
 	Name           string `gorm:"unique"`
 	Display_Name   string `gorm:"unique"`
 	ExpiryDuration uint   `gorm:"default:180"`
@@ -42,6 +44,28 @@ type User struct {
 	OverrideLocal  bool   `gorm:"default:false"`
 	Nameservers    StringList
 	SplitDns       SplitDNS
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (user *User) BeforeCreate(tx *gorm.DB) error {
+	if user.ID == 0 {
+		flakeID, err := snowflake.NewNode(1)
+		if err != nil {
+			return err
+		}
+		id := flakeID.Generate().Int64()
+		user.ID = id
+	}
+	longid := user.ID
+	shortID := ""
+	for longid > 0 {
+		shortID = string("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"[longid%62]) + shortID
+		longid /= 62
+	}
+	user.StableID = shortID
+	return nil
 }
 
 // CreateUser creates a new User. Returns error if could not be created

@@ -223,13 +223,13 @@ function subnetUpdateFail(msg) {
 
 //客户端操作动作部分
 function copyMIPv4() {
-  navigator.clipboard.writeText(MList.value[currentMID.value]["mipv4"]).then(function () {
+  navigator.clipboard.writeText(MList.value[currentMID.value]["addresses"][0]).then(function () {
     toastMsg.value = "蜃境网络IPv4地址已复制到粘贴板！";
     toastShow.value = true;
   });
 }
 function copyMIPv6() {
-  navigator.clipboard.writeText(MList.value[currentMID.value]["mipv6"]).then(function () {
+  navigator.clipboard.writeText(MList.value[currentMID.value]["addresses"][1]).then(function () {
     toastMsg.value = "蜃境网络IPv6地址已复制到粘贴板！";
     toastShow.value = true;
   });
@@ -272,31 +272,31 @@ function copyMIPv6() {
             <tr :id="id" :v-if="MList[id] != nil" @mouseenter="mouseOnMachine(id)" @mouseleave="mouseLeaveMachine(id)"
               class="w-full px-0.5 hover">
               <td class="md:w-1/4 flex-auto md:flex-initial md:shrink-0 w-0 text-ellipsis">
-                <router-link class="relative" :to="'/machines/' + m.mipv4">
+                <router-link class="relative" :to="'/machines/' + m.addresses[0]">
                   <div class="items-center text-gray-900">
                     <p class="font-semibold hover:text-blue-500">
                       <span :class="{
-                        'bg-green-500': m.ifonline,
-                        'bg-gray-300': !m.ifonline,
+                        'bg-green-500': m.connectedToControl,
+                        'bg-gray-300': !m.connectedToControl,
                       }" class="inline-block w-2 h-2 rounded-full relative -top-px lg:hidden mr-2"></span>
                       <a class="stretched-link">{{ m.name }} </a>
                     </p>
                     <div class="md:hidden flex space-x-1 truncate">
-                      <span class="text-sm">{{ m.mipv4 }}</span><span>·</span><span
-                        class="md:hidden text-gray-600 text-sm" title="m.version">{{
+                      <span class="text-sm">{{ m.addresses[0] }}</span><span>·</span><span
+                        class="md:hidden text-gray-600 text-sm" title="m.ipnVersion">{{
                           m.os
                         }}</span>
                     </div>
                   </div>
                   <div>
                     <div class="flex items-center text-gray-600 text-sm">
-                      <span>{{ m.useraccount }} </span>
+                      <span>{{ m.user }} </span>
                     </div>
                   </div>
                 </router-link>
                 <div class="my-1">
                   <div>
-                    <span v-if="m.issharedin">
+                    <span v-if="m.isExternal">
                       <div
                         class="inline-flex items-center align-middle justify-center font-medium border border-orange-50 bg-orange-50 text-orange-600 rounded-sm px-1 text-xs mr-1">
                         外部共享
@@ -366,7 +366,7 @@ function copyMIPv6() {
                     <div @mouseenter="machineIPShow = true" @mouseleave="machineIPShow = false"
                       class="flex relative min-w-0">
                       <div class="truncate">
-                        <span>{{ m.mipv4 }} </span>
+                        <span>{{ m.addresses[0] }} </span>
                       </div>
                       <div v-if="machineIPShow && currentMID == id"
                         class="absolute -mt-1 -ml-2 -top-px -left-px shadow-md cursor-pointer rounded-md active:shadow-sm transition-shadow duration-100 ease-in-out z-20"
@@ -374,7 +374,7 @@ function copyMIPv6() {
                         <div class="flex border rounded-md button-outline bg-white">
                           <div @click="copyMIPv4" class="flex min-w-0 py-1 px-2 hover:bg-gray-100 rounded-l-md">
                             <span class="inline-block select-none truncate"><span>
-                                {{ m.mipv4 }}
+                                {{ m.addresses[0] }}
                               </span></span><span class="cursor-pointer text-blue-500 pl-2">复制</span>
                           </div>
                           <div @click="copyMIPv6"
@@ -399,19 +399,19 @@ function copyMIPv6() {
                 <div class="flex items-center relative">
                   <div>{{ m.os }}</div>
                 </div>
-                <div class="text-sm text-gray-600">{{ m.version }}</div>
+                <div class="text-sm text-gray-600">{{ m.ipnVersion }}</div>
               </td>
               <td class="hidden lg:table-cell md:flex-auto">
                 <span>
                   <div class="inline-flex items-center cursor-default">
                     <span class="inline-block w-2 h-2 rounded-full mr-2" :class="{
-                      'bg-green-500': m.ifonline,
-                      'bg-gray-300': !m.ifonline,
+                      'bg-green-500': m.connectedToControl,
+                      'bg-gray-300': !m.connectedToControl,
                     }"></span>
-                    <span v-if="m.ifonline" class="text-sm text-gray-600 tooltip tooltip-top"
-                      :data-tip="'最近在线于' + m.lastseen">已连接</span>
-                    <span v-else class="text-sm text-gray-600 tooltip tooltip-top" :data-tip="'最近在线于' + m.lastseen">{{
-                      m.lastseen
+                    <span v-if="m.connectedToControl" class="text-sm text-gray-600 tooltip tooltip-top"
+                      :data-tip="'最近在线于' + m.lastSeen">已连接</span>
+                    <span v-else class="text-sm text-gray-600 tooltip tooltip-top" :data-tip="'最近在线于' + m.lastSeen">{{
+                      m.lastSeen
                     }}
                     </span>
                   </div>
