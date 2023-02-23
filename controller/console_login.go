@@ -10,7 +10,7 @@ func (h *Mirage) ConsoleLogout(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	controlCodeCookie, err := r.Cookie("miragcontrol")
+	controlCodeCookie, err := r.Cookie("miragecontrol")
 	if err != http.ErrNoCookie {
 		controlCode := controlCodeCookie.Value
 		h.controlCodeCache.Delete(controlCode)
