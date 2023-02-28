@@ -33,6 +33,8 @@ type Config struct {
 	IPPrefixes []netip.Prefix
 	BaseDomain string
 
+	AllowRouteDueToMachine bool
+
 	DERPURL string
 
 	ESURL string
@@ -167,7 +169,8 @@ func GetMirageConfig() (*Config, error) {
 
 		IPPrefixes: prefixes,
 
-		BaseDomain: baseDomain,
+		BaseDomain:             baseDomain,
+		AllowRouteDueToMachine: viper.GetBool("allow_route_due_to_machine"),
 
 		DERPURL: viper.GetString("derp_url"),
 

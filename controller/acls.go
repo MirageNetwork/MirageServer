@@ -146,7 +146,7 @@ func (h *Mirage) UpdateACLRules() error {
 		return errEmptyPolicy
 	}
 
-	rules, err := generateACLRules(machines, *h.aclPolicy, h.cfg.OIDC.StripEmaildomain)
+	rules, err := h.generateACLRules(machines, *h.aclPolicy, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (h *Mirage) UpdateACLRules() error {
 	return nil
 }
 
-func generateACLRules(
+func (h *Mirage) generateACLRules(
 	machines []Machine,
 	aclPolicy ACLPolicy,
 	stripEmaildomain bool,
@@ -184,7 +184,7 @@ func generateACLRules(
 
 		srcIPs := []string{}
 		for innerIndex, src := range acl.Sources {
-			srcs, err := generateACLPolicySrc(machines, aclPolicy, src, stripEmaildomain)
+			srcs, err := h.generateACLPolicySrc(machines, aclPolicy, src, stripEmaildomain)
 			if err != nil {
 				log.Error().
 					Msgf("Error parsing ACL %d, Source %d", index, innerIndex)
@@ -204,7 +204,7 @@ func generateACLRules(
 
 		destPorts := []tailcfg.NetPortRange{}
 		for innerIndex, dest := range acl.Destinations {
-			dests, err := generateACLPolicyDest(
+			dests, err := h.generateACLPolicyDest(
 				machines,
 				aclPolicy,
 				dest,
@@ -284,7 +284,8 @@ func (h *Mirage) generateSSHRules() ([]*tailcfg.SSHRule, error) {
 
 		principals := make([]*tailcfg.SSHPrincipal, 0, len(sshACL.Sources))
 		for innerIndex, rawSrc := range sshACL.Sources {
-			expandedSrcs, err := expandAlias(
+			expandedSrcs, err := h.expandAlias(
+				false,
 				machines,
 				*h.aclPolicy,
 				rawSrc,
@@ -335,16 +336,16 @@ func sshCheckAction(duration string) (*tailcfg.SSHAction, error) {
 	}, nil
 }
 
-func generateACLPolicySrc(
+func (h *Mirage) generateACLPolicySrc(
 	machines []Machine,
 	aclPolicy ACLPolicy,
 	src string,
 	stripEmaildomain bool,
 ) ([]string, error) {
-	return expandAlias(machines, aclPolicy, src, stripEmaildomain)
+	return h.expandAlias(false, machines, aclPolicy, src, stripEmaildomain)
 }
 
-func generateACLPolicyDest(
+func (h *Mirage) generateACLPolicyDest(
 	machines []Machine,
 	aclPolicy ACLPolicy,
 	dest string,
@@ -369,7 +370,8 @@ func generateACLPolicyDest(
 		alias = fmt.Sprintf("%s:%s", tokens[0], tokens[1])
 	}
 
-	expanded, err := expandAlias(
+	expanded, err := h.expandAlias(
+		h.cfg.AllowRouteDueToMachine,
 		machines,
 		aclPolicy,
 		alias,
@@ -447,13 +449,27 @@ func parseProtocol(protocol string) ([]int, bool, error) {
 	}
 }
 
+func (h *Mirage) expandMachineRoutes(machine Machine) []string {
+	routeIPs := []string{}
+	routeList, err := h.GetMachineRoutes(&machine)
+	if err != nil {
+		return routeIPs
+	}
+	for _, route := range routeList {
+		routeIPs = append(routeIPs, netip.Prefix(route.Prefix).String())
+	}
+
+	return routeIPs
+}
+
 // expandalias has an input of either
 // - a user
 // - a group
 // - a tag
 // - a host
 // and transform these in IPAddresses.
-func expandAlias(
+func (h *Mirage) expandAlias(
+	autoAddRoute bool,
 	machines []Machine,
 	aclPolicy ACLPolicy,
 	alias string,
@@ -477,6 +493,9 @@ func expandAlias(
 			nodes := filterMachinesByUser(machines, n)
 			for _, node := range nodes {
 				ips = append(ips, node.IPAddresses.ToStringSlice()...)
+				if autoAddRoute {
+					ips = append(ips, h.expandMachineRoutes(node)...)
+				}
 			}
 		}
 
@@ -488,6 +507,9 @@ func expandAlias(
 		for _, machine := range machines {
 			if contains(machine.ForcedTags, alias) {
 				ips = append(ips, machine.IPAddresses.ToStringSlice()...)
+				if autoAddRoute {
+					ips = append(ips, h.expandMachineRoutes(machine)...)
+				}
 			}
 		}
 
@@ -516,6 +538,9 @@ func expandAlias(
 				hi := machine.GetHostInfo()
 				if contains(hi.RequestTags, alias) {
 					ips = append(ips, machine.IPAddresses.ToStringSlice()...)
+					if autoAddRoute {
+						ips = append(ips, h.expandMachineRoutes(machine)...)
+					}
 				}
 			}
 		}
@@ -529,29 +554,57 @@ func expandAlias(
 
 	for _, n := range nodes {
 		ips = append(ips, n.IPAddresses.ToStringSlice()...)
+		if autoAddRoute {
+			ips = append(ips, h.expandMachineRoutes(n)...)
+		}
 	}
 	if len(ips) > 0 {
 		return ips, nil
 	}
 
 	// if alias is an host
-	if h, ok := aclPolicy.Hosts[alias]; ok {
-		return []string{h.String()}, nil
+	if host, ok := aclPolicy.Hosts[alias]; ok {
+		if autoAddRoute {
+			mlist := h.GetMachinesInPrefix(host)
+			if mlist != nil {
+				for _, m := range mlist {
+					ips = append(ips, h.expandMachineRoutes(m)...)
+				}
+			}
+
+		}
+		return []string{host.String()}, nil
 	}
 
 	// if alias is an IP
 	ip, err := netip.ParseAddr(alias)
 	if err == nil {
+		if autoAddRoute {
+			m := h.GetMachineByIP(ip)
+			if m != nil {
+				ips = append(ips, h.expandMachineRoutes(*m)...)
+			}
+
+		}
 		return []string{ip.String()}, nil
 	}
 
 	// if alias is an CIDR
 	cidr, err := netip.ParsePrefix(alias)
 	if err == nil {
+		if autoAddRoute {
+			mlist := h.GetMachinesInPrefix(cidr)
+			if mlist != nil {
+				for _, m := range mlist {
+					ips = append(ips, h.expandMachineRoutes(m)...)
+				}
+			}
+
+		}
 		return []string{cidr.String()}, nil
 	}
 
-	log.Warn().Msgf("No IPs found with the alias %v", alias)
+	log.Debug().Msgf("No IPs found with the alias %v", alias)
 
 	return ips, nil
 }

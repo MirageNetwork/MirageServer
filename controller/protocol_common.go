@@ -281,7 +281,7 @@ func (h *Mirage) SendACode(
 		log.Error().Caller().Err(err).Msg("Failed to write response")
 	}
 
-	log.Info().Caller().Str("AuthURL", resp.AuthURL).Str("machine", registerRequest.Hostinfo.Hostname).Msg("Successfully sent auth url")
+	log.Debug().Caller().Str("AuthURL", resp.AuthURL).Str("machine", registerRequest.Hostinfo.Hostname).Msg("Successfully sent auth url")
 }
 
 // handleAuthKeyCommon contains the logic to manage auth key client registration

@@ -46,7 +46,7 @@ func (t *ts2021App) NoisePollNetMapHandler(
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().
+			log.Debug().
 				Str("handler", "NoisePollNetMap").
 				Msgf("Ignoring request, cannot find machine with key %s", mapRequest.NodeKey.String())
 			http.Error(writer, "Internal error", http.StatusNotFound)

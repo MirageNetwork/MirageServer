@@ -429,6 +429,42 @@ func (h *Mirage) GetUserMachineByMachineKey(
 }
 
 // cgao6
+func (h *Mirage) GetMachineByIP(ip netip.Addr) *Machine {
+	machines, err := h.ListMachines()
+	if err != nil {
+		return nil
+	}
+	for _, m := range machines {
+		for _, mip := range m.IPAddresses.ToStringSlice() {
+			if mip == ip.String() {
+				return &m
+			}
+		}
+	}
+	return nil
+}
+func (h *Mirage) GetMachinesInPrefix(ip netip.Prefix) []Machine {
+	out := []Machine{}
+	machines, err := h.ListMachines()
+	if err != nil {
+		return out
+	}
+	for _, m := range machines {
+		for _, mip := range m.IPAddresses.ToStringSlice() {
+			trueip, err := netip.ParseAddr(mip)
+			if err != nil {
+				return out
+			}
+			if ip.Contains(trueip) {
+				out = append(out, m)
+				break
+			}
+		}
+	}
+	return out
+}
+
+// cgao6
 // GetMachine finds a Machine by user and backendlogid and returns the Machine struct.
 func (h *Mirage) GetMachineNSBLID(user string, backendlogid string) (*Machine, error) {
 	machines, err := h.ListMachinesByUser(user)
@@ -1199,7 +1235,7 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 			if approvedAlias == machine.User.Name {
 				approvedRoutes = append(approvedRoutes, advertisedRoute)
 			} else {
-				approvedIps, err := expandAlias([]Machine{*machine}, *h.aclPolicy, approvedAlias, h.cfg.OIDC.StripEmaildomain)
+				approvedIps, err := h.expandAlias(false, []Machine{*machine}, *h.aclPolicy, approvedAlias, h.cfg.OIDC.StripEmaildomain)
 				if err != nil {
 					log.Err(err).
 						Str("alias", approvedAlias).

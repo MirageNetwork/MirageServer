@@ -184,7 +184,7 @@ func (h *Mirage) ConsoleAuth(next http.Handler) http.Handler {
 		}
 		_, controcontrolCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCodeCookie.Value)
 		if !ok || controcontrolCodeExpiration.Compare(time.Now()) != 1 {
-			log.Error().
+			log.Debug().
 				Caller().
 				Msg("could not verifyIDTokenForOIDCCallback")
 			nextURL := r.URL.Path
@@ -221,7 +221,7 @@ func (h *Mirage) APIAuth(next http.Handler) http.Handler {
 		}
 		_, controcontrolCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCodeCookie.Value)
 		if !ok || controcontrolCodeExpiration.Compare(time.Now()) != 1 {
-			log.Error().
+			log.Debug().
 				Caller().
 				Msg("could not verifyIDTokenForOIDCCallback")
 			renderData := APICheckRes{

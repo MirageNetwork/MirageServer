@@ -73,6 +73,6 @@ func (h *Mirage) NoiseUpgradeHandler(
 	server.Handler = h2c.NewHandler(router, &http2.Server{})
 	err = server.Serve(netutil.NewOneConnListener(noiseConn, nil))
 	if err != nil {
-		log.Info().Err(err).Msg("The HTTP2 server was closed")
+		log.Debug().Err(err).Msg("The HTTP2 server was closed")
 	}
 }
