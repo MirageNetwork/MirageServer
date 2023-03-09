@@ -353,7 +353,7 @@ func (h *Mirage) handleAuthKeyCommon(
 	// exist, then this is a new machine and we will move
 	// on to registration.
 	//machine, _ := h.GetMachineByAnyKey(machineKey, registerRequest.NodeKey, registerRequest.OldNodeKey)
-	machine, _ := h.GetMachineByAnyKey(key.MachinePublic{}, registerRequest.NodeKey, registerRequest.OldNodeKey)
+	machine, _ := h.GetUserMachineByMachineKey(machineKey, pak.User.toTailscaleUser().ID)
 	if machine != nil {
 		log.Trace().
 			Caller().
@@ -362,6 +362,7 @@ func (h *Mirage) handleAuthKeyCommon(
 
 		machine.NodeKey = nodeKey
 		machine.AuthKeyID = uint(pak.ID)
+		machine.AuthKey = pak
 		err := h.RefreshMachine(machine, registerRequest.Expiry)
 		if err != nil {
 			log.Error().
@@ -392,7 +393,7 @@ func (h *Mirage) handleAuthKeyCommon(
 	} else {
 		now := time.Now().UTC()
 
-		givenName, err := h.GenerateGivenName(registerRequest.Hostinfo.BackendLogID, registerRequest.Hostinfo.Hostname)
+		givenName := h.GenMachineName(registerRequest.Hostinfo.Hostname, pak.User.toTailscaleUser().ID, machineKey) //h.GenerateGivenName(registerRequest.Hostinfo.BackendLogID, registerRequest.Hostinfo.Hostname)
 		//		givenName, err := h.GenerateGivenName(MachinePublicKeyStripPrefix(machineKey), registerRequest.Hostinfo.Hostname)
 		if err != nil {
 			log.Error().

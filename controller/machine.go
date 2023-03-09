@@ -67,7 +67,7 @@ type Machine struct {
 
 	// TODO(kradalby): This seems like irrelevant information?
 	AuthKeyID uint
-	AuthKey   *PreAuthKey
+	AuthKey   *PreAuthKey `gorm:"foreignKey:AuthKeyID"`
 
 	LastSeen             *time.Time
 	LastSuccessfulUpdate *time.Time
