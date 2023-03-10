@@ -380,17 +380,16 @@ func (h *Mirage) ListMachinesByGivenName(givenName string) ([]Machine, error) {
 func (h *Mirage) GenMachineName(
 	referName string,
 	uid tailcfg.UserID,
-	machineKey key.MachinePublic,
+	machineKey string,
 ) string {
-	mkey := MachinePublicKeyStripPrefix(machineKey)
 	giveName := referName
 	suffix := 1
 	m, err := h.GetUserMachineByGivenName(giveName, uid)
-	if err == nil && m.MachineKey != mkey {
+	if err == nil && m.MachineKey != machineKey {
 		giveName = giveName + "-" + strconv.Itoa(suffix)
 		m, err = h.GetUserMachineByGivenName(giveName, uid)
 	}
-	for err == nil && m.MachineKey != mkey {
+	for err == nil && m.MachineKey != machineKey {
 		giveName = strings.TrimSuffix(giveName, "-"+strconv.Itoa(suffix))
 		suffix++
 		giveName = giveName + "-" + strconv.Itoa(suffix)
@@ -621,11 +620,7 @@ func (h *Mirage) setAutoGenName(machine *Machine, newName string) (string, error
 			if machine.AutoGenName == isAutoGen {
 				return machine.GivenName, nil
 			}
-			newGiveName, err := h.GenerateGivenName(machine.HostInfo.BackendLogID, machine.Hostname)
-			if err != nil {
-				return "", fmt.Errorf("fail to gen a new given name: %w", err)
-			}
-			machine.GivenName = newGiveName
+			machine.GivenName = h.GenMachineName(machine.Hostname, machine.User.toTailscaleUser().ID, machine.MachineKey)
 		} else {
 			_, err := h.GetMachineByGivenName(machine.User.Name, newName)
 			if err != nil && err != ErrMachineNotFound {
@@ -1266,58 +1261,4 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 	}
 
 	return nil
-}
-
-func (h *Mirage) generateGivenName(suppliedName string, randomSuffix bool) (string, error) {
-	normalizedHostname, err := NormalizeToFQDNRules(
-		suppliedName,
-		h.cfg.OIDC.StripEmaildomain,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	if randomSuffix {
-		// Trim if a hostname will be longer than 63 chars after adding the hash.
-		trimmedHostnameLength := labelHostnameLength - MachineGivenNameHashLength - MachineGivenNameTrimSize
-		if len(normalizedHostname) > trimmedHostnameLength {
-			normalizedHostname = normalizedHostname[:trimmedHostnameLength]
-		}
-
-		suffix, err := GenerateRandomStringDNSSafe(MachineGivenNameHashLength)
-		if err != nil {
-			return "", err
-		}
-
-		normalizedHostname += "-" + suffix
-	}
-
-	return normalizedHostname, nil
-}
-
-func (h *Mirage) GenerateGivenName(backendLogID string, suppliedName string) (string, error) {
-	givenName, err := h.generateGivenName(suppliedName, false)
-	if err != nil {
-		return "", err
-	}
-
-	// Tailscale rules (may differ) https://tailscale.com/kb/1098/machine-names/
-	machines, err := h.ListMachinesByGivenName(givenName)
-	if err != nil {
-		return "", err
-	}
-
-	for _, machine := range machines {
-		if machine.HostInfo.BackendLogID != backendLogID && machine.GivenName == givenName {
-			//		if machine.MachineKey != machineKey && machine.GivenName == givenName {
-			postfixedName, err := h.generateGivenName(suppliedName, true)
-			if err != nil {
-				return "", err
-			}
-
-			givenName = postfixedName
-		}
-	}
-
-	return givenName, nil
 }
