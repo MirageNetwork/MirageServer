@@ -25,11 +25,14 @@ derp.yaml
 /db.sqlite
 *.sqlite3
 
+
 # Exclude Jetbrains Editors
 .idea
 
 test_output/
 control_logs/
+
+/controller/html
 
 # Nix build output
 result
