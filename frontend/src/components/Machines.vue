@@ -332,9 +332,9 @@ function copyMIPv6() {
                         子网转发
                         <div v-if="m.hasSubnets && m.extraIPs && m.extraIPs.length > 0" class="tooltip"
                           data-tip="该设备存在未批准子网转发，请在设备菜单的“编辑子网转发…”中检查">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"
-                            stroke-linejoin="round" class="ml-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"
+                            class="ml-1">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="12" y1="8" x2="12" y2="12"></line>
                             <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -347,9 +347,9 @@ function copyMIPv6() {
                         class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
                         出口节点
                         <div v-if="!m.allowedExitNode" class="tooltip" data-tip="该设备申请被用作出口节点，请在设备菜单的“编辑子网转发…”中检查">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"
-                            stroke-linejoin="round" class="ml-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"
+                            class="ml-1">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="12" y1="8" x2="12" y2="12"></line>
                             <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -383,8 +383,7 @@ function copyMIPv6() {
                                 {{ m.addresses[0] }}
                               </span></span><span class="cursor-pointer text-blue-500 pl-2">复制</span>
                           </div>
-                          <div @click="copyMIPv6"
-                            class="text-blue-500 py-1 px-2 border-l hover:bg-gray-100 rounded-r-md">
+                          <div @click="copyMIPv6" class="text-blue-500 py-1 px-2 border-l hover:bg-gray-100 rounded-r-md">
                             IPv6
                           </div>
                         </div>
@@ -483,7 +482,6 @@ function copyMIPv6() {
     <SetSubnet v-if="setSubnetShow" :id="currentMID" :current-machine="MList[currentMID]" @close="setSubnetShow = false"
       @update-done="subnetUpdateDone" @update-fail="subnetUpdateFail"></SetSubnet>
   </Teleport>
-
 </template>
 
 <style scoped>

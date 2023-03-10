@@ -23,6 +23,7 @@ watch(toastShow, () => {
 
 const hasSpecialStatus = computed(() => {
     return (
+        currentMachine.value["isEphemeral"] ||
         currentMachine.value["isExternal"] ||
         currentMachine.value["issharedout"] ||
         currentMachine.value["expirydesc"] == "已过期" ||
@@ -258,15 +259,15 @@ function subnetUpdateFail(msg) {
                                         <circle cx="12" cy="12" r="3"></circle>
                                         <path
                                             d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                                    </path>
-                                </svg>设备设置
-                            </div>
-                        </button>
+                                        </path>
+                                    </svg>设备设置
+                                </div>
+                            </button>
                         </div>
-                    </div>
                 </div>
-                <div class="flex border-t border-gray-200 text-sm mt-4 pt-4">
-                    <div class="max-w-sm">
+            </div>
+            <div class="flex border-t border-gray-200 text-sm mt-4 pt-4">
+                <div class="max-w-sm">
                         <div class="text-gray-500 mb-2">归属于</div>
                         <div class="mt-0.5">
                             <div class="flex items-center text-gray-600 text-sm">
@@ -344,6 +345,12 @@ function subnetUpdateFail(msg) {
                                             <line x1="12" y1="16" x2="12.01" y2="16"></line>
                                         </svg>
                                     </div>
+                                </div>
+                            </span>
+                            <span v-if="currentMachine.isEphemeral">
+                                <div
+                                    class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
+                                    自熄
                                 </div>
                             </span>
                         </div>
@@ -478,10 +485,10 @@ function subnetUpdateFail(msg) {
                                         <span>{{ ep }}</span>
                                     </li>
                                     <!--
-                                        <li class="select-all">
-                                            <span>172.17.0.1</span><wbr />:<span>41641</span>
-                                        </li>
-                                        -->
+                                            <li class="select-all">
+                                                <span>172.17.0.1</span><wbr />:<span>41641</span>
+                                            </li>
+                                            -->
                                 </ul>
                             </dd>
                         </dl>
