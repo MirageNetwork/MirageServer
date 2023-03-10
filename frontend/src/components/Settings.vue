@@ -2,12 +2,13 @@
 import { ref, computed, nextTick, onMounted, watch, watchEffect } from "vue";
 import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import General from "./setpart/General.vue";
+import Tags from "./setpart/Tags.vue";
 import Keys from "./setpart/Keys.vue";
 
 //路由及选择器页面控制
 const setPartContent = {
   "general": General,
-  "features": General, //TODO
+  "tags": Tags, //TODO
   "webhooks": General, //TODO
   "billing": General, //TODO
   "contact-preferences": General, //TODO
@@ -48,8 +49,8 @@ onMounted(() => {
                 :class="{ 'text-blue-600': currentSetPart == 'general', 'text-gray-700': currentSetPart != 'general' }"
                 to="/settings/general">通用</router-link>
               <router-link class="flex font-medium mt-4"
-                :class="{ 'text-blue-600': currentSetPart == 'features', 'text-gray-700': currentSetPart != 'features' }"
-                to="/settings/features">敬请期待</router-link>
+                :class="{ 'text-blue-600': currentSetPart == 'tags', 'text-gray-700': currentSetPart != 'tags' }"
+                to="/settings/tags">标签管理</router-link>
               <router-link class="flex font-medium mt-4"
                 :class="{ 'text-blue-600': currentSetPart == 'webhooks', 'text-gray-700': currentSetPart != 'webhooks' }"
                 to="/settings/webhooks">敬请期待</router-link>
@@ -79,7 +80,7 @@ onMounted(() => {
         <div class="select-with-arrow md:hidden mb-4">
           <select v-model.lazy="currentSetPart" @change="changeSetPart" class="select select-bordered w-full text-lg">
             <optgroup label="网络配置">
-              <option value="features">敬请期待</option>
+              <option value="tags">标签管理</option>
               <option value="general">通用</option>
               <option value="webhooks">敬请期待</option>
               <option value="billing">敬请期待</option>

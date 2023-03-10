@@ -56,27 +56,24 @@ const (
 	ProtocolFC       = 133 // Fibre Channel
 )
 
-// Test ACL update possibility by PingPong sequence.
-func (h *Mirage) ACLPingPong(PingMsg string) string {
-	if PingMsg != "ping" {
-		return "error"
-	}
-
-	aclPath := AbsolutePathFromConfigPath(ACLPath)
-	err := h.LoadACLPolicy(aclPath)
-	if err != nil {
-		log.Fatal().
-			Str("path", aclPath).
-			Err(err).
-			Msg("Could not load the ACL policy")
-	}
-
-	h.setLastStateChangeToNow()
-
-	return "pong"
-}
-
 var featureEnableSSH = envknob.RegisterBool("MIRAGE_EXPERIMENTAL_FEATURE_SSH")
+
+func (h *Mirage) SaveACLPolicy(path string) error {
+	log.Debug().
+		Str("func", "SaveACLPolicy").
+		Str("path", path).
+		Msg("Saving ACL policy back to path")
+
+	aclData, err := json.Marshal(h.aclPolicy)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(path, aclData, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 // LoadACLPolicy loads the ACL policy from the specify path, and generates the ACL rules.
 func (h *Mirage) LoadACLPolicy(path string) error {
