@@ -6,6 +6,9 @@
 **注意** 此版本可能与Headscale、Tailscale官方版本均有不兼容的情况，如需与官方版本并用需要考虑进行兼容性测试。    
       
       
+# 使用    
+example.mirage目录是示例配置，请将其重命名为.mirage放置在服务运行同目录下，并将其内acl和config文件名中的example去掉。根据自己情况修改acl和config文件配置。        
+    
 # 完成功能进度(ToDo List)：    
 - [ ] 系统零配置文件启动，页面初始化功能   
 - [ ] i18n
