@@ -186,7 +186,7 @@ func (h *Mirage) checkKeyValidity(k string) (*PreAuthKey, error) {
 		return nil, ErrPreAuthKeyExpired
 	}
 
-	if pak.Reusable || pak.Ephemeral { // we don't need to check if has been used before
+	if pak.Reusable { // cgao6: 依据TS逻辑，自熄并不影响是否可重用|| pak.Ephemeral { // we don't need to check if has been used before
 		return &pak, nil
 	}
 

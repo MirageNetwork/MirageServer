@@ -296,7 +296,9 @@ func (h *Mirage) ConsoleMachinesAPI(
 			Created:            machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
 			LastSeen:           machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
 			ConnectedToControl: machine.isOnline(),
-			NeverExpires:       *machine.Expiry == time.Time{},
+
+			IsEphemeral:  machine.isEphemeral(),
+			NeverExpires: *machine.Expiry == time.Time{},
 
 			Varies:            machine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
 			HairPinning:       machine.HostInfo.NetInfo.HairPinning.EqualBool(true),

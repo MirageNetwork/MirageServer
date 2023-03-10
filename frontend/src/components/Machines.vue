@@ -357,6 +357,12 @@ function copyMIPv6() {
                         </div>
                       </div>
                     </span>
+                    <span v-if="m.isEphemeral">
+                      <div
+                        class="inline-flex items-center align-middle justify-center font-medium border border-blue-50 bg-blue-50 text-blue-600 rounded-sm px-1 text-xs mr-1">
+                        自熄
+                      </div>
+                    </span>
                   </div>
                 </div>
               </td>
