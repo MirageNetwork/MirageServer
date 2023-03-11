@@ -13,7 +13,7 @@ const tagOwners = ref([])
 
 function createTagDone() {
   axios
-    .get("/admin/api/tags")
+    .get("/admin/api/acls/ags")
     .then(function (response) {
       // 处理成功情况
       if (response.data["status"] == "success") {
@@ -28,7 +28,7 @@ function createTagDone() {
 
 onMounted(() => {
   axios
-    .get("/admin/api/tags")
+    .get("/admin/api/acls/tags")
     .then(function (response) {
       // 处理成功情况
       if (response.data["status"] == "success") {
@@ -51,7 +51,7 @@ function toRemoveTag(tag) {
 
 function doRemoveTag() {
   axios
-    .delete("/admin/api/tags/" + wantRemoveTag.value, {})
+    .delete("/admin/api/acls/tags/" + wantRemoveTag.value, {})
     .then(function (response) {
       if (response.data["status"] == "success") {
         var tmpTagOwners = []

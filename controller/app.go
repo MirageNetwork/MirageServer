@@ -311,19 +311,19 @@ func (h *Mirage) createRouter() *mux.Router {
 	console_router.HandleFunc("/api/dns", h.CAPIGetDNS).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/netsettings", h.getNetSettingAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/keys", h.CAPIGetKeys).Methods(http.MethodGet)
-	console_router.HandleFunc("/api/tags", h.CAPIGetTags).Methods(http.MethodGet)
+	console_router.HandleFunc("/api/acls/tags", h.CAPIGetTags).Methods(http.MethodGet)
 
 	// POST(更新类)API
 	console_router.HandleFunc("/api/machines", h.ConsoleMachinesUpdateAPI).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/machine/remove", h.ConsoleRemoveMachineAPI).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/netsetting/updatekeyexpiry", h.ConsoleUpdateKeyExpiryAPI).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/keys", h.CAPIPostKeys).Methods(http.MethodPost)
-	console_router.HandleFunc("/api/tags", h.CAPIPostTags).Methods(http.MethodPost)
+	console_router.HandleFunc("/api/acls/tags", h.CAPIPostTags).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/dns", h.CAPIPostDNS).Methods(http.MethodPost)
 
 	// DELETE(删除类)API
 	console_router.PathPrefix("/api/keys/").HandlerFunc(h.CAPIDelKeys).Methods(http.MethodDelete)
-	console_router.PathPrefix("/api/tags/").HandlerFunc(h.CAPIDelTags).Methods(http.MethodDelete)
+	console_router.PathPrefix("/api/acls/tags/").HandlerFunc(h.CAPIDelTags).Methods(http.MethodDelete)
 
 	// TODO: 登出及页面转至VUE，要考虑logout是否有必要发消息给服务端
 	console_router.HandleFunc("/logout", h.ConsoleLogout).Methods(http.MethodGet)

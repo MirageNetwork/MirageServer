@@ -9,6 +9,7 @@ function showGenAuthKey() {
   genAuthKeyShow.value = true;
 }
 
+const tagOwners = ref([])
 const authKeys = ref([])
 
 function doAddAuthkey() {
@@ -33,6 +34,18 @@ onMounted(() => {
       // 处理成功情况
       if (response.data["status"] == "success") {
         authKeys.value = response.data["data"]["authKeys"]
+      }
+    })
+    .catch(function (error) {
+      // 处理错误情况
+      console.log(error);
+    })
+  axios
+    .get("/admin/api/acls/tags")
+    .then(function (response) {
+      // 处理成功情况
+      if (response.data["status"] == "success") {
+        tagOwners.value = response.data["data"]["tagOwners"]
       }
     })
     .catch(function (error) {
@@ -104,20 +117,24 @@ function doRevokeAuthKey() {
             <th class="hidden shrink-0 py-2 lg:block w-40">创建日期</th>
             <th class="hidden shrink-0 py-2 lg:block w-40">失效日期</th>
             <th class="flex-1 shrink-0 py-2 min-w-0">类型</th>
-            <th
-              class="w-20 shrink-0 py-2 text-right text-red-400 cursor-pointer pointer-events-auto hover:text-red-600">
+            <th class="w-20 shrink-0 py-2 text-right text-red-400 cursor-pointer pointer-events-auto hover:text-red-600">
               <span class="sr-only">注销密钥</span>
             </th>
           </tr>
         </thead>
         <tbody class="block">
           <template v-for="authKey, id in authKeys">
-            <tr @click="authKey.expand = authKey.expand ? false : true" :class="{ 'border-t': id > 0 }"
-              class="group flex border-stone-200 cursor-pointer hover:bg-gray-50 pl-8 pr-4 lg:px-4 lg:cursor-auto border-b-0">
+            <tr @click="authKey.expand = authKey.expand ? false : true"
+              class="group flex border-stone-200 cursor-pointer hover:bg-gray-50 pl-8 pr-4 border-b-0" :class="{
+                'border-t': id > 0,
+                'lg:cursor-auto': !authKey.authkey.tags || authKey.authkey.tags.length == 0,
+              }">
               <td class="flex shrink-0 py-2 w-36">
-                <div class="w-8 -ml-8 lg:hidden"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
-                    stroke-linejoin="round" class="text-gray-400 w-4 mx-2 group-hover:text-gray-500">
+                <div class="w-8 -ml-8" :class="{
+                  'lg:hidden': !authKey.authkey.tags || authKey.authkey.tags.length == 0,
+                }"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                    class="text-gray-400 w-4 mx-2 group-hover:text-gray-500">
                     <polyline :points="authKey.expand ? '6 9 12 15 18 9' : '9 18 15 12 9 6'"></polyline>
                   </svg></div>
                 <pre class="text-sm truncate leading-6 font-semibold"><code>{{ authKey.id }}</code></pre>
@@ -127,7 +144,7 @@ function doRevokeAuthKey() {
               <td class="hidden shrink-0 py-2 lg:block w-40"><span data-state="closed"><span class="cursor-default">
                     {{ authKey.expiry.split(' ')[0] }}</span></span></td>
               <td class="flex-1 shrink-0 py-2 min-w-0">{{
-              (authKey.authkey.reusable == true ? "可重用" : "一次性") + (authKey.authkey.ephemeral == true ? ",自熄" : "") }}
+                (authKey.authkey.reusable == true ? "可重用" : "一次性") + (authKey.authkey.ephemeral == true ? ",自熄" : "") }}
               </td>
               <td
                 class="w-20 shrink-0 py-2 text-right text-red-400 cursor-pointer pointer-events-auto hover:text-red-600">
@@ -136,7 +153,9 @@ function doRevokeAuthKey() {
             </tr>
             <tr v-if="authKey.expand" class="border-b-0 flex border-stone-200">
               <td class="shrink-0 p-0">
-                <div class="flex-col px-8 pt-0.5 pb-2 lg:hidden">
+                <div class="flex-col px-8 pt-0.5 pb-2" :class="{
+                  'lg:hidden': !authKey.authkey.tags || authKey.authkey.tags.length == 0,
+                }">
                   <div class="flex items-center lg:hidden">
                     <p class="w-20 text-sm text-gray-500">创建日期</p>
                     <p class="text-sm"><span data-state="closed"><span class="cursor-default">{{
@@ -150,6 +169,17 @@ function doRevokeAuthKey() {
                       authKey.expiry.split(' ')[0]
                     }}</span></span>
                     </p>
+                  </div>
+                  <div class="flex items-center">
+                    <p class="w-20 text-sm text-gray-500">标签</p>
+                    <div v-for="tag,i in authKey.authkey.tags" class="flex flex-wrap">
+                      <span><span>
+                          <div
+                            class="flex items-center align-middle justify-center font-medium border border-gray-300 bg-white rounded-full px-2 py-1 leading-none text-xs mr-1">
+                            <span class="text-gray-500">{{ tag.substring(4) }}</span>
+                          </div>
+                        </span></span>
+                    </div>
                   </div>
                 </div>
               </td>
@@ -177,7 +207,8 @@ function doRevokeAuthKey() {
   </div>
   <Teleport to="body">
     <!-- 生成授权密钥提示框显示 -->
-    <GenAuthKey v-if="genAuthKeyShow" @added-authkey="doAddAuthkey" @close="genAuthKeyShow = false"></GenAuthKey>
+    <GenAuthKey v-if="genAuthKeyShow" :tag-owners="tagOwners" @added-authkey="doAddAuthkey"
+      @close="genAuthKeyShow = false"></GenAuthKey>
     <!-- 注销授权密钥提示框显示 -->
     <template v-if="RevokeAuthKeyShow">
       <div @click.self="RevokeAuthKeyShow = false"
@@ -211,6 +242,4 @@ function doRevokeAuthKey() {
   </Teleport>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

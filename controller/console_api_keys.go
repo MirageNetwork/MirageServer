@@ -35,10 +35,11 @@ type Key struct {
 	Apikey  ApiKeyTypes  `json:"apikey"`
 }
 type AuthKeyTypes struct {
-	Reusable      bool `json:"reusable"`
-	Ephemeral     bool `json:"ephemeral"`
-	Preauthorized bool `json:"preauthorized"` //未实现，建议true
-	ForAdminPanel bool `json:"forAdminPanel"` //未实现，未知含义，建议false
+	Reusable      bool     `json:"reusable"`
+	Ephemeral     bool     `json:"ephemeral"`
+	Preauthorized bool     `json:"preauthorized"` //未实现，建议true
+	ForAdminPanel bool     `json:"forAdminPanel"` //未实现，未知含义，建议false
+	Tags          []string `json:"tags"`
 }
 type ApiKeyTypes struct {
 	Api string `json:"api"` //"control"
@@ -70,6 +71,10 @@ func (h *Mirage) CAPIGetKeys(
 	resData := KeysData{}
 	resData.AuthKeys = make([]Key, 0)
 	for _, key := range authKeys {
+		aclTags := []string{}
+		for _, tag := range key.ACLTags {
+			aclTags = append(aclTags, tag.Tag)
+		}
 		tmpAuthKey := Key{
 			Id:      key.Key[:12], //key.ID,
 			Created: Time2SHString(*key.CreatedAt),
@@ -81,6 +86,7 @@ func (h *Mirage) CAPIGetKeys(
 				Ephemeral:     key.Ephemeral,
 				Preauthorized: true,  //TODO
 				ForAdminPanel: false, //TODO
+				Tags:          aclTags,
 			},
 		}
 		resData.AuthKeys = append(resData.AuthKeys, tmpAuthKey)
@@ -119,7 +125,7 @@ func (h *Mirage) CAPIPostKeys(
 	case "authkey":
 		keyCfg := reqData.KeyData.Authkey
 		keyExpiration := time.Now().Add(time.Duration(reqData.KeyData.ExpirySeconds) * time.Second)
-		genedAuthKey, err := h.CreatePreAuthKey(userName, keyCfg.Reusable, keyCfg.Ephemeral, &keyExpiration, nil)
+		genedAuthKey, err := h.CreatePreAuthKey(userName, keyCfg.Reusable, keyCfg.Ephemeral, &keyExpiration, keyCfg.Tags)
 		if err != nil {
 			h.doAPIResponse(w, "授权密钥创建失败", nil)
 			return
