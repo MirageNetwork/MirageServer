@@ -83,6 +83,15 @@ function doRevokeAuthKey() {
       console.log(error)
     })
 }
+
+function isInvalidTag(tag)  {
+  for (var i in tagOwners.value) {
+    if (tagOwners.value[i].tagName == tag) {
+      return false
+    }
+  }
+  return true
+}
 </script>
 
 <template>
@@ -172,10 +181,21 @@ function doRevokeAuthKey() {
                   </div>
                   <div class="flex items-center">
                     <p class="w-20 text-sm text-gray-500">标签</p>
-                    <div v-for="tag,i in authKey.authkey.tags" class="flex flex-wrap">
+                    <div v-for="tag, i in authKey.authkey.tags" class="flex flex-wrap">
                       <span><span>
                           <div
-                            class="flex items-center align-middle justify-center font-medium border border-gray-300 bg-white rounded-full px-2 py-1 leading-none text-xs mr-1">
+                            class="flex items-center align-middle justify-center font-medium border rounded-full px-2 py-1 leading-none text-xs mr-1"
+                            :class="{
+                              'border-gray-200 bg-gray-200 text-gray-600':isInvalidTag(tag),
+                              'border-gray-300 bg-white':!isInvalidTag(tag),
+                            }"
+                            >
+                            <svg v-if="isInvalidTag(tag)" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                              stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                              class="mr-1 text-gray-500">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                            </svg>
                             <span class="text-gray-500">{{ tag.substring(4) }}</span>
                           </div>
                         </span></span>
