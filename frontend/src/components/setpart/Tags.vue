@@ -13,7 +13,7 @@ const tagOwners = ref([])
 
 function createTagDone() {
   axios
-    .get("/admin/api/acls/ags")
+    .get("/admin/api/acls/tags")
     .then(function (response) {
       // 处理成功情况
       if (response.data["status"] == "success") {

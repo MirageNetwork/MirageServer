@@ -37,7 +37,7 @@ function createTagName() {
     }
     inputBlocking.value = true
     axios
-        .post("/admin/api/tags", {
+        .post("/admin/api/acls/tags", {
             state: "create",
             tagName: setName.value
         })
