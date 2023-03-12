@@ -5,6 +5,7 @@ import MachineMenu from "./MachineMenu.vue";
 import RemoveMachine from "./mmenu/RemoveMachine.vue";
 import UpdateHostname from "./mmenu/UpdateHostname.vue";
 import SetSubnet from "./mmenu/SetSubnet.vue";
+import EditTags from "./mmenu/EditTags.vue";
 import Toast from "./Toast.vue";
 
 const devmode = ref(false);
@@ -85,10 +86,16 @@ function showSetSubnet() {
     closeMachineMenu();
     setSubnetShow.value = true;
 }
+const editTagsShow = ref(false);
+function showEditTags() {
+    closeMachineMenu();
+    editTagsShow.value = true;
+}
 
 //数据填充控制部分
 const currentMachine = ref({});
 const currentMID = ref("");
+const tagOwners = ref({});
 const mipNotFound = ref(false);
 const basedomain = ref("");
 onMounted(() => {
@@ -138,6 +145,18 @@ onMounted(() => {
         .then(function () {
             // 总是会执行
         });
+    axios
+        .get("/admin/api/acls/tags")
+        .then(function (response) {
+            // 处理成功情况
+            if (response.data["status"] == "success") {
+                tagOwners.value = response.data["data"]["tagOwners"]
+            }
+        })
+        .catch(function (error) {
+            // 处理错误情况
+            console.log(error);
+        })
 });
 //服务端请求
 function setExpires() {
@@ -217,6 +236,21 @@ function subnetUpdateFail(msg) {
     toastShow.value = true
 }
 
+function tagsUpdateDone(mid, allowedTags, invalidTags) {
+    currentMachine.value["allowedTags"] = allowedTags
+    currentMachine.value["invalidTags"] = invalidTags
+    editTagsShow.value = false
+    nextTick(() => {
+        nextTick(() => {
+            toastMsg.value = "已更新设备标签！"
+            toastShow.value = true
+        })
+    })
+}
+function tagsUpdateFail(msg) {
+    toastMsg.value = "更新设备标签失败！" + msg
+    toastShow.value = true
+}
 </script>
 
 <template>
@@ -264,12 +298,34 @@ function subnetUpdateFail(msg) {
                                 </div>
                             </button>
                         </div>
+                    </div>
                 </div>
-            </div>
-            <div class="flex border-t border-gray-200 text-sm mt-4 pt-4">
-                <div class="max-w-sm">
+                <div class="flex border-t border-gray-200 text-sm mt-4 pt-4">
+                    <div class="max-w-sm">
                         <div class="text-gray-500 mb-2">归属于</div>
-                        <div class="mt-0.5">
+                        <div v-if="currentMachine.hasTags" class="mt-0.5">
+                            <div class="-mt-1">
+                                <span v-for="tag, i in currentMachine.invalidTags">
+                                    <div
+                                        class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-full px-2 py-1 leading-none text-xs mr-1 mt-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"
+                                            fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                                            stroke-linejoin="round" class="mr-1 text-gray-500">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                        </svg>
+                                        <span class="text-gray-500">{{ tag.substring(4) }}</span>
+                                    </div>
+                                </span>
+                                <span v-for="tag, i in currentMachine.allowedTags">
+                                    <div
+                                        class="inline-flex items-center align-middle justify-center font-medium border border-gray-300 bg-white rounded-full px-2 py-1 leading-none text-xs mr-1 mt-1">
+                                        <span class="text-gray-500">{{ tag.substring(4) }}</span>
+                                    </div>
+                                </span>
+                            </div>
+                        </div>
+                        <div v-if="!currentMachine.hasTags" class="mt-0.5">
                             <div class="flex items-center text-gray-600 text-sm">
                                 <div class="relative shrink-0 rounded-full overflow-hidden w-5 h-5 text-xs mr-2">
                                     <div class="flex items-center justify-center text-center capitalize text-white font-medium pointer-events-none w-5 h-5 text-xs"
@@ -408,6 +464,31 @@ function subnetUpdateFail(msg) {
                 </header>
                 <div class="p-4 md:p-6 border border-gray-200 rounded-md grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-2">
                     <div class="space-y-2">
+                        <dl v-if="currentMachine.hasTags" class="flex text-sm">
+                            <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">ACL 标签</dt>
+                            <dd class="min-w-0">
+                                <div class="-mt-1">
+                                    <span v-for="tag, i in currentMachine.invalidTags">
+                                        <div
+                                            class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-full px-2 py-1 leading-none text-xs mr-1 mt-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                                                stroke-linecap="round" stroke-linejoin="round" class="mr-1 text-gray-500">
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                            </svg>
+                                            <span class="text-gray-500">{{ tag.substring(4) }}</span>
+                                        </div>
+                                    </span>
+                                    <span v-for="tag, i in currentMachine.allowedTags">
+                                        <div
+                                            class="inline-flex items-center align-middle justify-center font-medium border border-gray-300 bg-white rounded-full px-2 py-1 leading-none text-xs mr-1 mt-1">
+                                            <span class="text-gray-500">{{ tag.substring(4) }}</span>
+                                        </div>
+                                    </span>
+                                </div>
+                            </dd>
+                        </dl>
                         <dl class="flex text-sm">
                             <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">创建者</dt>
                             <dd class="min-w-0 truncate">{{ currentMachine.user }}</dd>
@@ -484,11 +565,6 @@ function subnetUpdateFail(msg) {
                                     <li v-for="ep in currentMachine.endpoints" class="select-all">
                                         <span>{{ ep }}</span>
                                     </li>
-                                    <!--
-                                            <li class="select-all">
-                                                <span>172.17.0.1</span><wbr />:<span>41641</span>
-                                            </li>
-                                            -->
                                 </ul>
                             </dd>
                         </dl>
@@ -587,7 +663,8 @@ function subnetUpdateFail(msg) {
     <Teleport to="body">
         <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" :neverExpires="currentMachine.neverExpires"
             @close="closeMachineMenu" @set-expires="setExpires" @showdialog-remove="showDelConfirm"
-            @showdialog-updatehostname="showUpdateHostname" @showdialog-setsubnet="showSetSubnet"></MachineMenu>
+            @showdialog-edittags="showEditTags" @showdialog-updatehostname="showUpdateHostname"
+            @showdialog-setsubnet="showSetSubnet"></MachineMenu>
     </Teleport>
 
     <!-- 菜单弹出提示框显示 -->
@@ -603,6 +680,11 @@ function subnetUpdateFail(msg) {
         <!-- 设置子网转发提示框显示 -->
         <SetSubnet v-if="setSubnetShow" :id="currentMID" :current-machine="currentMachine" @close="setSubnetShow = false"
             @update-done="subnetUpdateDone" @update-fail="subnetUpdateFail"></SetSubnet>
+        <!-- 修改设备名提示框显示 -->
+        <EditTags v-if="editTagsShow" :id="currentMID" :current-machine="currentMachine" :tag-owners="tagOwners"
+            :given-name="currentMachine.name" @close="editTagsShow = false" @update-done="tagsUpdateDone"
+            @update-fail="tagsUpdateFail">
+        </EditTags>
     </Teleport>
 </template>
 

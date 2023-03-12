@@ -86,6 +86,9 @@ type machineItem struct {
 	HasSubnets         bool     `json:"hasSubnets"`
 	AdvertisedExitNode bool     `json:"advertisedExitNode"`
 	AllowedExitNode    bool     `json:"allowedExitNode"`
+	AllowedTags        []string `json:"allowedTags"`
+	InvalidTags        []string `json:"invalidTags"`
+	HasTags            bool     `json:"hasTags"`
 
 	Varies      bool `json:"varies"`
 	HairPinning bool `json:"hairpinning"`
@@ -285,7 +288,6 @@ func (h *Mirage) ConsoleMachinesAPI(
 			IPNver = strings.Split(machine.HostInfo.IPNVersion, "-")[0]
 		}
 		tz, _ := time.LoadLocation("Asia/Shanghai")
-
 		tmpMachine := machineItem{
 			Name:               machine.GivenName,
 			User:               machine.User.Name,
@@ -296,21 +298,35 @@ func (h *Mirage) ConsoleMachinesAPI(
 			Created:            machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
 			LastSeen:           machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
 			ConnectedToControl: machine.isOnline(),
+			AllowedTags:        []string{},
+			InvalidTags:        []string{},
+			HasTags:            machine.ForcedTags != nil && len(machine.ForcedTags) > 0,
 
 			IsEphemeral:  machine.isEphemeral(),
 			NeverExpires: *machine.Expiry == time.Time{},
 
-			Varies:            machine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
-			HairPinning:       machine.HostInfo.NetInfo.HairPinning.EqualBool(true),
-			CanIPv6:           machine.HostInfo.NetInfo.WorkingIPv6.EqualBool(true),
-			CanUDP:            machine.HostInfo.NetInfo.WorkingUDP.EqualBool(true),
-			CanUPnP:           machine.HostInfo.NetInfo.UPnP.EqualBool(true),
-			CanPCP:            machine.HostInfo.NetInfo.PCP.EqualBool(true),
-			CanPMP:            machine.HostInfo.NetInfo.PMP.EqualBool(true),
+			Varies:            machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
+			HairPinning:       machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.HairPinning.EqualBool(true),
+			CanIPv6:           machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.WorkingIPv6.EqualBool(true),
+			CanUDP:            machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.WorkingUDP.EqualBool(true),
+			CanUPnP:           machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.UPnP.EqualBool(true),
+			CanPCP:            machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.PCP.EqualBool(true),
+			CanPMP:            machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.PMP.EqualBool(true),
 			Endpoints:         machine.Endpoints,
 			AutomaticNameMode: machine.AutoGenName,
 		}
+		// 处理标签部分
+		if machine.ForcedTags != nil && len(machine.ForcedTags) > 0 {
+			for _, tag := range machine.ForcedTags {
+				if _, ok := h.aclPolicy.TagOwners[tag]; ok {
+					tmpMachine.AllowedTags = append(tmpMachine.AllowedTags, tag)
+				} else {
+					tmpMachine.InvalidTags = append(tmpMachine.InvalidTags, tag)
+				}
+			}
+		}
 
+		// 处理路由部分
 		machineRoutes, err := h.GetMachineRoutes(&machine)
 		if err != nil {
 			errRes := adminTemplateConfig{ErrorMsg: "查询设备路由失败"}
@@ -356,7 +372,7 @@ func (h *Mirage) ConsoleMachinesAPI(
 			}
 		}
 
-		if machine.HostInfo.NetInfo.PreferredDERP != 0 {
+		if machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.PreferredDERP != 0 {
 			tmpMachine.DERPs = make(map[string]int)
 			for derpname, latency := range machine.HostInfo.NetInfo.DERPLatency {
 				ipver := strings.Split(derpname, "-")[1]
@@ -609,6 +625,37 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 			}
 			h.doAPIResponse(writer, "", resData)
 		}
+	case "set-tags": //设置设备标签
+		reqTags := reqData["tags"].([]interface{})
+		setTags := make([]string, len(reqTags))
+		for i, tag := range reqTags {
+			setTags[i] = tag.(string)
+		}
+		msg, err := h.setMachineTags(toUpdateMachine, setTags)
+		if err != nil {
+			h.doAPIResponse(writer, msg, nil)
+		} else {
+			invalidTags := []string{}
+			allowedTags := []string{}
+			for _, tag := range setTags {
+				if _, ok := h.aclPolicy.TagOwners[tag]; ok {
+					allowedTags = append(allowedTags, tag)
+				} else {
+					invalidTags = append(invalidTags, tag)
+				}
+			}
+			resData := machineData{
+				AutomaticNameMode: toUpdateMachine.AutoGenName,
+				Name:              toUpdateMachine.GivenName,
+				Hostname:          toUpdateMachine.Hostname,
+				NeverExpires:      *toUpdateMachine.Expiry == time.Time{},
+				Expires:           msg,
+				HasTags:           setTags != nil && len(setTags) > 0,
+				AllowedTags:       allowedTags,
+				InvalidTags:       invalidTags,
+			}
+			h.doAPIResponse(writer, "", resData)
+		}
 	}
 }
 
@@ -765,6 +812,14 @@ func (h *Mirage) setMachineName(machine *Machine, newName string) (string, strin
 		return "设置主机名失败", "", err
 	}
 	return "", newGiveName, nil
+}
+
+func (h *Mirage) setMachineTags(machine *Machine, tags []string) (string, error) {
+	err := h.SetTags(machine, tags)
+	if err != nil {
+		return "设置设备标签失败", err
+	}
+	return "", nil
 }
 
 func (h *Mirage) setMachineSubnet(machine *Machine, ExitNodeEnable bool, allowedIPs []string) (string, error) {

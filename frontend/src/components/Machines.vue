@@ -6,6 +6,7 @@ import RemoveMachine from "./mmenu/RemoveMachine.vue";
 import UpdateHostname from "./mmenu/UpdateHostname.vue";
 import SetSubnet from "./mmenu/SetSubnet.vue";
 import Toast from "./Toast.vue";
+import EditTags from "./mmenu/EditTags.vue";
 
 //与框架交互部分
 
@@ -60,6 +61,13 @@ function showDelConfirm() {
   closeMachineMenu(currentMID.value);
   delConfirmShow.value = true;
 }
+const editTagsShow = ref(false);
+function showEditTags() {
+  machineBtnShow.value = false;
+  closeMachineMenu(currentMID.value);
+  editTagsShow.value = true;
+}
+
 const updateHostnameShow = ref(false);
 function showUpdateHostname() {
   machineBtnShow.value = false;
@@ -75,6 +83,7 @@ function showSetSubnet() {
 
 //数据填充控制部分
 const MList = ref({});
+const tagOwners = ref({});
 const machinenumber = computed(() => {
   return Object.getOwnPropertyNames(MList.value).length;
 });
@@ -129,11 +138,23 @@ onMounted(() => {
   window.addEventListener("resize", refreshMachineMenuPos)
   window.addEventListener("scroll", refreshMachineMenuPos)
 
-
   getMachines().then().catch();
   getMIntID = setInterval(() => {
     getMachines().then().catch();
   }, 15000);
+
+  axios
+    .get("/admin/api/acls/tags")
+    .then(function (response) {
+      // 处理成功情况
+      if (response.data["status"] == "success") {
+        tagOwners.value = response.data["data"]["tagOwners"]
+      }
+    })
+    .catch(function (error) {
+      // 处理错误情况
+      console.log(error);
+    })
 });
 onUnmounted(() => {
   window.removeEventListener("resize", refreshMachineMenuPos)
@@ -203,6 +224,22 @@ function hostnameUpdateDone(newName, newAutomaticNameMode, wantClose) {
 }
 function hostnameUpdateFail(msg) {
   toastMsg.value = "更新设备名称失败！"
+  toastShow.value = true
+}
+
+function tagsUpdateDone(mid, allowedTags, invalidTags) {
+  MList.value[mid]["allowedTags"] = allowedTags
+  MList.value[mid]["invalidTags"] = invalidTags
+  editTagsShow.value = false
+  nextTick(() => {
+    nextTick(() => {
+      toastMsg.value = "已更新设备标签！"
+      toastShow.value = true
+    })
+  })
+}
+function tagsUpdateFail(msg) {
+  toastMsg.value = "更新设备标签失败！" + msg
   toastShow.value = true
 }
 
@@ -288,7 +325,29 @@ function copyMIPv6() {
                         }}</span>
                     </div>
                   </div>
-                  <div>
+                  <div v-if="m.hasTags" class="mt-1">
+                    <div class="-mt-1">
+                      <span v-for="tag, i in m.invalidTags">
+                        <div
+                          class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-full px-2 py-1 leading-none text-xs mr-1 mt-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                            class="mr-1 text-gray-500">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                          </svg>
+                          <span class="text-gray-500">{{ tag.substring(4) }}</span>
+                        </div>
+                      </span>
+                      <span v-for="tag, i in m.allowedTags">
+                        <div
+                          class="inline-flex items-center align-middle justify-center font-medium border border-gray-300 bg-white rounded-full px-2 py-1 leading-none text-xs mr-1 mt-1">
+                          <span class="text-gray-500">{{ tag.substring(4) }}</span>
+                        </div>
+                      </span>
+                    </div>
+                  </div>
+                  <div v-if="!m.hasTags">
                     <div class="flex items-center text-gray-600 text-sm">
                       <span>{{ m.user }} </span>
                     </div>
@@ -465,7 +524,8 @@ function copyMIPv6() {
   <Teleport to="body">
     <MachineMenu v-if="machineMenuShow" :toleft="btnLeft" :totop="btnTop" :neverExpires="MList[currentMID].neverExpires"
       @close="closeMachineMenu" @set-expires="setExpires(currentMID)" @showdialog-remove="showDelConfirm"
-      @showdialog-updatehostname="showUpdateHostname" @showdialog-setsubnet="showSetSubnet"></MachineMenu>
+      @showdialog-edittags="showEditTags" @showdialog-updatehostname="showUpdateHostname"
+      @showdialog-setsubnet="showSetSubnet"></MachineMenu>
   </Teleport>
 
   <!-- 菜单弹出提示框显示 -->
@@ -481,6 +541,11 @@ function copyMIPv6() {
     <!-- 设置子网转发提示框显示 -->
     <SetSubnet v-if="setSubnetShow" :id="currentMID" :current-machine="MList[currentMID]" @close="setSubnetShow = false"
       @update-done="subnetUpdateDone" @update-fail="subnetUpdateFail"></SetSubnet>
+    <!-- 修改设备名提示框显示 -->
+    <EditTags v-if="editTagsShow" :id="currentMID" :current-machine="MList[currentMID]" :tag-owners="tagOwners"
+      :given-name="MList[currentMID].name" @close="editTagsShow = false" @update-done="tagsUpdateDone"
+      @update-fail="tagsUpdateFail">
+    </EditTags>
   </Teleport>
 </template>
 

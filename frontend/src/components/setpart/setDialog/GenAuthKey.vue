@@ -106,7 +106,6 @@ const tagMenuLeft = ref(0)
 const tagMenuTop = ref(0)
 const tagMenuShow = ref(false)
 function adjustTagMenuPosition() {
-    console.log("Adjusting")
     if (activeBtn.value != null) {
         tagMenuLeft.value = activeBtn.value?.getBoundingClientRect().left
         tagMenuTop.value = activeBtn.value?.getBoundingClientRect().top - 8 - 40 * props.tagOwners.length

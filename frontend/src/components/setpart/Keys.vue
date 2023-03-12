@@ -112,7 +112,7 @@ function doRevokeAuthKey() {
 
       <table v-if="authKeys && authKeys.length > 0" class="block border box-border rounded-lg mt-4 tb">
         <thead class="block font-semibold tracking-wider text-left text-xs text-stone-500">
-          <tr class="flex border-b border-stone-200 pl-8 pr-4 lg:px-4">
+          <tr class="flex border-b border-stone-200 pl-8 pr-4">
             <th class="w-36 shrink-0 py-2">ID</th>
             <th class="hidden shrink-0 py-2 lg:block w-40">创建日期</th>
             <th class="hidden shrink-0 py-2 lg:block w-40">失效日期</th>
