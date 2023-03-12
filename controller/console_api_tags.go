@@ -15,7 +15,7 @@ type Tag struct {
 	Owners  []string `json:"owners"`
 }
 
-// 接受/admin/api/tags的Get请求，用于查询tags
+// 接受/admin/api/acls/tags的Get请求，用于查询tags
 func (h *Mirage) CAPIGetTags(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -46,7 +46,7 @@ type CreateTagREQ struct {
 	Owners  []string `json:"owners"`
 }
 
-// 接受/admin/api/tags的Post请求，用于创建标签
+// 接受/admin/api/acls/tags的Post请求，用于创建标签
 func (h *Mirage) CAPIPostTags(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -91,7 +91,7 @@ func (h *Mirage) CAPIPostTags(
 	}
 }
 
-// 注销Key执行DELETE方法api/tagss/:tag
+// 注销Key执行DELETE方法api/acls/tags/:tag
 func (h *Mirage) CAPIDelTags(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -101,7 +101,7 @@ func (h *Mirage) CAPIDelTags(
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
-	targetTagName := strings.TrimPrefix(r.URL.Path, "/admin/api/tags/")
+	targetTagName := strings.TrimPrefix(r.URL.Path, "/admin/api/acls/tags/")
 	owners, ok := h.aclPolicy.TagOwners["tag:"+targetTagName]
 	if !ok {
 		h.doAPIResponse(w, "该标签不存在", nil)
