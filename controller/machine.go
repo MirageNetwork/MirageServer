@@ -463,23 +463,6 @@ func (h *Mirage) GetMachinesInPrefix(ip netip.Prefix) []Machine {
 	return out
 }
 
-// cgao6
-// GetMachine finds a Machine by user and backendlogid and returns the Machine struct.
-func (h *Mirage) GetMachineNSBLID(user string, backendlogid string) (*Machine, error) {
-	machines, err := h.ListMachinesByUser(user)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, m := range machines {
-		if m.HostInfo.BackendLogID == backendlogid {
-			return &m, nil
-		}
-	}
-
-	return nil, ErrMachineNotFound
-}
-
 // GetMachine finds a Machine by name and user and returns the Machine struct.
 func (h *Mirage) GetMachine(user string, name string) (*Machine, error) {
 	machines, err := h.ListMachinesByUser(user)

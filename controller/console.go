@@ -298,7 +298,7 @@ func (h *Mirage) ConsoleMachinesAPI(
 			Created:            machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
 			LastSeen:           machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
 			ConnectedToControl: machine.isOnline(),
-			AllowedTags:        []string{},
+			AllowedTags:        machine.ForcedTags,
 			InvalidTags:        []string{},
 			HasTags:            machine.ForcedTags != nil && len(machine.ForcedTags) > 0,
 
@@ -316,16 +316,16 @@ func (h *Mirage) ConsoleMachinesAPI(
 			AutomaticNameMode: machine.AutoGenName,
 		}
 		// 处理标签部分
-		if machine.ForcedTags != nil && len(machine.ForcedTags) > 0 {
-			for _, tag := range machine.ForcedTags {
-				if _, ok := h.aclPolicy.TagOwners[tag]; ok {
-					tmpMachine.AllowedTags = append(tmpMachine.AllowedTags, tag)
-				} else {
-					tmpMachine.InvalidTags = append(tmpMachine.InvalidTags, tag)
+		/*		if machine.ForcedTags != nil && len(machine.ForcedTags) > 0 {
+					for _, tag := range machine.ForcedTags {
+						if _, ok := h.aclPolicy.TagOwners[tag]; ok {
+							tmpMachine.AllowedTags = append(tmpMachine.AllowedTags, tag)
+						} else {
+							tmpMachine.InvalidTags = append(tmpMachine.InvalidTags, tag)
+						}
+					}
 				}
-			}
-		}
-
+		*/
 		// 处理路由部分
 		machineRoutes, err := h.GetMachineRoutes(&machine)
 		if err != nil {
