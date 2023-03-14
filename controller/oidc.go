@@ -316,11 +316,11 @@ func getUserName(
 func (h *Mirage) findOrCreateNewUserForOIDCCallback(
 	userName string,
 	userDisName string,
-	orgId int64,
+	orgName string,
 ) (*User, error) {
 	user, err := h.GetUser(userName)
 	if errors.Is(err, ErrUserNotFound) {
-		user, err = h.CreateUser(userName, userDisName, orgId)
+		user, err = h.CreateUser(userName, userDisName, orgName)
 		if err != nil {
 			log.Error().
 				Err(err).

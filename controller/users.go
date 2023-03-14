@@ -83,7 +83,7 @@ func (user *User) BeforeCreate(tx *gorm.DB) error {
 
 // CreateUser creates a new User. Returns error if could not be created
 // or another user already exists.
-func (h *Mirage) CreateUser(name string, DisName string, OrgId int64, OrgName string) (*User, error) {
+func (h *Mirage) CreateUser(name string, DisName string, OrgName string) (*User, error) {
 	err := CheckForFQDNRules(name)
 	if err != nil {
 		return nil, err
@@ -94,8 +94,8 @@ func (h *Mirage) CreateUser(name string, DisName string, OrgId int64, OrgName st
 	}
 	user.Name = name
 	user.Display_Name = DisName
-	// 个人用户新建时候orgId为0,OrgName为用户名
-	if OrgId == 0 {
+	// 个人用户新建时候orgName为空
+	if len(OrgName) == 0 {
 		err := h.db.Transaction(func(tx *gorm.DB) error {
 			org, err := CreateOrgnaizationInTx(tx, name)
 			if err != nil {
