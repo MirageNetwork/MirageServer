@@ -725,11 +725,11 @@ func (h *Mirage) registerMachineFromConsole(
 		Str("machineKey", aCodeItem.mKey.ShortString()).
 		Str("nodeKey", nodeKey.ShortString()).
 		Str("userName", user.Name).
-		Str("expiresAt", fmt.Sprintf("%v", time.Now().AddDate(0, 0, int(user.ExpiryDuration)))).
+		Str("expiresAt", fmt.Sprintf("%v", time.Now().AddDate(0, 0, int(user.Org.ExpiryDuration)))).
 		Msg("Registering machine from console confirm")
 
 	now := time.Now()
-	expiration := time.Now().AddDate(0, 0, int(user.ExpiryDuration))
+	expiration := time.Now().AddDate(0, 0, int(user.Org.ExpiryDuration))
 	givenName := h.GenMachineName(aCodeItem.regReq.Hostinfo.Hostname, aCodeItem.uid, MachinePublicKeyStripPrefix(aCodeItem.mKey))
 	newmachine := Machine{
 		MachineKey:           MachinePublicKeyStripPrefix(aCodeItem.mKey),

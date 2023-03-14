@@ -469,7 +469,7 @@ func (h *Mirage) getNetSettingAPI(
 		MaxKeyDurationDays: 180,
 		NetworkLockEnabled: false, //未实现
 	}
-	netsettingData.MaxKeyDurationDays = int(user.ExpiryDuration)
+	netsettingData.MaxKeyDurationDays = int(user.Org.ExpiryDuration)
 	h.doAPIResponse(writer, "", netsettingData)
 }
 
@@ -794,7 +794,7 @@ func (h *Mirage) setMachineExpiry(machine *Machine) (string, error) {
 			return "", err
 		}
 	} else {
-		expiryDuration := time.Hour * 24 * time.Duration(machine.User.ExpiryDuration)
+		expiryDuration := time.Hour * 24 * time.Duration(machine.User.Org.ExpiryDuration)
 		newExpiry := time.Now().Add(expiryDuration)
 		err := h.RefreshMachine(machine, newExpiry)
 		if err != nil {

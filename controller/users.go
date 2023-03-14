@@ -24,6 +24,11 @@ const (
 )
 
 const (
+	RoleMember = 0
+	RoleAdmin  = 1
+)
+
+const (
 	// value related to RFC 1123 and 952.
 	labelHostnameLength = 63
 )
@@ -35,16 +40,24 @@ var invalidCharsInUserRegex = regexp.MustCompile("[^a-z0-9-.]+")
 // At the end of the day, users in Tailscale are some kind of 'bubbles' or users
 // that contain our machines.
 type User struct {
-	ID             int64  `gorm:"primary_key;unique;not null"`
-	StableID       string `gorm:"unique"`
-	Name           string `gorm:"unique"`
-	Display_Name   string `gorm:"unique"`
-	ExpiryDuration uint   `gorm:"default:180"`
-	EnableMagic    bool   `gorm:"default:false"`
-	OverrideLocal  bool   `gorm:"default:false"`
-	Nameservers    StringList
-	SplitDns       SplitDNS
+	ID            int64  `gorm:"primary_key;unique;not null"`
+	StableID      string `gorm:"unique"`
+	Name          string `gorm:"unique"`
+	OrgId         int64
+	Org           Organization
+	Display_Name  string `gorm:"unique"`
+	Role          int64
+	IsBelongToOrg bool `gorm:"default:false"`
 
+	//TODO 哪些字段是user也需要的
+	/*
+		ExpiryDuration uint `gorm:"default:180"`
+		ExpiryDuration uint `gorm:"default:180"`
+		EnableMagic    bool `gorm:"default:false"`
+		OverrideLocal  bool `gorm:"default:false"`
+		Nameservers    StringList
+		SplitDns       SplitDNS
+	*/
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -70,7 +83,7 @@ func (user *User) BeforeCreate(tx *gorm.DB) error {
 
 // CreateUser creates a new User. Returns error if could not be created
 // or another user already exists.
-func (h *Mirage) CreateUser(name string, DisName string) (*User, error) {
+func (h *Mirage) CreateUser(name string, DisName string, OrgId int64, OrgName string) (*User, error) {
 	err := CheckForFQDNRules(name)
 	if err != nil {
 		return nil, err
@@ -80,18 +93,53 @@ func (h *Mirage) CreateUser(name string, DisName string) (*User, error) {
 		return nil, ErrUserExists
 	}
 	user.Name = name
-	user.ExpiryDuration = 180
 	user.Display_Name = DisName
-	if err := h.db.Create(&user).Error; err != nil {
-		log.Error().
-			Str("func", "CreateUser").
-			Err(err).
-			Msg("Could not create row")
+	// 个人用户新建时候orgId为0,OrgName为用户名
+	if OrgId == 0 {
+		err := h.db.Transaction(func(tx *gorm.DB) error {
+			org, err := CreateOrgnaizationInTx(tx, name)
+			if err != nil {
+				return err
+			}
+			err = tx.Create(&user).Error
+			if err != nil {
+				log.Error().
+					Str("func", "CreateUser").
+					Err(err).
+					Msg("Could not create row")
 
-		return nil, err
+				return err
+			}
+			user.OrgId = org.ID
+			user.Org = *org
+			user.Role = RoleAdmin
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &user, nil
+		// 非个人用户新建,先查询组织id,再进行新建
+	} else {
+		org := Organization{}
+		err := h.db.Model(&Organization{}).Where("name = ?", OrgName).Take(&org).Error
+		if err == nil && org.ID == 0 {
+			err = ErrOrgNotFound
+		}
+		if err == nil {
+			user.IsBelongToOrg = true
+			err = h.db.Create(&user).Error
+		}
+		if err != nil {
+			log.Error().
+				Str("func", "CreateUser").
+				Err(err).
+				Msg("Could not create row")
+			return nil, err
+		}
+		user.Org = org
+		return &user, nil
 	}
-
-	return &user, nil
 }
 
 // DestroyUser destroys a User. Returns error if the User does
@@ -121,11 +169,17 @@ func (h *Mirage) DestroyUser(name string) error {
 		}
 	}
 
-	if result := h.db.Unscoped().Delete(&user); result.Error != nil {
-		return result.Error
-	}
-
-	return nil
+	return h.db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Unscoped().Delete(&user).Error
+		if err != nil {
+			return err
+		}
+		if !user.IsBelongToOrg {
+			err = DestroyOrgnaizationInTx(tx, user.OrgId)
+		}
+		//TODO Organization 删除失败是否回滚
+		return nil
+	})
 }
 
 // Update User's node key expiry duration.
@@ -135,12 +189,10 @@ func (h *Mirage) UpdateUserKeyExpiry(name string, newDuration uint) error {
 	if err != nil {
 		return err
 	}
-	user.ExpiryDuration = newDuration
-
-	if result := h.db.Save(&user); result.Error != nil {
-		return result.Error
+	if user.OrgId == 0 {
+		return ErrOrgNotFound
 	}
-	return nil
+	return h.UpdateOrgExpiry(user.OrgId, newDuration)
 }
 
 // RenameUser renames a User. Returns error if the User does
@@ -175,7 +227,7 @@ func (h *Mirage) RenameUser(oldName, newName string) error {
 // GetUser fetches a user by name.
 func (h *Mirage) GetUserByID(id tailcfg.UserID) (*User, error) {
 	user := User{}
-	if result := h.db.First(&user, "id = ?", id); errors.Is(
+	if result := h.db.Preload("Org").First(&user, "id = ?", id); errors.Is(
 		result.Error,
 		gorm.ErrRecordNotFound,
 	) {
@@ -188,7 +240,7 @@ func (h *Mirage) GetUserByID(id tailcfg.UserID) (*User, error) {
 // GetUser fetches a user by name.
 func (h *Mirage) GetUser(name string) (*User, error) {
 	user := User{}
-	if result := h.db.First(&user, "name = ?", name); errors.Is(
+	if result := h.db.Preload("Org").First(&user, "name = ?", name); errors.Is(
 		result.Error,
 		gorm.ErrRecordNotFound,
 	) {
@@ -201,7 +253,7 @@ func (h *Mirage) GetUser(name string) (*User, error) {
 // ListUsers gets all the existing users.
 func (h *Mirage) ListUsers() ([]User, error) {
 	users := []User{}
-	if err := h.db.Find(&users).Error; err != nil {
+	if err := h.db.Preload("Org").Find(&users).Error; err != nil {
 		return nil, err
 	}
 
@@ -220,6 +272,7 @@ func (h *Mirage) ListMachinesByUser(name string) ([]Machine, error) {
 	}
 
 	machines := []Machine{}
+	//TODO 是否需要组织信息
 	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Where(&Machine{UserID: user.ID}).Find(&machines).Error; err != nil {
 		return nil, err
 	}
@@ -358,7 +411,7 @@ func CheckForFQDNRules(name string) error {
 func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, string) {
 	dnsConfig := &tailcfg.DNSConfig{}
 
-	nameserversStr := me.Nameservers
+	nameserversStr := me.Org.Nameservers
 
 	nameservers := []netip.Addr{}
 	resolvers := []*dnstype.Resolver{}
@@ -389,7 +442,7 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 
 	dnsConfig.Nameservers = nameservers
 
-	if me.OverrideLocal {
+	if me.Org.OverrideLocal {
 		dnsConfig.Resolvers = resolvers
 	} else {
 		dnsConfig.FallbackResolvers = resolvers
@@ -398,7 +451,7 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 	//cgao6: split DNS related here
 	dnsConfig.Routes = make(map[string][]*dnstype.Resolver)
 	domains := []string{}
-	restrictedDNS := me.SplitDns
+	restrictedDNS := me.Org.SplitDns
 	for domain, restrictedNameservers := range restrictedDNS {
 		restrictedResolvers := make(
 			[]*dnstype.Resolver,
@@ -448,7 +501,7 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 		dnsConfig.ExtraRecords = extraRecords
 	}
 
-	dnsConfig.Proxied = me.EnableMagic
+	dnsConfig.Proxied = me.Org.EnableMagic
 
 	if dnsConfig.Proxied { // if MagicDNS
 		magicDNSDomains := generateMagicDNSRootDomains(ipPrefixesCfg)
@@ -477,20 +530,9 @@ func (h *Mirage) UpdateDNSConfig(userName string, newDNSCfg DNSData) error {
 	if err != nil {
 		return err
 	}
-	user.EnableMagic = newDNSCfg.MagicDNS
-	user.Nameservers = make([]string, 0)
-	if len(newDNSCfg.Resolvers) > 0 {
-		user.OverrideLocal = true
-		user.Nameservers = newDNSCfg.Resolvers
-	} else if len(newDNSCfg.FallbackResolvers) > 0 {
-		user.OverrideLocal = false
-		user.Nameservers = newDNSCfg.FallbackResolvers
+	if user.Org.ID == 0 {
+		return ErrOrgNotFound
 	}
-	user.SplitDns = newDNSCfg.Routes
-
-	if result := h.db.Save(user); result.Error != nil {
-		return result.Error
-	}
-
-	return nil
+	org := &user.Org
+	return h.UpdateOrgDNSConfig(org, newDNSCfg)
 }
