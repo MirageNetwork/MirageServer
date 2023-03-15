@@ -95,7 +95,7 @@ function showEditTags() {
 //数据填充控制部分
 const currentMachine = ref({});
 const currentMID = ref("");
-const tagOwners = ref({});
+const tagOwners = ref([]);
 const mipNotFound = ref(false);
 const basedomain = ref("");
 onMounted(() => {
@@ -239,6 +239,9 @@ function subnetUpdateFail(msg) {
 function tagsUpdateDone(mid, allowedTags, invalidTags) {
     currentMachine.value["allowedTags"] = allowedTags
     currentMachine.value["invalidTags"] = invalidTags
+    if (allowedTags.length > 0) {
+        currentMachine.value["hasTags"] = true
+    }
     editTagsShow.value = false
     nextTick(() => {
         nextTick(() => {

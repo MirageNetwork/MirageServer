@@ -59,12 +59,14 @@ function addTag(tag) {
     }
 }
 onMounted(() => {
-    addedTags.value = props.currentMachine.allowedTags.concat(props.currentMachine.invalidTags)
+    addedTags.value = []
+    if (props.currentMachine.allowedTags != null) {
+        addedTags.value =addedTags.value.concat(props.currentMachine.allowedTags)
+    }
     allTags.value = []
     for (let i = 0; i < props.tagOwners.length; i++) {
-        allTags.value.push(props.tagOwners[i]["tagName"])
+        allTags.value.push(props.tagOwners[i].tagName)
     }
-    console.log(allTags.value)
 })
 
 
@@ -169,7 +171,7 @@ function isInvalidTag(tag) {
                         class="btn border-0 bg-blue-500 hover:bg-blue-900 disabled:bg-blue-500/60 text-white disabled:text-white/60 h-9 min-h-fit"
                         type="submit">更新</button>
                 </footer>
-            </form>
+            </form> 
             <button @click="$emit('close')"
                 class="btn btn-sm btn-ghost absolute top-5 right-5 px-2 py-2 border-0 bg-base-0 focus:bg-base-200 hover:bg-base-200"
                 type="button"><svg xmlns="http://www.w3.org/2000/svg" width="1.25em" height="1.25em" viewBox="0 0 24 24"
@@ -182,7 +184,7 @@ function isInvalidTag(tag) {
     <!--下方显示标签菜单-->
     <div v-if="tagMenuShow" v-click-away="closeTagMenu" class="shadow-xl border border-base-300 rounded-md z-20"
         :style="'position: fixed; left: 0px; top: 0px; transform: translate3d(' + tagMenuLeft + 'px, ' + tagMenuTop + 'px, 0px); min-width: max-content; z-index: 50; --radix-popper-transform-origin: 50% 155px;'">
-        <div v-for="tag, i in tagOwners" class="bg-white rounded-md overflow-y-scroll max-h-80 max-w-xs z-50"
+        <div v-for="tag in tagOwners" class="bg-white rounded-md overflow-y-scroll max-h-80 max-w-xs z-50"
             style="outline: currentcolor; pointer-events: auto; --radix-dropdown-menu-content-transform-origin: var(--radix-popper-transform-origin);">
             <div @click="addTag(tag.tagName)"
                 class="cursor-pointer hover:bg-stone-100 focus:outline-none focus:bg-bg-menu-item-hover border-b">

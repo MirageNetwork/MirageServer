@@ -738,6 +738,7 @@ func (h *Mirage) registerMachineFromConsole(
 		AutoGenName:          true,
 		NodeKey:              NodePublicKeyStripPrefix(aCodeItem.regReq.NodeKey),
 		UserID:               user.ID,
+		ForcedTags:           aCodeItem.regReq.Hostinfo.RequestTags,
 		LastSeen:             &now,
 		LastSuccessfulUpdate: &now,
 		Expiry:               &expiration,
