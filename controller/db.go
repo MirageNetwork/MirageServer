@@ -53,6 +53,11 @@ func (h *Mirage) initDB() error {
 		return err
 	}
 
+	err = db.AutoMigrate(&Organization{})
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 
