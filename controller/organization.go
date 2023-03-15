@@ -16,6 +16,7 @@ const (
 
 type Organization struct {
 	ID             int64  `gorm:"primary_key;unique;not null"`
+	StableID       string `gorm:"unique"`
 	Name           string `gorm:"unique"`
 	ExpiryDuration uint   `gorm:"default:180"`
 	EnableMagic    bool   `gorm:"default:false"`
@@ -36,6 +37,7 @@ func (o *Organization) BeforeCreate(tx *gorm.DB) error {
 		id := flakeID.Generate().Int64()
 		o.ID = id
 	}
+	o.StableID = GetShortId(o.ID)
 	return nil
 }
 
@@ -64,6 +66,22 @@ func CreateOrgnaizationInTx(tx *gorm.DB, name string) (*Organization, error) {
 		return nil, err
 	}
 
+	return &org, nil
+}
+
+func (m *Mirage) GetOrgnaizationByName(name string) (*Organization, error) {
+	return GetOrgnaizationByNameInTx(m.db.Session(&gorm.Session{}), name)
+}
+
+func GetOrgnaizationByNameInTx(tx *gorm.DB, name string) (*Organization, error) {
+	var org Organization
+	if err := tx.Where("name = ?", name).Take(&org).Error; err != nil {
+		log.Error().
+			Str("func", "GetOrgnaizationByName").
+			Err(err).
+			Msg("Could not get row")
+		return nil, err
+	}
 	return &org, nil
 }
 

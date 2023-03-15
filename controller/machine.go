@@ -465,8 +465,8 @@ func (h *Mirage) GetMachinesInPrefix(ip netip.Prefix) []Machine {
 
 // cgao6
 // GetMachine finds a Machine by user and backendlogid and returns the Machine struct.
-func (h *Mirage) GetMachineNSBLID(user string, backendlogid string) (*Machine, error) {
-	machines, err := h.ListMachinesByUser(user)
+func (h *Mirage) GetMachineNSBLID(userID int64, backendlogid string) (*Machine, error) {
+	machines, err := h.ListMachinesByUser(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -481,8 +481,8 @@ func (h *Mirage) GetMachineNSBLID(user string, backendlogid string) (*Machine, e
 }
 
 // GetMachine finds a Machine by name and user and returns the Machine struct.
-func (h *Mirage) GetMachine(user string, name string) (*Machine, error) {
-	machines, err := h.ListMachinesByUser(user)
+func (h *Mirage) GetMachine(userID int64, name string) (*Machine, error) {
+	machines, err := h.ListMachinesByUser(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -497,8 +497,8 @@ func (h *Mirage) GetMachine(user string, name string) (*Machine, error) {
 }
 
 // GetMachineByGivenName finds a Machine by given name and user and returns the Machine struct.
-func (h *Mirage) GetMachineByGivenName(user string, givenName string) (*Machine, error) {
-	machines, err := h.ListMachinesByUser(user)
+func (h *Mirage) GetMachineByGivenName(userID int64, givenName string) (*Machine, error) {
+	machines, err := h.ListMachinesByUser(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -622,7 +622,7 @@ func (h *Mirage) setAutoGenName(machine *Machine, newName string) (string, error
 			}
 			machine.GivenName = h.GenMachineName(machine.Hostname, machine.User.toTailscaleUser().ID, machine.MachineKey)
 		} else {
-			_, err := h.GetMachineByGivenName(machine.User.Name, newName)
+			_, err := h.GetMachineByGivenName(machine.User.ID, newName)
 			if err != nil && err != ErrMachineNotFound {
 				return "", fmt.Errorf("fail to check whether new name already exist: %w", err)
 			} else if err == nil {

@@ -23,14 +23,9 @@ func (h *Mirage) CAPIGetDNS(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
 		h.doAPIResponse(w, "用户信息核对失败", nil)
-		return
-	}
-	user, err := h.GetUser(userName)
-	if err != nil {
-		h.doAPIResponse(w, "查询用户失败:"+err.Error(), nil)
 		return
 	}
 	userDNSCfg, userBaseDomain := user.GetDNSConfig(h.cfg.IPPrefixes)
@@ -78,8 +73,8 @@ func (h *Mirage) CAPIPostDNS(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
@@ -90,7 +85,7 @@ func (h *Mirage) CAPIPostDNS(
 	}
 	reqData := DNSData{}
 	json.NewDecoder(r.Body).Decode(&reqData)
-	err = h.UpdateDNSConfig(userName, reqData)
+	err = h.UpdateDNSConfig(user, reqData)
 	if err != nil {
 		h.doAPIResponse(w, "更新用户DNS设置失败", nil)
 		return
@@ -104,9 +99,13 @@ func (h *Mirage) CAPIDelDNS(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败", nil)
+		return
+	}
 	targetKeyID := strings.TrimPrefix(r.URL.Path, "/admin/api/keys/")
-	allKeys, err := h.ListPreAuthKeys(userName)
+	allKeys, err := h.ListPreAuthKeys(user.ID)
 	if err != nil {
 		h.doAPIResponse(w, "查询用户密钥信息失败", nil)
 		return

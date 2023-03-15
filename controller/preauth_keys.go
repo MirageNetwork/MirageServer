@@ -43,16 +43,12 @@ type PreAuthKeyACLTag struct {
 
 // CreatePreAuthKey creates a new PreAuthKey in a user, and returns it.
 func (h *Mirage) CreatePreAuthKey(
-	userName string,
+	user *User,
 	reusable bool,
 	ephemeral bool,
 	expiration *time.Time,
 	aclTags []string,
 ) (*PreAuthKey, error) {
-	user, err := h.GetUser(userName)
-	if err != nil {
-		return nil, err
-	}
 
 	for _, tag := range aclTags {
 		if !strings.HasPrefix(tag, "tag:") {
@@ -108,14 +104,9 @@ func (h *Mirage) CreatePreAuthKey(
 }
 
 // ListPreAuthKeys returns the list of PreAuthKeys for a user.
-func (h *Mirage) ListPreAuthKeys(userName string) ([]PreAuthKey, error) {
-	user, err := h.GetUser(userName)
-	if err != nil {
-		return nil, err
-	}
-
+func (h *Mirage) ListPreAuthKeys(userID int64) ([]PreAuthKey, error) {
 	keys := []PreAuthKey{}
-	if err := h.db.Preload("User").Preload("ACLTags").Where(&PreAuthKey{UserID: user.ID}).Find(&keys).Error; err != nil {
+	if err := h.db.Preload("User").Preload("ACLTags").Where(&PreAuthKey{UserID: userID}).Find(&keys).Error; err != nil {
 		return nil, err
 	}
 

@@ -173,7 +173,7 @@ func (h *Mirage) expireEphemeralNodesWorker() {
 	}
 
 	for _, user := range users {
-		machines, err := h.ListMachinesByUser(user.Name)
+		machines, err := h.ListMachinesByUser(user.ID)
 		if err != nil {
 			log.Error().
 				Err(err).
@@ -218,7 +218,7 @@ func (h *Mirage) expireExpiredMachinesWorker() {
 	}
 
 	for _, user := range users {
-		machines, err := h.ListMachinesByUser(user.Name)
+		machines, err := h.ListMachinesByUser(user.ID)
 		if err != nil {
 			log.Error().
 				Err(err).

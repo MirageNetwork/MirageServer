@@ -57,13 +57,13 @@ func (h *Mirage) CAPIGetKeys(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
 
-	authKeys, err := h.ListPreAuthKeys(userName)
+	authKeys, err := h.ListPreAuthKeys(user.ID)
 	if err != nil {
 		h.doAPIResponse(w, "授权密钥查询失败", nil)
 		return
@@ -109,8 +109,8 @@ func (h *Mirage) CAPIPostKeys(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
@@ -125,7 +125,7 @@ func (h *Mirage) CAPIPostKeys(
 	case "authkey":
 		keyCfg := reqData.KeyData.Authkey
 		keyExpiration := time.Now().Add(time.Duration(reqData.KeyData.ExpirySeconds) * time.Second)
-		genedAuthKey, err := h.CreatePreAuthKey(userName, keyCfg.Reusable, keyCfg.Ephemeral, &keyExpiration, keyCfg.Tags)
+		genedAuthKey, err := h.CreatePreAuthKey(user, keyCfg.Reusable, keyCfg.Ephemeral, &keyExpiration, keyCfg.Tags)
 		if err != nil {
 			h.doAPIResponse(w, "授权密钥创建失败", nil)
 			return
@@ -145,9 +145,13 @@ func (h *Mirage) CAPIDelKeys(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败", nil)
+		return
+	}
 	targetKeyID := strings.TrimPrefix(r.URL.Path, "/admin/api/keys/")
-	allKeys, err := h.ListPreAuthKeys(userName)
+	allKeys, err := h.ListPreAuthKeys(user.ID)
 	if err != nil {
 		h.doAPIResponse(w, "查询用户密钥信息失败", nil)
 		return

@@ -20,8 +20,8 @@ func (h *Mirage) CAPIGetTags(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
@@ -51,8 +51,8 @@ func (h *Mirage) CAPIPostTags(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
@@ -96,8 +96,8 @@ func (h *Mirage) CAPIDelTags(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
