@@ -176,16 +176,17 @@ func (h *Mirage) DestroyUser(name, orgName string) error {
 }
 
 // Update User's node key expiry duration.
-func (h *Mirage) UpdateUserKeyExpiry(name, orgName string, newDuration uint) error {
-	var err error
-	user, err := h.GetUser(name, orgName)
-	if err != nil {
-		return err
-	}
+func (h *Mirage) UpdateUserKeyExpiry(user *User, newDuration uint) error {
 	if user.OrgId == 0 {
 		return ErrOrgNotFound
 	}
 	return h.UpdateOrgExpiry(user.OrgId, newDuration)
+}
+
+func (h *Mirage) CheckUserExistence(name, orgName string) (bool, error) {
+	var count int64
+	err := h.db.Model(&User{}).Where("name = ?", name).Where("org_name = ?", orgName).Count(&count).Error
+	return count > 0, err
 }
 
 // RenameUser renames a User. Returns error if the User does
@@ -200,12 +201,10 @@ func (h *Mirage) RenameUser(oldName, newName string, orgName string) error {
 	if err != nil {
 		return err
 	}
-	_, err = h.GetUser(newName, orgName)
-	if err == nil {
-		return ErrUserExists
-	}
-	if !errors.Is(err, ErrUserNotFound) {
+	if isEx, err := h.CheckUserExistence(newName, orgName); err != nil {
 		return err
+	} else if isEx {
+		return ErrUserExists
 	}
 
 	oldUser.Name = newName

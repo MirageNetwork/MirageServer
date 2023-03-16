@@ -489,7 +489,7 @@ func (h *Mirage) ConsoleUpdateKeyExpiryAPI(
 		h.doAPIResponse(writer, "从请求获取新值失败:"+err.Error(), nil)
 		return
 	}
-	err = h.UpdateUserKeyExpiry(user.Name, user.OrgName, uint(newExpiryDuration))
+	err = h.UpdateUserKeyExpiry(user, uint(newExpiryDuration))
 	if err != nil {
 		h.doAPIResponse(writer, "更新密钥过期时长失败:"+err.Error(), nil)
 		return
