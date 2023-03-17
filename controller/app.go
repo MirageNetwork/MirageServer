@@ -77,6 +77,7 @@ type Mirage struct {
 	stateCodeCache          *cache.Cache
 	controlCodeCache        *cache.Cache
 	machineControlCodeCache *cache.Cache
+	organizationCache       *cache.Cache
 
 	longPollChanPool map[string]chan string
 

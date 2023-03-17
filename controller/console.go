@@ -315,8 +315,20 @@ func (h *Mirage) ConsoleMachinesAPI(
 		}
 		// 处理标签部分
 		if machine.ForcedTags != nil && len(machine.ForcedTags) > 0 {
+			org, err := h.GetOrgnaizationByName(user.OrgName)
+			if err != nil {
+				errRes := adminTemplateConfig{ErrorMsg: "查询设备组织失败"}
+				err = json.NewEncoder(writer).Encode(&errRes)
+				if err != nil {
+					log.Error().
+						Caller().
+						Err(err).
+						Msg("Failed to write response")
+				}
+				return
+			}
 			for _, tag := range machine.ForcedTags {
-				if _, ok := h.aclPolicy.TagOwners[tag]; ok {
+				if _, ok := org.AclPolicy.TagOwners[tag]; ok {
 					tmpMachine.AllowedTags = append(tmpMachine.AllowedTags, tag)
 				} else {
 					tmpMachine.InvalidTags = append(tmpMachine.InvalidTags, tag)
@@ -630,8 +642,12 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 		} else {
 			invalidTags := []string{}
 			allowedTags := []string{}
+			org, err := h.GetOrgnaizationByName(user.OrgName)
+			if err != nil {
+				h.doAPIResponse(writer, msg, nil)
+			}
 			for _, tag := range setTags {
-				if _, ok := h.aclPolicy.TagOwners[tag]; ok {
+				if _, ok := org.AclPolicy.TagOwners[tag]; ok {
 					allowedTags = append(allowedTags, tag)
 				} else {
 					invalidTags = append(invalidTags, tag)

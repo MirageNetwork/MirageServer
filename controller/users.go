@@ -103,11 +103,11 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string) (*User,
 		var trxErr error
 		//个人用户: userName 和 orgName相同
 		if user.Name == orgName {
-			org, trxErr = CreateOrgnaizationInTx(tx, orgName)
+			org, trxErr = CreateOrgnaizationInTx(tx, orgName, h.aclPolicy)
 			user.Role = RoleAdmin
 		} else {
 			//企业用户,需要先查询orgName是否存在
-			org, trxErr = GetOrgnaizationByNameInTx(tx, orgName)
+			org, _, trxErr = GetOrgnaizationByNameInTx(tx, orgName, h.organizationCache)
 			if trxErr == nil && org.ID == 0 {
 				trxErr = ErrOrgNotFound
 			}
@@ -168,7 +168,8 @@ func (h *Mirage) DestroyUser(name, orgName string) error {
 			return err
 		}
 		if !user.IsBelongToOrg {
-			err = DestroyOrgnaizationInTx(tx, user.OrgId)
+			err = DestroyOrgnaizationInTx(tx, orgName)
+			h.organizationCache.Delete(orgName)
 		}
 		//TODO Organization 删除失败是否回滚
 		return nil
@@ -177,10 +178,10 @@ func (h *Mirage) DestroyUser(name, orgName string) error {
 
 // Update User's node key expiry duration.
 func (h *Mirage) UpdateUserKeyExpiry(user *User, newDuration uint) error {
-	if user.OrgId == 0 {
+	if user == nil || user.OrgId == 0 {
 		return ErrOrgNotFound
 	}
-	return h.UpdateOrgExpiry(user.OrgId, newDuration)
+	return h.UpdateOrgExpiry(user, newDuration)
 }
 
 func (h *Mirage) CheckUserExistence(name, orgName string) (bool, error) {

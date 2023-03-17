@@ -75,6 +75,10 @@ func (h *Mirage) SaveACLPolicy(path string) error {
 	return nil
 }
 
+func (h *Mirage) SaveACLPolicyOfOrg(org *Organization) error {
+	return h.db.Select("AclPolicy").Save(org).Error
+}
+
 // LoadACLPolicy loads the ACL policy from the specify path, and generates the ACL rules.
 func (h *Mirage) LoadACLPolicy(path string) error {
 	log.Debug().
@@ -165,6 +169,126 @@ func (h *Mirage) UpdateACLRules() error {
 	}
 
 	return nil
+}
+
+func (h *Mirage) UpdateACLRulesOfOrg(org *Organization) error {
+	if org == nil || org.AclPolicy == nil || org.ID == 0 {
+		return errEmptyPolicy
+	}
+	machines, err := h.ListMachinesByOrgID(org.ID)
+	if err != nil {
+		return err
+	}
+	rules, err := h.generateACLRules(machines, *org.AclPolicy, h.cfg.OIDC.StripEmaildomain)
+	if err != nil {
+		return err
+	}
+	log.Trace().Interface("ACL", rules).Msg("ACL rules generated")
+	org.AclRules = rules
+
+	if featureEnableSSH() {
+		sshRules, err := h.generateSSHRulesOfOrg(machines, org)
+		if err != nil {
+			return err
+		}
+		log.Trace().Interface("SSH", sshRules).Msg("SSH rules generated")
+		if org.SshPolicy == nil {
+			org.SshPolicy = &tailcfg.SSHPolicy{}
+		}
+		org.SshPolicy.Rules = sshRules
+	} else if org.AclPolicy != nil && len(org.AclPolicy.SSHs) > 0 {
+		log.Info().Msg("SSH ACLs has been defined, but MIRAGE_EXPERIMENTAL_FEATURE_SSH is not enabled, this is a unstable feature, check docs before activating")
+	}
+
+	return nil
+}
+
+func (h *Mirage) generateSSHRulesOfOrg(machines []Machine, org *Organization) ([]*tailcfg.SSHRule, error) {
+	if org == nil || org.ID == 0 {
+		return nil, ErrOrgNotFound
+	}
+	a := org.AclPolicy
+	if a == nil {
+		return nil, errEmptyPolicy
+	}
+
+	rules := []*tailcfg.SSHRule{}
+
+	acceptAction := tailcfg.SSHAction{
+		Message:                  "",
+		Reject:                   false,
+		Accept:                   true,
+		SessionDuration:          0,
+		AllowAgentForwarding:     false,
+		HoldAndDelegate:          "",
+		AllowLocalPortForwarding: true,
+	}
+
+	rejectAction := tailcfg.SSHAction{
+		Message:                  "",
+		Reject:                   true,
+		Accept:                   false,
+		SessionDuration:          0,
+		AllowAgentForwarding:     false,
+		HoldAndDelegate:          "",
+		AllowLocalPortForwarding: false,
+	}
+
+	for index, sshACL := range a.SSHs {
+		action := rejectAction
+		switch sshACL.Action {
+		case "accept":
+			action = acceptAction
+		case "check":
+			checkAction, err := sshCheckAction(sshACL.CheckPeriod)
+			if err != nil {
+				log.Error().
+					Msgf("Error parsing SSH %d, check action with unparsable duration '%s'", index, sshACL.CheckPeriod)
+			} else {
+				action = *checkAction
+			}
+		default:
+			log.Error().
+				Msgf("Error parsing SSH %d, unknown action '%s'", index, sshACL.Action)
+
+			return nil, fmt.Errorf("Error parsing SSH %d, unknown action '%s'", index, sshACL.Action)
+		}
+
+		principals := make([]*tailcfg.SSHPrincipal, 0, len(sshACL.Sources))
+		for innerIndex, rawSrc := range sshACL.Sources {
+			expandedSrcs, err := h.expandAlias(
+				false,
+				machines,
+				*a,
+				rawSrc,
+				h.cfg.OIDC.StripEmaildomain,
+			)
+			if err != nil {
+				log.Error().
+					Msgf("Error parsing SSH %d, Source %d", index, innerIndex)
+
+				return nil, err
+			}
+			for _, expandedSrc := range expandedSrcs {
+				principals = append(principals, &tailcfg.SSHPrincipal{
+					NodeIP: expandedSrc,
+				})
+			}
+		}
+
+		userMap := make(map[string]string, len(sshACL.Users))
+		for _, user := range sshACL.Users {
+			userMap[user] = "="
+		}
+		rules = append(rules, &tailcfg.SSHRule{
+			RuleExpires: nil,
+			Principals:  principals,
+			SSHUsers:    userMap,
+			Action:      &action,
+		})
+	}
+
+	return rules, nil
 }
 
 func (h *Mirage) generateACLRules(

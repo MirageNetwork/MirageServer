@@ -285,7 +285,23 @@ func (h *Mirage) ListPeers(machine *Machine) (Machines, error) {
 		Msg("Finding direct peers")
 
 	machines := Machines{}
-	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Where("node_key <> ?",
+	orgId := machine.User.OrgId
+	if orgId == 0 {
+		return h.ListMachines()
+	}
+	userIds := []int64{}
+	h.db.Model(&User{}).Where("org_id = ?", orgId).Select("id").Find(&userIds)
+	if len(userIds) == 0 {
+		return machines, nil
+	}
+	scopeFunc := func(tx *gorm.DB) *gorm.DB {
+		if len(userIds) == 1 {
+			return tx.Where("user_id = ?", userIds[0])
+		} else {
+			return tx.Where("user_id in ?", userIds)
+		}
+	}
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Scopes(scopeFunc).Where("node_key <> ?",
 		machine.NodeKey).Find(&machines).Error; err != nil {
 		log.Error().Err(err).Msg("Error accessing db")
 
@@ -309,15 +325,21 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 
 	// If ACLs rules are defined, filter visible host list with the ACLs
 	// else use the classic user scope
-	if h.aclPolicy != nil {
+	if machine.User.Org.AclPolicy != nil {
+		org, err := h.GetOrgnaizationByName(machine.User.OrgName)
+		if err != nil {
+			log.Error().Err(err).Msg("Error retrieving organization of machine")
+
+			return Machines{}, []tailcfg.NodeID{}, err
+		}
 		var machines []Machine
-		machines, err = h.ListMachines()
+		machines, err = h.ListMachinesByOrgID(org.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Error retrieving list of machines")
 
 			return Machines{}, []tailcfg.NodeID{}, err
 		}
-		peers, invalidNodeIDs = getFilteredByACLPeers(machines, h.aclRules, machine)
+		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, machine)
 	} else {
 		peers, err = h.ListPeers(machine)
 		if err != nil {
@@ -370,6 +392,30 @@ func (h *Mirage) ListMachines() ([]Machine, error) {
 func (h *Mirage) ListMachinesByGivenName(givenName string) ([]Machine, error) {
 	machines := []Machine{}
 	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Where("given_name = ?", givenName).Find(&machines).Error; err != nil {
+		return nil, err
+	}
+
+	return machines, nil
+}
+
+func (h *Mirage) ListMachinesByOrgID(orgId int64) ([]Machine, error) {
+	if orgId == 0 {
+		return h.ListMachines()
+	}
+	machines := []Machine{}
+	userIds := []int64{}
+	h.db.Model(&User{}).Where("org_id = ?", orgId).Select("id").Find(&userIds)
+	if len(userIds) == 0 {
+		return machines, nil
+	}
+	scopeFunc := func(tx *gorm.DB) *gorm.DB {
+		if len(userIds) == 1 {
+			return tx.Where("user_id = ?", userIds[0])
+		} else {
+			return tx.Where("user_id in ?", userIds)
+		}
+	}
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Scopes(scopeFunc).Find(&machines).Error; err != nil {
 		return nil, err
 	}
 
@@ -916,7 +962,7 @@ func (h *Mirage) toNode(
 
 	online := machine.isOnline()
 
-	tags, _ := getTags(h.aclPolicy, machine, h.cfg.OIDC.StripEmaildomain)
+	tags, _ := getTags(machine.User.Org.AclPolicy, machine, h.cfg.OIDC.StripEmaildomain)
 	tags = lo.Uniq(append(tags, machine.ForcedTags...))
 
 	node := tailcfg.Node{
@@ -1214,7 +1260,10 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 	approvedRoutes := []Route{}
 
 	for _, advertisedRoute := range routes {
-		routeApprovers, err := h.aclPolicy.AutoApprovers.GetRouteApprovers(
+		if machine.User.Org.AclPolicy == nil {
+			continue
+		}
+		routeApprovers, err := machine.User.Org.AclPolicy.AutoApprovers.GetRouteApprovers(
 			netip.Prefix(advertisedRoute.Prefix),
 		)
 		if err != nil {
@@ -1230,7 +1279,7 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 			if approvedAlias == machine.User.Name {
 				approvedRoutes = append(approvedRoutes, advertisedRoute)
 			} else {
-				approvedIps, err := h.expandAlias(false, []Machine{*machine}, *h.aclPolicy, approvedAlias, h.cfg.OIDC.StripEmaildomain)
+				approvedIps, err := h.expandAlias(false, []Machine{*machine}, *(machine.User.Org.AclPolicy), approvedAlias, h.cfg.OIDC.StripEmaildomain)
 				if err != nil {
 					log.Err(err).
 						Str("alias", approvedAlias).
