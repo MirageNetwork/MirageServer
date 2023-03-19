@@ -69,6 +69,9 @@ func (h *Mirage) CAPIPostTags(
 			h.doAPIResponse(w, "occupied", nil)
 			return
 		}
+		if h.aclPolicy.TagOwners == nil {
+			h.aclPolicy.TagOwners = map[string][]string{}
+		}
 		h.aclPolicy.TagOwners["tag:"+reqData.TagName] = reqData.Owners
 		aclPath := AbsolutePathFromConfigPath(ACLPath)
 		err := h.SaveACLPolicy(aclPath)
