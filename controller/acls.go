@@ -75,6 +75,18 @@ func (h *Mirage) SaveACLPolicy(path string) error {
 	return nil
 }
 
+func (h *Mirage) CreateDefaultACLPolicy() error {
+	h.aclPolicy = &ACLPolicy{
+		ACLs: []ACL{{
+			Action:       "accept",
+			Protocol:     "",
+			Sources:      []string{"*"},
+			Destinations: []string{"*:*"},
+		}},
+	}
+	return h.UpdateACLRules()
+}
+
 // LoadACLPolicy loads the ACL policy from the specify path, and generates the ACL rules.
 func (h *Mirage) LoadACLPolicy(path string) error {
 	log.Debug().

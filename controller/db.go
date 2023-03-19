@@ -14,6 +14,10 @@ import (
 	"tailscale.com/tailcfg"
 )
 
+type DataPool struct {
+	db *gorm.DB
+}
+
 const (
 	dbVersion = "1"
 
@@ -21,34 +25,40 @@ const (
 	ErrCannotParsePrefix = Error("cannot parse prefix")
 )
 
-func (h *Mirage) initDB() error {
-	db, err := h.openDB()
+func (dp *DataPool) DB() *gorm.DB {
+	return dp.db
+}
+
+func (dp *DataPool) InitCockpitDB() error {
+	err := dp.db.AutoMigrate(&SysConfig{})
 	if err != nil {
 		return err
 	}
-	h.db = db
+	return err
+}
 
-	err = db.AutoMigrate(&User{})
-	if err != nil {
-		return err
-	}
-
-	err = db.AutoMigrate(&Route{})
-	if err != nil {
-		return err
-	}
-
-	err = db.AutoMigrate(&Machine{})
+func (dp *DataPool) InitMirageDB() error {
+	err := dp.db.AutoMigrate(&User{})
 	if err != nil {
 		return err
 	}
 
-	err = db.AutoMigrate(&PreAuthKey{})
+	err = dp.db.AutoMigrate(&Route{})
 	if err != nil {
 		return err
 	}
 
-	err = db.AutoMigrate(&PreAuthKeyACLTag{})
+	err = dp.db.AutoMigrate(&Machine{})
+	if err != nil {
+		return err
+	}
+
+	err = dp.db.AutoMigrate(&PreAuthKey{})
+	if err != nil {
+		return err
+	}
+
+	err = dp.db.AutoMigrate(&PreAuthKeyACLTag{})
 	if err != nil {
 		return err
 	}
@@ -56,14 +66,11 @@ func (h *Mirage) initDB() error {
 	return err
 }
 
-func (h *Mirage) openDB() (*gorm.DB, error) {
-	var db *gorm.DB
-	var err error
-
+func (dp *DataPool) OpenDB() error {
 	var log logger.Interface
 	log = logger.Default.LogMode(logger.Silent)
 
-	db, err = gorm.Open(
+	db, err := gorm.Open(
 		sqlite.Open(AbsolutePathFromConfigPath(DatabasePath)+"?_synchronous=1&_journal_mode=WAL"),
 		&gorm.Config{
 			DisableForeignKeyConstraintWhenMigrating: true,
@@ -82,16 +89,17 @@ func (h *Mirage) openDB() (*gorm.DB, error) {
 	sqlDB.SetConnMaxIdleTime(time.Hour)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
+	dp.db = db
 
-	return db, nil
+	return nil
 }
 
-func (h *Mirage) pingDB(ctx context.Context) error {
+func (dp *DataPool) pingDB(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	db, err := h.db.DB()
+	db, err := dp.db.DB()
 	if err != nil {
 		return err
 	}
@@ -127,6 +135,10 @@ func (hi HostInfo) Value() (driver.Value, error) {
 }
 
 type IPPrefix netip.Prefix
+
+func (i IPPrefix) String() string {
+	return netip.Prefix(i).String()
+}
 
 func (i *IPPrefix) Scan(destination interface{}) error {
 	switch value := destination.(type) {

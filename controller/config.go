@@ -1,17 +1,11 @@
 package controller
 
 import (
-	"errors"
+	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"net/netip"
-	"os"
-	"strings"
 	"time"
-
-	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
-	"go4.org/netipx"
 )
 
 const (
@@ -22,20 +16,16 @@ const (
 	maxDuration           time.Duration = 1<<63 - 1
 )
 
-var errOidcMutuallyExclusive = errors.New(
-	"oidc_client_secret and oidc_client_secret_path are mutually exclusive",
-)
-
 // Config contains the initial Mirage configuration.
 type Config struct {
-	ServerURL  string
-	Addr       string
-	IPPrefixes []netip.Prefix
-	BaseDomain string
+	ServerURL  string         //DONE
+	Addr       string         //DONE
+	IPPrefixes []netip.Prefix //DONE
+	BaseDomain string         //DONE
 
-	AllowRouteDueToMachine bool
+	AllowRouteDueToMachine bool //DONE
 
-	DERPURL string
+	DERPURL string //DONE
 
 	ESURL string
 	ESKey string
@@ -44,34 +34,87 @@ type Config struct {
 
 	wxScanURL string
 
-	ali_IDaaS ALIConfig
-
-	org_name string
+	IDaaS ALIConfig
+	SMS   SMSConfig
 }
+
+type SMSConfig struct {
+	ID       string `json:"id"`
+	Key      string `json:"key"`
+	Sign     string `json:"sign"`
+	Template string `json:"template"`
+}
+
+func (ac *SMSConfig) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, ac)
+	case string:
+		return json.Unmarshal([]byte(v), ac)
+	default:
+		return fmt.Errorf("cannot parse SMS Config: unexpected data type %T", value)
+	}
+}
+
+func (ac SMSConfig) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(ac)
+	return string(bytes), err
+}
+
 type ALIConfig struct {
-	ali_app_id       string
-	ali_cli_id       string
-	ali_cli_key      string
-	ali_instance     string
-	ali_org_id       string
-	ali_access_id    string
-	ali_access_key   string
-	ali_sms_sign     string
-	ali_sms_template string
+	App       string `json:"app"`
+	ClientID  string `json:"id"`
+	ClientKey string `json:"key"`
+	Instance  string `json:"instance"`
+	OrgID     string `json:"org"`
+}
+
+func (ac *ALIConfig) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, ac)
+	case string:
+		return json.Unmarshal([]byte(v), ac)
+	default:
+		return fmt.Errorf("cannot parse Ali IDaaS Config: unexpected data type %T", value)
+	}
+}
+
+func (ac ALIConfig) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(ac)
+	return string(bytes), err
 }
 
 type OIDCConfig struct {
-	Issuer           string
-	ClientID         string
-	ClientSecret     string
-	Scope            []string
-	ExtraParams      map[string]string
-	StripEmaildomain bool
+	Issuer           string            `json:"issuer"`
+	ClientID         string            `json:"id"`
+	ClientSecret     string            `json:"key"`
+	Scope            []string          `json:"scope"`
+	ExtraParams      map[string]string `json:"extra"`
+	StripEmaildomain bool              `json:"strip_flag"`
 }
 
+func (ac *OIDCConfig) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, ac)
+	case string:
+		return json.Unmarshal([]byte(v), ac)
+	default:
+		return fmt.Errorf("cannot parse OIDC Config: unexpected data type %T", value)
+	}
+}
+
+func (ac OIDCConfig) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(ac)
+	return string(bytes), err
+}
+
+/*
 type ACLConfig struct {
 	PolicyPath string
 }
+
 
 func LoadConfig() error {
 	viper.SetConfigName("config")
@@ -112,7 +155,7 @@ func GetBasedomain() string {
 	return baseDomain
 }
 
-func GetMirageConfig() (*Config, error) {
+func GetMirageConfig(srvAddr, serverURL string) (*Config, error) {
 
 	baseDomain := GetBasedomain()
 
@@ -150,23 +193,9 @@ func GetMirageConfig() (*Config, error) {
 
 	wxScanAdapterURL := viper.GetString("wxscan.url")
 
-	oidcClientSecret := viper.GetString("oidc.client_secret")
-	oidcClientSecretPath := viper.GetString("oidc.client_secret_path")
-	if oidcClientSecretPath != "" && oidcClientSecret != "" {
-		return nil, errOidcMutuallyExclusive
-	}
-	if oidcClientSecretPath != "" {
-		secretBytes, err := os.ReadFile(os.ExpandEnv(oidcClientSecretPath))
-		if err != nil {
-			return nil, err
-		}
-		oidcClientSecret = string(secretBytes)
-	}
-
 	return &Config{
-		ServerURL: viper.GetString("server_url"),
-		Addr:      viper.GetString("listen_addr"),
-
+		ServerURL:  serverURL,
+		Addr:       srvAddr,
 		IPPrefixes: prefixes,
 
 		BaseDomain:             baseDomain,
@@ -178,26 +207,28 @@ func GetMirageConfig() (*Config, error) {
 		ESKey: viper.GetString("es_apikey"),
 
 		OIDC: OIDCConfig{
-			Issuer:           viper.GetString("oidc.issuer"),
-			ClientID:         viper.GetString("oidc.client_id"),
-			ClientSecret:     oidcClientSecret,
-			Scope:            viper.GetStringSlice("oidc.scope"),
-			ExtraParams:      viper.GetStringMapString("oidc.extra_params"),
-			StripEmaildomain: viper.GetBool("oidc.strip_email_domain"),
+			Issuer:           viper.GetString("ali.issuer"),
+			ClientID:         viper.GetString("ali.client_id"),
+			ClientSecret:     viper.GetString("ali.client_secret"),
+			Scope:            viper.GetStringSlice("ali.scope"),
+			ExtraParams:      viper.GetStringMapString("ali.extra_params"),
+			StripEmaildomain: viper.GetBool("ali.strip_email_domain"),
 		},
 		wxScanURL: wxScanAdapterURL,
 
-		ali_IDaaS: ALIConfig{
-			ali_app_id:       viper.GetString("ali_app_id"),
-			ali_cli_id:       viper.GetString("ali_cli_id"),
-			ali_cli_key:      viper.GetString("ali_cli_key"),
-			ali_instance:     viper.GetString("ali_instance"),
-			ali_org_id:       viper.GetString("ali_org_id"),
-			ali_access_id:    viper.GetString("ali_access_id"),
-			ali_access_key:   viper.GetString("ali_access_key"),
-			ali_sms_sign:     viper.GetString("ali_sms_sign"),
-			ali_sms_template: viper.GetString("ali_sms_template"),
+		IDaaS: ALIConfig{
+			App:       viper.GetString("idaas.app_id"),
+			ClientID:  viper.GetString("idaas.cli_id"),
+			ClientKey: viper.GetString("idaas.cli_key"),
+			Instance:  viper.GetString("idaas.instance"),
+			OrgID:     viper.GetString("idaas.org_id"),
 		},
-		org_name: viper.GetString("org_name"),
+		SMS: SMSConfig{
+			ID:       viper.GetString("sms.access_id"),
+			Key:      viper.GetString("sms.access_key"),
+			Sign:     viper.GetString("sms.sms_sign"),
+			Template: viper.GetString("sms.sms_template"),
+		},
 	}, nil
 }
+*/

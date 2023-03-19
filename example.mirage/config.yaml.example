@@ -47,5 +47,3 @@ ali_access_key: <Key>
 ali_sms_sign: <短信发送服务签名>
 ali_sms_template: <短信发送服务模板>
 
-# 组织（目前默认为个人用户，Personal代表每个用户独立成组织）
-org_name: "Personal"

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -17,32 +16,12 @@ const (
 	SocketWritePermissions = 0o666
 )
 
-func getMirageApp() (*controller.Mirage, error) {
-	cfg, err := controller.GetMirageConfig()
-	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to load configuration while creating mirage instance: %w",
-			err,
-		)
-	}
-
-	app, err := controller.NewMirage(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	aclPath := controller.AbsolutePathFromConfigPath(controller.ACLPath)
-	err = app.LoadACLPolicy(aclPath)
-	if err != nil {
-		log.Fatal().
-			Str("path", aclPath).
-			Err(err).
-			Msg("Could not load the ACL policy")
-	}
-	return app, nil
-}
-
 func main() {
+	sysAddr, set := os.LookupEnv("MIRAGE_SYS_ADDR")
+	if !set {
+		sysAddr = ":8081"
+	}
+
 	var colors bool
 	switch l := termcolor.SupportLevel(os.Stderr); l {
 	case termcolor.Level16M:
@@ -71,18 +50,98 @@ func main() {
 		NoColor:    !colors,
 	})
 
-	err := controller.LoadConfig()
+	datapool := controller.DataPool{}
+	err := datapool.OpenDB()
 	if err != nil {
-		log.Fatal().Caller().Err(err).Msgf("Error loading config")
+		log.Fatal().Caller().Err(err).Msg("Error opening database")
 	}
 
-	app, err := getMirageApp()
+	ctrlChn := make(chan controller.CtrlMsg)
+	msgChn := make(chan controller.CtrlMsg)
+	err = datapool.InitCockpitDB()
 	if err != nil {
-		log.Fatal().Caller().Err(err).Msg("Error initializing")
+		log.Fatal().Caller().Err(err).Msg("Error initializing cockpit database")
+	}
+	cockpit, err := controller.NewCockpit(sysAddr, ctrlChn, msgChn, datapool.DB())
+	if err != nil {
+		log.Fatal().Caller().Err(err).Msg("Error initializing cockpit")
 	}
 
-	err = app.Serve()
-	if err != nil {
-		log.Fatal().Caller().Err(err).Msg("Error starting server")
+	go cockpit.Run()
+
+	log.Info().Caller().Msg("Cockpit is ready on " + sysAddr + "")
+
+	/*
+		err = controller.LoadConfig()
+		if err != nil {
+			log.Fatal().Caller().Err(err).Msgf("Error loading config")
+		}
+
+		cfg, err := controller.GetMirageConfig(srvAddr, serverURL)
+		if err != nil {
+			log.Fatal().Caller().Err(err).Msgf("Error loading config")
+		}
+	*/
+	for {
+		select {
+		case cockpitMsg := <-ctrlChn:
+			log.Trace().Caller().Msgf("Cockpit message received: %s", cockpitMsg.Msg)
+			switch cockpitMsg.Msg {
+			case "start":
+				err = datapool.InitMirageDB()
+				if err != nil {
+					log.Error().Caller().Err(err).Msgf("Error initializing Mirage DB")
+					msgChn <- controller.CtrlMsg{
+						Msg: "error",
+						Err: err,
+					}
+					break
+				}
+
+				app, err := controller.NewMirage(cockpitMsg.SysCfg, datapool.DB())
+				if err != nil {
+					log.Error().Caller().Err(err).Msg("Error initializing Mirage")
+					msgChn <- controller.CtrlMsg{
+						Msg: "error",
+						Err: err,
+					}
+					break
+				}
+
+				aclPath := controller.AbsolutePathFromConfigPath(controller.ACLPath)
+				if _, err = os.Stat(aclPath); err == nil {
+					err = app.LoadACLPolicy(aclPath)
+					if err != nil {
+						log.Error().Caller().Err(err).Msg("Error loading ACL policy")
+						msgChn <- controller.CtrlMsg{
+							Msg: "error",
+							Err: err,
+						}
+						break
+					}
+				} else {
+					log.Warn().Caller().Err(err).Msg("ACL policy not found: " + aclPath + " Will create default ACL policy")
+					err = app.CreateDefaultACLPolicy()
+					if err != nil {
+						log.Error().Caller().Err(err).Msg("Error creating default ACL policy")
+						msgChn <- controller.CtrlMsg{
+							Msg: "error",
+							Err: err,
+						}
+						break
+					}
+				}
+
+				err = app.Serve(ctrlChn)
+				if err != nil {
+					log.Error().Caller().Err(err).Msg("Error starting server")
+					msgChn <- controller.CtrlMsg{
+						Msg: "error",
+						Err: err,
+					}
+					break
+				}
+			}
+		}
 	}
 }
