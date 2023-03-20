@@ -568,6 +568,21 @@ func (h *Mirage) GetMachineByID(id int64) (*Machine, error) {
 	return &m, nil
 }
 
+// GetMachineOrgID finds a Machine's Org.
+func (h *Mirage) GetMachineOrgByID(machine *Machine) (*Organization, error) {
+	user := User{}
+	err := h.db.Where("id = ?", machine.UserID).Take(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	org := Organization{}
+	err = h.db.Where("id = ?", user.OrgId).Take(&org).Error
+	if err != nil {
+		return nil, err
+	}
+	return &org, nil
+}
+
 // GetMachineByMachineKey finds a Machine by its MachineKey and returns the Machine struct.
 func (h *Mirage) GetMachineByMachineKey(
 	machineKey key.MachinePublic,
@@ -620,6 +635,10 @@ func (h *Mirage) UpdateMachineFromDatabase(machine *Machine) error {
 
 // SetTags takes a Machine struct pointer and update the forced tags.
 func (h *Mirage) SetTags(machine *Machine, tags []string) error {
+	org, err := h.GetMachineOrgByID(machine)
+	if err != nil {
+		return fmt.Errorf("failed to update tags for machine in the database: %w", err)
+	}
 	newTags := []string{}
 	for _, tag := range tags {
 		if !contains(newTags, tag) {
@@ -627,9 +646,10 @@ func (h *Mirage) SetTags(machine *Machine, tags []string) error {
 		}
 	}
 	machine.ForcedTags = newTags
-	if err := h.UpdateACLRules(); err != nil && !errors.Is(err, errEmptyPolicy) {
+	if err := h.UpdateACLRulesOfOrg(org); err != nil && !errors.Is(err, errEmptyPolicy) {
 		return err
 	}
+	h.organizationCache.Set(org.Name, *org, -1)
 	h.setLastStateChangeToNow()
 
 	if err := h.db.Save(machine).Error; err != nil {

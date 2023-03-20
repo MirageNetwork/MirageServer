@@ -20,9 +20,10 @@ type Organization struct {
 	ID             int64  `gorm:"primary_key;unique;not null"`
 	StableID       string `gorm:"unique"`
 	Name           string `gorm:"unique"`
-	ExpiryDuration uint   `gorm:"default:180"`
-	EnableMagic    bool   `gorm:"default:false"`
-	OverrideLocal  bool   `gorm:"default:false"`
+	DisplayName    string
+	ExpiryDuration uint `gorm:"default:180"`
+	EnableMagic    bool `gorm:"default:false"`
+	OverrideLocal  bool `gorm:"default:false"`
 	Nameservers    StringList
 	SplitDns       SplitDNS
 	AclPolicy      *ACLPolicy
