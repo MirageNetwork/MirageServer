@@ -567,23 +567,12 @@ func (c *Cockpit) SetSettingGeneral(
 			c.doAPIResponse(w, "更新系统配置失败", nil)
 			return
 		}
-	case "set-esurl":
+	case "set-es":
 		esURL, ok := reqData["ESURL"].(string)
 		if !ok {
 			c.doAPIResponse(w, "用户请求ESURL解析失败", nil)
 			return
 		}
-		sysCfg := c.GetSysCfg()
-		if sysCfg == nil {
-			c.doAPIResponse(w, "获取系统配置失败", nil)
-			return
-		}
-		sysCfg.EsUrl = esURL
-		if err := c.db.Save(sysCfg).Error; err != nil {
-			c.doAPIResponse(w, "更新系统配置失败", nil)
-			return
-		}
-	case "set-eskey":
 		esKey, ok := reqData["ESKey"].(string)
 		if !ok {
 			c.doAPIResponse(w, "用户请求ESKey解析失败", nil)
@@ -594,6 +583,7 @@ func (c *Cockpit) SetSettingGeneral(
 			c.doAPIResponse(w, "获取系统配置失败", nil)
 			return
 		}
+		sysCfg.EsUrl = esURL
 		sysCfg.EsKey = esKey
 		if err := c.db.Save(sysCfg).Error; err != nil {
 			c.doAPIResponse(w, "更新系统配置失败", nil)
