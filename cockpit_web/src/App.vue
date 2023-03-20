@@ -6,6 +6,13 @@ import UserMenu from "./components/UserMenu.vue";
 const router = useRouter();
 const route = useRoute();
 
+router.afterEach((to, from) => {
+  getServiceState();
+  console.log("route changed: current route is " + currentRoute.value);
+  console.log("needRegister: " + needRegister.value);
+  console.log("needReauth: " + needReauth.value);
+});
+
 //界面控制部分
 const userAvatar = ref(null);
 const avatarLeft = ref(0);
@@ -392,8 +399,12 @@ function doLogout() {
   </div>
   <router-view
     v-if="
-      ((currentRoute == 'login' || !needReauth) && !needRegister) ||
-      currentRoute == 'regAdmin'
+      (currentRoute != 'login' &&
+        currentRoute != 'regAdmin' &&
+        !needReauth &&
+        !needRegister) ||
+      (currentRoute == 'login' && needReauth) ||
+      (currentRoute == 'regAdmin' && needRegister)
     "
   ></router-view>
   <main
@@ -404,7 +415,7 @@ function doLogout() {
     class="container mx-auto pb-20 md:pb-24"
   >
     <section class="mb-24">
-      <div class="w-full p-3 flex items-center justify-center text-sm">
+      <div class="w-full p-3 flex flex-col items-center justify-center text-sm">
         <div class="flex items-center justify-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -423,6 +434,13 @@ function doLogout() {
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
           </svg>
           <div><strong>错误：</strong> {{ netErrMsg }}</div>
+        </div>
+
+        <div
+          v-if="currentRoute == 'regAdmin' && !needRegister"
+          class="flex items-center justify-center text-xl mt-4"
+        >
+          <strong>系统已绑定超级管理员，请登录后在超管驾驶舱修改绑定</strong>
         </div>
       </div>
     </section>

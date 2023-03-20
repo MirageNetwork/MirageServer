@@ -3,12 +3,13 @@ import { ref, computed, nextTick, onMounted, watch, watchEffect } from "vue";
 import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import General from "./setpart/General.vue";
 import Authority from "./setpart/Authority.vue";
+import RebindSA from "./setpart/RebindSA.vue";
 
 //路由及选择器页面控制
 const setPartContent = {
   general: General,
   authority: Authority,
-  option3: General,
+  rebindSA: RebindSA,
 };
 const route = useRoute();
 const router = useRouter();
@@ -92,11 +93,11 @@ onMounted(() => {
               <router-link
                 class="flex font-medium mt-4"
                 :class="{
-                  'text-blue-600': currentSetPart == 'option3',
-                  'text-gray-700': currentSetPart != 'option3',
+                  'text-blue-600': currentSetPart == 'rebindSA',
+                  'text-gray-700': currentSetPart != 'rebindSA',
                 }"
-                to="/setting/option3"
-                >暂无内容</router-link
+                to="/setting/rebindSA"
+                >换绑超管</router-link
               >
             </div>
           </div>
@@ -112,7 +113,7 @@ onMounted(() => {
               <option value="authority">第三方服务</option>
             </optgroup>
             <optgroup label="其他配置">
-              <option value="option3">暂无内容</option>
+              <option value="rebindSA">换绑超管</option>
             </optgroup>
           </select>
         </div>

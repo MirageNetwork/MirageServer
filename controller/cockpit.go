@@ -208,10 +208,14 @@ func (c *Cockpit) RegisterAdmin(
 			c.doAPIResponse(w, "创建超管凭证失败", nil)
 			return
 		}
-		newSysCfg := &SysConfig{
-			AdminCredential: AdminCredential(*credential),
+		newSysCfg := c.GetSysCfg()
+		if newSysCfg != nil {
+			newSysCfg.AdminCredential = AdminCredential(*credential)
+		} else {
+			newSysCfg = &SysConfig{
+				AdminCredential: AdminCredential(*credential),
+			}
 		}
-
 		c.db.Save(newSysCfg)
 		c.superAdmin, c.hasAdmin = c.GetAdmin()
 		if !c.hasAdmin {
