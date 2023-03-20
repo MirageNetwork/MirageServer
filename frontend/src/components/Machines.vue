@@ -242,6 +242,14 @@ function tagsUpdateFail(msg) {
   toastMsg.value = "更新设备标签失败！" + msg
   toastShow.value = true
 }
+function isInvalidTag(tag) {
+  for (var i in tagOwners.value) {
+    if (tagOwners.value[i].tagName == tag) {
+      return false
+    }
+  }
+  return true
+}
 
 function subnetUpdateDone(newAllIPs, newAllowedIPs, newExtraIPs, newEnExitNode) {
   MList.value[currentMID.value]["advertisedIPs"] = newAllIPs
@@ -327,21 +335,19 @@ function copyMIPv6() {
                   </div>
                   <div v-if="m.hasTags" class="mt-1">
                     <div class="-mt-1">
-                      <span v-for="tag, i in m.invalidTags">
+                      <span v-for="tag, i in m.allowedTags">
                         <div
-                          class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-full px-2 py-1 leading-none text-xs mr-1 mt-1">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
-                            class="mr-1 text-gray-500">
+                          class="inline-flex items-center align-middle justify-center font-medium border rounded-full px-2 py-1 leading-none text-xs mr-1 mt-1"
+                          :class="{
+                            'border-gray-200 bg-gray-200 text-gray-600': isInvalidTag(tag),
+                            'border-gray-300 bg-white': !isInvalidTag(tag),
+                          }">
+                          <svg v-if="isInvalidTag(tag)" xmlns="http://www.w3.org/2000/svg" width="10" height="10"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                            stroke-linejoin="round" class="mr-1 text-gray-500">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
                           </svg>
-                          <span class="text-gray-500">{{ tag.substring(4) }}</span>
-                        </div>
-                      </span>
-                      <span v-for="tag, i in m.allowedTags">
-                        <div
-                          class="inline-flex items-center align-middle justify-center font-medium border border-gray-300 bg-white rounded-full px-2 py-1 leading-none text-xs mr-1 mt-1">
                           <span class="text-gray-500">{{ tag.substring(4) }}</span>
                         </div>
                       </span>

@@ -39,14 +39,14 @@ func (h *Mirage) AddUserToIDaaS(
 	name string, mobile string,
 ) (_result *eiam_developerapi20220225.CreateUserResponse, _err error) {
 	generateTokenRequest := &eiam_developerapi20220225.GenerateTokenRequest{
-		ClientId:     &h.cfg.ali_IDaaS.ali_cli_id,
-		ClientSecret: &h.cfg.ali_IDaaS.ali_cli_key,
+		ClientId:     &h.cfg.IDaaS.ClientID,
+		ClientSecret: &h.cfg.IDaaS.ClientKey,
 		GrantType:    tea.String("client_credentials"),
 	}
 	runtime := &util.RuntimeOptions{}
 	headers := make(map[string]*string)
 	client, _ := CreateIDaaSClient()
-	genTokenRes, _ := client.GenerateTokenWithOptions(&h.cfg.ali_IDaaS.ali_instance, &h.cfg.ali_IDaaS.ali_app_id, generateTokenRequest, headers, runtime)
+	genTokenRes, _ := client.GenerateTokenWithOptions(&h.cfg.IDaaS.Instance, &h.cfg.IDaaS.App, generateTokenRequest, headers, runtime)
 	bearToken := "Bearer " + *genTokenRes.Body.AccessToken
 	varTrue := true
 	client, _ = CreateIDaaSClient()
@@ -59,11 +59,11 @@ func (h *Mirage) AddUserToIDaaS(
 		PhoneNumber:                 &mobile,
 		PhoneNumberVerified:         &varTrue,
 		DisplayName:                 &name,
-		PrimaryOrganizationalUnitId: &h.cfg.ali_IDaaS.ali_org_id,
+		PrimaryOrganizationalUnitId: &h.cfg.IDaaS.OrgID,
 	}
 	runtime = &util.RuntimeOptions{}
 	// 复制代码运行请自行打印 API 的返回值
-	createUserRes, err1 := client.CreateUserWithOptions(&h.cfg.ali_IDaaS.ali_instance, &h.cfg.ali_IDaaS.ali_app_id, createUserRequest, createUserHeaders, runtime)
+	createUserRes, err1 := client.CreateUserWithOptions(&h.cfg.IDaaS.Instance, &h.cfg.IDaaS.App, createUserRequest, createUserHeaders, runtime)
 	return createUserRes, err1
 }
 
@@ -117,8 +117,8 @@ func (h *Mirage) RegisterUserAPI(
 		//	h.smsCodeCache.Set(fp, newUserReg, smsCacheExpiration)
 
 		config := &openapi.Config{
-			AccessKeyId:     &h.cfg.ali_IDaaS.ali_access_id,
-			AccessKeySecret: &h.cfg.ali_IDaaS.ali_access_key,
+			AccessKeyId:     &h.cfg.SMS.ID,
+			AccessKeySecret: &h.cfg.SMS.Key,
 		}
 		// 访问的域名
 		config.Endpoint = tea.String("dysmsapi.aliyuncs.com")
@@ -132,8 +132,8 @@ func (h *Mirage) RegisterUserAPI(
 
 		sendSmsRequest := &dysmsapi20170525.SendSmsRequest{
 			PhoneNumbers:  &mobile,
-			SignName:      &h.cfg.ali_IDaaS.ali_sms_sign,
-			TemplateCode:  &h.cfg.ali_IDaaS.ali_sms_template,
+			SignName:      &h.cfg.SMS.Sign,
+			TemplateCode:  &h.cfg.SMS.Template,
 			TemplateParam: tea.String("{\"code\":\"" + newVerifyCode + "\"}"),
 		}
 		runtime := &util.RuntimeOptions{}

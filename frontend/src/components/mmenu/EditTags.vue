@@ -15,7 +15,7 @@ const props = defineProps({
     givenName: String,
 })
 
-const allTags= ref([])
+const allTags = ref([])
 const addedTags = ref([])
 const containInvalidTags = computed(() => {
     return addedTags.value.some(tag => !allTags.value.includes(tag))
@@ -59,12 +59,14 @@ function addTag(tag) {
     }
 }
 onMounted(() => {
-    addedTags.value = props.currentMachine.allowedTags.concat(props.currentMachine.invalidTags)
+    addedTags.value = []
+    if (props.currentMachine.allowedTags != null) {
+        addedTags.value =addedTags.value.concat(props.currentMachine.allowedTags)
+    }
     allTags.value = []
     for (let i = 0; i < props.tagOwners.length; i++) {
-        allTags.value.push(props.tagOwners[i]["tagName"])
+        allTags.value.push(props.tagOwners[i].tagName)
     }
-    console.log(allTags.value)
 })
 
 
@@ -89,6 +91,14 @@ function updateTags() {
         });
     inputBlocking.value = false
 }
+function isInvalidTag(tag) {
+    for (var i in props.tagOwners) {
+        if (props.tagOwners[i].tagName == tag) {
+            return false
+        }
+    }
+    return true
+}
 </script>
 
 <template>
@@ -111,8 +121,17 @@ function updateTags() {
                 <div v-if="addedTags.length > 0"
                     class="rounded-md border border-stone-200 mt-4 mb-3 flex flex-wrap gap-2 bg-stone-50 p-6">
                     <span v-for="tag, i in addedTags">
-                        <div
-                            class="flex items-center align-middle justify-center font-medium border border-gray-300 bg-white rounded-full px-2 py-1 leading-none text-xs">
+                        <div class="flex items-center align-middle justify-center font-medium border rounded-full px-2 py-1 leading-none text-xs"
+                            :class="{
+                                'border-gray-200 bg-gray-200 text-gray-600': isInvalidTag(tag),
+                                'border-gray-300 bg-white': !isInvalidTag(tag),
+                            }">
+                            <svg v-if="isInvalidTag(tag)" xmlns="http://www.w3.org/2000/svg" width="10" height="10"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                                stroke-linecap="round" stroke-linejoin="round" class="mr-1 text-gray-500">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                            </svg>
                             <span class="text-gray-500">{{ tag.substring(4) }}</span>
                             <span class="ml-1">
                                 <button @click="addTag(tag)" type="button"><svg xmlns="http://www.w3.org/2000/svg"
@@ -152,7 +171,7 @@ function updateTags() {
                         class="btn border-0 bg-blue-500 hover:bg-blue-900 disabled:bg-blue-500/60 text-white disabled:text-white/60 h-9 min-h-fit"
                         type="submit">更新</button>
                 </footer>
-            </form>
+            </form> 
             <button @click="$emit('close')"
                 class="btn btn-sm btn-ghost absolute top-5 right-5 px-2 py-2 border-0 bg-base-0 focus:bg-base-200 hover:bg-base-200"
                 type="button"><svg xmlns="http://www.w3.org/2000/svg" width="1.25em" height="1.25em" viewBox="0 0 24 24"
@@ -165,7 +184,7 @@ function updateTags() {
     <!--下方显示标签菜单-->
     <div v-if="tagMenuShow" v-click-away="closeTagMenu" class="shadow-xl border border-base-300 rounded-md z-20"
         :style="'position: fixed; left: 0px; top: 0px; transform: translate3d(' + tagMenuLeft + 'px, ' + tagMenuTop + 'px, 0px); min-width: max-content; z-index: 50; --radix-popper-transform-origin: 50% 155px;'">
-        <div v-for="tag, i in tagOwners" class="bg-white rounded-md overflow-y-scroll max-h-80 max-w-xs z-50"
+        <div v-for="tag in tagOwners" class="bg-white rounded-md overflow-y-scroll max-h-80 max-w-xs z-50"
             style="outline: currentcolor; pointer-events: auto; --radix-dropdown-menu-content-transform-origin: var(--radix-popper-transform-origin);">
             <div @click="addTag(tag.tagName)"
                 class="cursor-pointer hover:bg-stone-100 focus:outline-none focus:bg-bg-menu-item-hover border-b">

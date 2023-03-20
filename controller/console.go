@@ -152,9 +152,7 @@ func (h *Mirage) ConsoleSelfAPI(
 	userNameHead := string([]rune(userDisName)[0])
 
 	userOrgName := userName
-	if h.cfg.org_name != "Personal" {
-		userOrgName = h.cfg.org_name
-	}
+	// 用户所属组织将存于数据库，合并实现前，不设置配置文件中该项，均按个人用户处理
 
 	renderData := adminTemplateConfig{
 		Basedomain:   h.cfg.BaseDomain,
@@ -296,7 +294,7 @@ func (h *Mirage) ConsoleMachinesAPI(
 			Created:            machine.CreatedAt.In(tz).Format("2006年01月02日 15:04:05"),
 			LastSeen:           machine.LastSeen.In(tz).Format("2006年01月02日 15:04:05"),
 			ConnectedToControl: machine.isOnline(),
-			AllowedTags:        []string{},
+			AllowedTags:        machine.ForcedTags,
 			InvalidTags:        []string{},
 			HasTags:            machine.ForcedTags != nil && len(machine.ForcedTags) > 0,
 
@@ -335,7 +333,6 @@ func (h *Mirage) ConsoleMachinesAPI(
 				}
 			}
 		}
-
 		// 处理路由部分
 		machineRoutes, err := h.GetMachineRoutes(&machine)
 		if err != nil {

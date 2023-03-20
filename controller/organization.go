@@ -49,7 +49,14 @@ func (o *Organization) BeforeCreate(tx *gorm.DB) error {
 
 func (m *Mirage) CreateOrgnaization(name string, acl *ACLPolicy) (*Organization, error) {
 	tx := m.db.Session(&gorm.Session{})
-	return CreateOrgnaizationInTx(tx, name, acl)
+	org, err := CreateOrgnaizationInTx(tx, name, acl)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.CreateDefaultACLPolicyOfOrg(org); err != nil {
+		m.organizationCache.Set(org.Name, *org, -1)
+	}
+	return org, nil
 }
 
 func CreateOrgnaizationInTx(tx *gorm.DB, name string, acl *ACLPolicy) (*Organization, error) {
@@ -72,8 +79,6 @@ func CreateOrgnaizationInTx(tx *gorm.DB, name string, acl *ACLPolicy) (*Organiza
 
 		return nil, err
 	}
-	org.AclRules = tailcfg.FilterAllowAll // default allowall
-	org.SshPolicy = &tailcfg.SSHPolicy{}
 	return &org, nil
 }
 
@@ -104,8 +109,6 @@ func GetOrgnaizationByNameInTx(tx *gorm.DB, name string, c *cache.Cache) (*Organ
 			Msg("Could not get row")
 		return nil, false, err
 	}
-	org.AclRules = tailcfg.FilterAllowAll // default allowall
-	org.SshPolicy = &tailcfg.SSHPolicy{}
 
 	return &org, false, nil
 }

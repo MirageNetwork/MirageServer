@@ -10,11 +10,9 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"sort"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -87,7 +85,7 @@ type Mirage struct {
 	pollNetMapStreamWG sync.WaitGroup
 }
 
-func NewMirage(cfg *Config) (*Mirage, error) {
+func NewMirage(cfg *Config, db *gorm.DB) (*Mirage, error) {
 	noisePrivateKey, err := readOrCreatePrivateKey(AbsolutePathFromConfigPath(NoiseKeyPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read or create Noise protocol private key: %w", err)
@@ -109,6 +107,7 @@ func NewMirage(cfg *Config) (*Mirage, error) {
 
 	app := Mirage{
 		cfg:             cfg,
+		db:              db,
 		noisePrivateKey: noisePrivateKey,
 		aclRules:        tailcfg.FilterAllowAll, // default allowall
 
@@ -118,13 +117,9 @@ func NewMirage(cfg *Config) (*Mirage, error) {
 		machineControlCodeCache: machineControlCodeCache,
 		longPollChanPool:        longPollChanPool,
 		smsCodeCache:            smsCodeCache,
+		shutdownChan:            make(chan struct{}),
 		pollNetMapStreamWG:      sync.WaitGroup{},
 		lastStateChange:         xsync.NewMapOf[time.Time](),
-	}
-
-	err = app.initDB()
-	if err != nil {
-		return nil, err
 	}
 
 	if cfg.OIDC.Issuer != "" {
@@ -139,8 +134,8 @@ func NewMirage(cfg *Config) (*Mirage, error) {
 
 // expireEphemeralNodes deletes ephemeral machine records that have not been
 // seen for longer than h.cfg.EphemeralNodeInactivityTimeout.
-func (h *Mirage) expireEphemeralNodes(milliSeconds int64) {
-	ticker := time.NewTicker(time.Duration(milliSeconds) * time.Millisecond)
+func (h *Mirage) expireEphemeralNodes(ticker *time.Ticker) { //milliSeconds int64) {
+	//ticker := time.NewTicker(time.Duration(milliSeconds) * time.Millisecond)
 	for range ticker.C {
 		h.expireEphemeralNodesWorker()
 	}
@@ -148,15 +143,15 @@ func (h *Mirage) expireEphemeralNodes(milliSeconds int64) {
 
 // expireExpiredMachines expires machines that have an explicit expiry set
 // after that expiry time has passed.
-func (h *Mirage) expireExpiredMachines(milliSeconds int64) {
-	ticker := time.NewTicker(time.Duration(milliSeconds) * time.Millisecond)
+func (h *Mirage) expireExpiredMachines(ticker *time.Ticker) { //milliSeconds int64) {
+	//ticker := time.NewTicker(time.Duration(milliSeconds) * time.Millisecond)
 	for range ticker.C {
 		h.expireExpiredMachinesWorker()
 	}
 }
 
-func (h *Mirage) failoverSubnetRoutes(milliSeconds int64) {
-	ticker := time.NewTicker(time.Duration(milliSeconds) * time.Millisecond)
+func (h *Mirage) failoverSubnetRoutes(ticker *time.Ticker) { //milliSeconds int64) {
+	//ticker := time.NewTicker(time.Duration(milliSeconds) * time.Millisecond)
 	for range ticker.C {
 		err := h.handlePrimarySubnetFailover()
 		if err != nil {
@@ -347,16 +342,21 @@ func (h *Mirage) createRouter() *mux.Router {
 }
 
 // Serve launches a GIN server with the Mirage API.
-func (h *Mirage) Serve() error {
+func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 	var err error
 
 	// Fetch an initial DERP Map before we start serving
 	h.DERPMap, err = LoadDERPMapFromURL(h.cfg.DERPURL)
+	if err != nil {
+		return err
+	}
 
-	go h.expireEphemeralNodes(updateInterval)
-	go h.expireExpiredMachines(updateInterval)
+	ticker := time.NewTicker(time.Millisecond * updateInterval)
+	defer ticker.Stop()
 
-	go h.failoverSubnetRoutes(updateInterval)
+	go h.expireEphemeralNodes(ticker)  //updateInterval)
+	go h.expireExpiredMachines(ticker) //updateInterval)
+	go h.failoverSubnetRoutes(ticker)  //updateInterval)
 
 	// Prepare group for running listeners
 	errorGroup := new(errgroup.Group)
@@ -395,27 +395,44 @@ func (h *Mirage) Serve() error {
 		return fmt.Errorf("failed to bind to TCP address: %w", err)
 	}
 
-	// Handle common process-killing signals so we can gracefully shut down:
-	h.shutdownChan = make(chan struct{})
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-		syscall.SIGHUP)
-	sigFunc := func(c chan os.Signal) {
-		// Wait for a SIGINT or SIGKILL:
+	ctrlFunc := func(c chan CtrlMsg) {
 		for {
-			sig := <-c
-			switch sig {
-			case syscall.SIGHUP:
-				log.Info().
-					Str("signal", sig.String()).
-					Msg("Received SIGHUP, reloading ACL and Config")
-
-					// TODO(kradalby): Reload config on SIGHUP
-
+			msg := <-c
+			switch msg.Msg {
+			case "stop":
+				log.Info().Msg("Received stop message, shutting down")
+				close(h.shutdownChan)
+				h.pollNetMapStreamWG.Wait()
+				// Gracefully shut down servers
+				ctx, cancel := context.WithTimeout(
+					context.Background(),
+					HTTPShutdownTimeout,
+				)
+				// Shutdown http server
+				if err := httpServer.Shutdown(ctx); err != nil {
+					log.Error().Err(err).Msg("Failed to shutdown http")
+				}
+				// Close network listeners
+				err = httpListener.Close()
+				if err != nil {
+					log.Error().Err(err).Msg("Failed to close http listener")
+				}
+				/*
+					// Close db connections
+					db, err := h.db.DB()
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to get db handle")
+					}
+					err = db.Close()
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to close db")
+					}
+				*/
+				log.Info().Msg("Mirage stopped")
+				cancel()
+				return
+			case "reload":
+				log.Info().Msg("Received reload message, reloading ACL and Config")
 				aclPath := AbsolutePathFromConfigPath(ACLPath)
 				err := h.LoadACLPolicy(aclPath)
 				if err != nil {
@@ -424,52 +441,92 @@ func (h *Mirage) Serve() error {
 				log.Info().
 					Str("path", aclPath).
 					Msg("ACL policy successfully reloaded, notifying nodes of change")
-
 				h.setLastStateChangeToNow()
-			default:
-				log.Info().
-					Str("signal", sig.String()).
-					Msg("Received signal to stop, shutting down gracefully")
-
-				close(h.shutdownChan)
-				h.pollNetMapStreamWG.Wait()
-
-				// Gracefully shut down servers
-				ctx, cancel := context.WithTimeout(
-					context.Background(),
-					HTTPShutdownTimeout,
-				)
-				if err := httpServer.Shutdown(ctx); err != nil {
-					log.Error().Err(err).Msg("Failed to shutdown http")
-				}
-
-				// Close network listeners
-				httpListener.Close()
-
-				// Close db connections
-				db, err := h.db.DB()
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to get db handle")
-				}
-				err = db.Close()
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to close db")
-				}
-
-				log.Info().
-					Msg("Mirage stopped")
-
-				// And we're done:
-				cancel()
-				os.Exit(0)
 			}
 		}
 	}
 	errorGroup.Go(func() error {
-		sigFunc(sigc)
-
+		ctrlFunc(ctrlChn)
 		return nil
 	})
+
+	/*
+		// Handle common process-killing signals so we can gracefully shut down:
+		h.shutdownChan = make(chan struct{})
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc,
+			syscall.SIGHUP,
+			syscall.SIGINT,
+			syscall.SIGTERM,
+			syscall.SIGQUIT,
+			syscall.SIGHUP)
+		sigFunc := func(c chan os.Signal) {
+			// Wait for a SIGINT or SIGKILL:
+			for {
+				sig := <-c
+				switch sig {
+				case syscall.SIGHUP:
+					log.Info().
+						Str("signal", sig.String()).
+						Msg("Received SIGHUP, reloading ACL and Config")
+
+						// TODO(kradalby): Reload config on SIGHUP
+
+					aclPath := AbsolutePathFromConfigPath(ACLPath)
+					err := h.LoadACLPolicy(aclPath)
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to reload ACL policy")
+					}
+					log.Info().
+						Str("path", aclPath).
+						Msg("ACL policy successfully reloaded, notifying nodes of change")
+
+					h.setLastStateChangeToNow()
+				default:
+					log.Info().
+						Str("signal", sig.String()).
+						Msg("Received signal to stop, shutting down gracefully")
+
+					close(h.shutdownChan)
+					h.pollNetMapStreamWG.Wait()
+
+					// Gracefully shut down servers
+					ctx, cancel := context.WithTimeout(
+						context.Background(),
+						HTTPShutdownTimeout,
+					)
+					if err := httpServer.Shutdown(ctx); err != nil {
+						log.Error().Err(err).Msg("Failed to shutdown http")
+					}
+
+					// Close network listeners
+					httpListener.Close()
+
+					// Close db connections
+					db, err := h.db.DB()
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to get db handle")
+					}
+					err = db.Close()
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to close db")
+					}
+
+					log.Info().
+						Msg("Mirage stopped")
+
+					// And we're done:
+					cancel()
+					os.Exit(0)
+				}
+			}
+		}
+		errorGroup.Go(func() error {
+			sigFunc(sigc)
+
+			return nil
+		})
+	*/
 
 	return errorGroup.Wait()
 }
