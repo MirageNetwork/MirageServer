@@ -82,7 +82,6 @@ func (h *Mirage) CAPIPostTags(
 		//aclPath := AbsolutePathFromConfigPath(ACLPath)
 		//err = h.SaveACLPolicy(aclPath)
 		err = h.SaveACLPolicyOfOrg(org)
-		h.organizationCache.Delete(org.Name)
 		if err != nil {
 			//delete(acl.TagOwners, "tag:"+reqData.TagName)
 			h.doAPIResponse(w, "保存ACL策略失败:"+err.Error(), nil)
@@ -127,7 +126,6 @@ func (h *Mirage) CAPIDelTags(
 	}
 	delete(org.AclPolicy.TagOwners, "tag:"+targetTagName)
 	err = h.SaveACLPolicyOfOrg(org)
-	h.organizationCache.Delete(org.Name)
 	if err != nil {
 		h.doAPIResponse(w, "保存ACL策略失败:"+err.Error(), nil)
 		return

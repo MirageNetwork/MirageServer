@@ -649,7 +649,6 @@ func (h *Mirage) SetTags(machine *Machine, tags []string) error {
 	if err := h.UpdateACLRulesOfOrg(org); err != nil && !errors.Is(err, errEmptyPolicy) {
 		return err
 	}
-	h.organizationCache.Set(org.Name, *org, -1)
 	h.setLastStateChangeToNow()
 
 	if err := h.db.Save(machine).Error; err != nil {

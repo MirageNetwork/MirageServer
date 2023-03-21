@@ -4,16 +4,16 @@ import (
 	"time"
 
 	"github.com/bwmarrin/snowflake"
-	"github.com/patrickmn/go-cache"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 	"tailscale.com/tailcfg"
 )
 
 const (
-	ErrOrgExists      = Error("Organization already exists")
-	ErrOrgNotFound    = Error("Organization not found")
-	DefaultExpireTime = 180
+	ErrOrgExists       = Error("Organization already exists")
+	ErrOrgNotFound     = Error("Organization not found")
+	ErrCreateOrgParams = Error("Invalid create organization paramters")
+	DefaultExpireTime  = 180
 )
 
 type Organization struct {
@@ -47,19 +47,20 @@ func (o *Organization) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-func (m *Mirage) CreateOrgnaization(name string, acl *ACLPolicy) (*Organization, error) {
+func (m *Mirage) CreateOrgnaization(name, displayName string) (*Organization, error) {
 	tx := m.db.Session(&gorm.Session{})
-	org, err := CreateOrgnaizationInTx(tx, name, acl)
+	org, err := CreateOrgnaizationInTx(tx, name, displayName)
 	if err != nil {
 		return nil, err
 	}
-	if err := m.CreateDefaultACLPolicyOfOrg(org); err != nil {
-		m.organizationCache.Set(org.Name, *org, -1)
-	}
+	m.UpdateACLRulesOfOrg(org)
 	return org, nil
 }
 
-func CreateOrgnaizationInTx(tx *gorm.DB, name string, acl *ACLPolicy) (*Organization, error) {
+func CreateOrgnaizationInTx(tx *gorm.DB, name, displayName string) (*Organization, error) {
+	if len(name) == 0 || len(displayName) == 0 {
+		return nil, ErrCreateOrgParams
+	}
 	var count int64
 	if err := tx.Model(&Organization{}).Where("name = ?", name).Count(&count).Error; err != nil {
 		return nil, err
@@ -69,7 +70,15 @@ func CreateOrgnaizationInTx(tx *gorm.DB, name string, acl *ACLPolicy) (*Organiza
 	}
 	org := Organization{}
 	org.Name = name
-	org.AclPolicy = acl
+	org.DisplayName = displayName
+	org.AclPolicy = &ACLPolicy{
+		ACLs: []ACL{{
+			Action:       "accept",
+			Protocol:     "",
+			Sources:      []string{"*"},
+			Destinations: []string{"*:*"},
+		}},
+	}
 	org.ExpiryDuration = DefaultExpireTime
 	if err := tx.Create(&org).Error; err != nil {
 		log.Error().
@@ -83,42 +92,30 @@ func CreateOrgnaizationInTx(tx *gorm.DB, name string, acl *ACLPolicy) (*Organiza
 }
 
 func (m *Mirage) GetOrgnaizationByName(name string) (*Organization, error) {
-	org, hit, err := GetOrgnaizationByNameInTx(m.db.Session(&gorm.Session{}), name, m.organizationCache)
+	org, err := GetOrgnaizationByNameInTx(m.db.Session(&gorm.Session{}), name)
 	if err != nil {
 		return nil, err
 	}
-	if org != nil && !hit {
-		m.UpdateACLRulesOfOrg(org)
-		m.organizationCache.Set(name, *org, -1)
-	}
+	m.UpdateACLRulesOfOrg(org)
 	return org, err
 }
 
-func GetOrgnaizationByNameInTx(tx *gorm.DB, name string, c *cache.Cache) (*Organization, bool, error) {
-	oc, ok := c.Get(name)
-	if oc != nil && ok {
-		if val, ok := oc.(Organization); ok {
-			return &val, true, nil
-		}
-	}
+func GetOrgnaizationByNameInTx(tx *gorm.DB, name string) (*Organization, error) {
 	var org Organization
 	if err := tx.Where("name = ?", name).Take(&org).Error; err != nil {
 		log.Error().
 			Str("func", "GetOrgnaizationByName").
 			Err(err).
 			Msg("Could not get row")
-		return nil, false, err
+		return nil, err
 	}
 
-	return &org, false, nil
+	return &org, nil
 }
 
 func (m *Mirage) DestroyOrgnaization(orgName string) error {
 	tx := m.db.Session(&gorm.Session{})
 	err := DestroyOrgnaizationInTx(tx, orgName)
-	if err == nil {
-		m.organizationCache.Delete(orgName)
-	}
 	return err
 }
 
@@ -139,9 +136,6 @@ func (m *Mirage) UpdateOrgExpiry(user *User, newDuration uint) error {
 		ID:             user.OrgId,
 		ExpiryDuration: newDuration,
 	}).Error
-	if err == nil {
-		m.organizationCache.Delete(user.OrgName)
-	}
 	return err
 }
 
@@ -158,8 +152,5 @@ func (m *Mirage) UpdateOrgDNSConfig(org *Organization, newDNSCfg DNSData) error 
 	}
 	org.SplitDns = newDNSCfg.Routes
 	err := m.db.Select("EnableMagic", "Nameservers", "OverrideLocal", "Nameservers", "OverrideLocal", "SplitDns").Updates(org).Error
-	if err == nil {
-		m.organizationCache.Delete(org.Name)
-	}
 	return err
 }

@@ -90,21 +90,6 @@ func (h *Mirage) CreateDefaultACLPolicy() error {
 	return h.UpdateACLRules()
 }
 
-func (h *Mirage) CreateDefaultACLPolicyOfOrg(org *Organization) error {
-	if org == nil {
-		return ErrOrgNotFound
-	}
-	org.AclPolicy = &ACLPolicy{
-		ACLs: []ACL{{
-			Action:       "accept",
-			Protocol:     "",
-			Sources:      []string{"*"},
-			Destinations: []string{"*:*"},
-		}},
-	}
-	return h.UpdateACLRulesOfOrg(org)
-}
-
 // LoadACLPolicy loads the ACL policy from the specify path, and generates the ACL rules.
 func (h *Mirage) LoadACLPolicy(path string) error {
 	log.Debug().

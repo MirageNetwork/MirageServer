@@ -101,14 +101,19 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string) (*User,
 	err = h.db.Transaction(func(tx *gorm.DB) error {
 		var org *Organization
 		var trxErr error
-		//个人用户: userName 和 orgName相同
-		if user.Name == orgName {
-			org, trxErr = CreateOrgnaizationInTx(tx, orgName, h.aclPolicy)
+		//个人用户: orgName 为空, 然后赋值为userName
+		if len(orgName) == 0 {
+			org, trxErr = CreateOrgnaizationInTx(tx, name, disName)
 			user.Role = RoleAdmin
 		} else {
 			//企业用户,需要先查询orgName是否存在
-			org, _, trxErr = GetOrgnaizationByNameInTx(tx, orgName, h.organizationCache)
-			if trxErr == nil && org.ID == 0 {
+			org, trxErr = GetOrgnaizationByNameInTx(tx, orgName)
+			// 不存在: 创建组织
+			if errors.Is(trxErr, gorm.ErrRecordNotFound) {
+				org, trxErr = CreateOrgnaizationInTx(tx, orgName, orgName)
+				user.Role = RoleAdmin
+				// 其他错误, 报错返回
+			} else if trxErr == nil && org.ID == 0 {
 				trxErr = ErrOrgNotFound
 			}
 			user.IsBelongToOrg = true
@@ -169,7 +174,6 @@ func (h *Mirage) DestroyUser(name, orgName string) error {
 		}
 		if !user.IsBelongToOrg {
 			err = DestroyOrgnaizationInTx(tx, orgName)
-			h.organizationCache.Delete(orgName)
 		}
 		//TODO Organization 删除失败是否回滚
 		return nil
