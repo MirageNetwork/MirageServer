@@ -71,10 +71,11 @@ func (user *User) BeforeCreate(tx *gorm.DB) error {
 // CreateUser creates a new User. Returns error if could not be created
 // or another user already exists.
 func (h *Mirage) CreateUser(name string, DisName string) (*User, error) {
-	err := CheckForFQDNRules(name)
-	if err != nil {
-		return nil, err
-	}
+	/*	err := CheckForFQDNRules(name)
+		if err != nil {
+			return nil, err
+		}
+	*/
 	user := User{}
 	if err := h.db.Where("name = ?", name).First(&user).Error; err == nil {
 		return nil, ErrUserExists

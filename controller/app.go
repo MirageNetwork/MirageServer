@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/dexidp/dex/server"
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
 	"github.com/puzpuzpuz/xsync/v2"
@@ -38,6 +39,8 @@ const (
 const (
 	NoiseKeyPath = "noise.key"
 	DatabasePath = "db.sqlite"
+	DexDBPath    = "dexdb.sqlite"
+	DexDBType    = "sqlite3"
 	ACLPath      = "acl.hujson"
 	AuthPrefix   = "Bearer "
 
@@ -54,8 +57,10 @@ const (
 
 // Mirage represents the base app of the service.
 type Mirage struct {
-	cfg *Config
-	db  *gorm.DB
+	cfg    *Config
+	db     *gorm.DB
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	noisePrivateKey *key.MachinePrivate
 	DERPMap         *tailcfg.DERPMap
@@ -104,9 +109,14 @@ func NewMirage(cfg *Config, db *gorm.DB) (*Mirage, error) {
 
 	InitESLogger(cfg)
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	app := Mirage{
-		cfg:             cfg,
-		db:              db,
+		cfg:    cfg,
+		db:     db,
+		ctx:    ctx,
+		cancel: cancel,
+
 		noisePrivateKey: noisePrivateKey,
 		aclRules:        tailcfg.FilterAllowAll, // default allowall
 
@@ -121,12 +131,14 @@ func NewMirage(cfg *Config, db *gorm.DB) (*Mirage, error) {
 		lastStateChange:         xsync.NewMapOf[time.Time](),
 	}
 
+	/* 由于可能我们会使用内建的dex，所以这里可能并不能正确初始化OIDC
 	if cfg.OIDC.Issuer != "" {
 		err = app.initOIDC()
 		if err != nil {
 			log.Warn().Err(err).Msg("failed to set up OIDC provider, falling back to CLI based authentication")
 		}
 	}
+	*/
 
 	return &app, nil
 }
@@ -260,8 +272,7 @@ var mainpageFS embed.FS
 //go:embed html/login
 var loginFS embed.FS
 
-func (h *Mirage) createRouter() *mux.Router {
-	router := mux.NewRouter()
+func (h *Mirage) initRouter(router *mux.Router) {
 
 	adminDir, err := fs.Sub(adminFS, "html/admin")
 	if err != nil {
@@ -278,6 +289,7 @@ func (h *Mirage) createRouter() *mux.Router {
 
 	//注册
 	router.PathPrefix("/api/register").HandlerFunc(h.RegisterUserAPI).Methods(http.MethodPost)
+	router.PathPrefix("/api/idps").HandlerFunc(h.ListIdps).Methods(http.MethodGet)
 
 	//登录
 	router.PathPrefix("/login").HandlerFunc(h.doLogin).Methods(http.MethodPost)
@@ -337,7 +349,6 @@ func (h *Mirage) createRouter() *mux.Router {
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h.ErrMessage(w, r, 404, "你迷失在蜃境中了吗？这里什么都没有")
 	})
-	return router
 }
 
 // Serve launches a GIN server with the Mirage API.
@@ -366,7 +377,15 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 	//
 	// This is the regular router that we expose
 	// over our main Addr. It also serves the legacy Tailcale API
-	router := h.createRouter()
+	router := mux.NewRouter()
+
+	_, err = server.InitDexServer(h.ctx, *h.cfg.DexConfig, router) //cgao6: 这里是dex的初始化
+	if err != nil {
+		return err
+	}
+	defer h.cfg.DexConfig.Storage.Close()
+
+	h.initRouter(router)
 
 	httpServer := &http.Server{
 		Addr:        h.cfg.Addr,
@@ -416,6 +435,8 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to close http listener")
 				}
+
+				h.cancel() // ??
 				/*
 					// Close db connections
 					db, err := h.db.DB()

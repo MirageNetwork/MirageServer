@@ -73,17 +73,26 @@ func (h *Mirage) doLogin(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, stateCodeCookie)
 
 	switch provider {
-	case "Ali":
-		h.doAliLogin(w, r, stateCode)
+	case "Github", "Microsoft", "Google", "Apple", "Ali":
+		h.doDexLogin(w, r, stateCode, provider)
 	case "WXScan":
 		h.doWXScanLogin(w, r, stateCode)
 	}
 }
-func (h *Mirage) doAliLogin(w http.ResponseWriter, r *http.Request, stateCode string) {
+
+func (h *Mirage) doDexLogin(w http.ResponseWriter, r *http.Request, stateCode, provider string) {
+	if h.cfg.OIDC.Issuer != "" {
+		err := h.initOIDC()
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to set up OIDC provider, falling back to CLI based authentication")
+		}
+	}
+
 	extras := make([]oauth2.AuthCodeOption, 0, len(h.cfg.OIDC.ExtraParams))
 	for k, v := range h.cfg.OIDC.ExtraParams {
 		extras = append(extras, oauth2.SetAuthURLParam(k, v))
 	}
+	extras = append(extras, oauth2.SetAuthURLParam("connector_id", provider))
 
 	log.Error().Msg("之后会跳转到：" + fmt.Sprintf(
 		"https://%s/%s",
@@ -451,7 +460,7 @@ func (h *Mirage) oauthResponse(
 	userName := ""
 	userDisName := ""
 	switch qStateItem.provider {
-	case "Ali":
+	case "Microsoft", "Google", "Github", "Apple", "Ali":
 		oauth2Token, err := h.oauth2Config.Exchange(r.Context(), code)
 		if err != nil {
 			h.ErrMessage(w, r, 403, "三方登录认证错误")
@@ -472,7 +481,9 @@ func (h *Mirage) oauthResponse(
 			h.ErrMessage(w, r, 403, "三方登录认证解析用户错误")
 			return
 		}
-		userName, userDisName, err = getUserName(w, claims, h.cfg.OIDC.StripEmaildomain)
+		//userName, userDisName, err = getUserName(w, claims, h.cfg.OIDC.StripEmaildomain)
+		userName = claims.Email
+		userDisName = claims.Name
 		if err != nil {
 			h.ErrMessage(w, r, 500, "三方登录用户信息解析出错")
 			return

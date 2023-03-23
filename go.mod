@@ -3,6 +3,7 @@ module MirageNetwork/MirageServer
 go 1.20
 
 require (
+	github.com/dexidp/dex v0.0.0-00010101000000-000000000000
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.4
 	github.com/alibabacloud-go/dysmsapi-20170525/v3 v3.0.5
 	github.com/alibabacloud-go/eiam-developerapi-20220225/v2 v2.0.1
@@ -26,7 +27,7 @@ require (
 	gorm.io/gorm v1.24.6
 	tailscale.com v1.38.1
 )
-
+replace github.com/dexidp/dex => ./dex
 require (
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.4 // indirect
 	github.com/alibabacloud-go/debug v0.0.0-20190504072949-9472017b5c68 // indirect

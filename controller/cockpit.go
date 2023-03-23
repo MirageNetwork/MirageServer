@@ -212,8 +212,10 @@ func (c *Cockpit) RegisterAdmin(
 		if newSysCfg != nil {
 			newSysCfg.AdminCredential = AdminCredential(*credential)
 		} else {
+			dexSecret := c.GenAuthCode()
 			newSysCfg = &SysConfig{
 				AdminCredential: AdminCredential(*credential),
+				DexSecret:       dexSecret,
 			}
 		}
 		c.db.Save(newSysCfg)
@@ -389,12 +391,14 @@ func (c *Cockpit) CheckCfgValid() (cfg *Config, ok bool) {
 		if cfg.OIDC.Issuer == "" || cfg.OIDC.ClientID == "" || cfg.OIDC.ClientSecret == "" {
 			return
 		}
-		if cfg.IDaaS.App == "" || cfg.IDaaS.ClientID == "" || cfg.IDaaS.ClientKey == "" || cfg.IDaaS.Instance == "" || cfg.IDaaS.OrgID == "" {
-			return
-		}
-		if cfg.SMS.ID == "" || cfg.SMS.Key == "" || cfg.SMS.Sign == "" || cfg.SMS.Template == "" {
-			return
-		}
+		/*
+			if cfg.IDaaS.App == "" || cfg.IDaaS.ClientID == "" || cfg.IDaaS.ClientKey == "" || cfg.IDaaS.Instance == "" || cfg.IDaaS.OrgID == "" {
+				return
+			}
+			if cfg.SMS.ID == "" || cfg.SMS.Key == "" || cfg.SMS.Sign == "" || cfg.SMS.Template == "" {
+				return
+			}
+		*/
 		ok = true
 	}
 	return
@@ -650,48 +654,85 @@ func (c *Cockpit) SetSettingGeneral(
 			c.doAPIResponse(w, "更新系统配置失败", nil)
 			return
 		}
-	case "set-oidc":
-		oidcInt, ok := reqData["OIDC"].(map[string]interface{})
+	case "set-microsoft":
+		MSInt, ok := reqData["Microsoft"].(map[string]interface{})
 		if !ok {
-			c.doAPIResponse(w, "用户请求OIDC解析失败", nil)
+			c.doAPIResponse(w, "用户请求Microsoft解析失败", nil)
 			return
 		}
-		scope := []string{}
-		if oidcInt["scope"] != nil {
-			scopetmp, ok := oidcInt["scope"].([]interface{})
-			if !ok {
-				c.doAPIResponse(w, "用户请求OIDC scope解析失败", nil)
-				return
-			}
-			for _, v := range scopetmp {
-				scope = append(scope, v.(string))
-			}
-		}
-		extra := map[string]string{}
-		if oidcInt["extra"] != nil {
-			extratmp, ok := oidcInt["extra"].(map[string]interface{})
-			if !ok {
-				c.doAPIResponse(w, "用户请求OIDC extra解析失败", nil)
-				return
-			}
-			for k, v := range extratmp {
-				extra[k] = v.(string)
-			}
-		}
-		oidcCfg := OIDCConfig{
-			Issuer:           oidcInt["issuer"].(string),
-			ClientID:         oidcInt["id"].(string),
-			ClientSecret:     oidcInt["key"].(string),
-			Scope:            scope,
-			ExtraParams:      extra,
-			StripEmaildomain: false,
+		MSCfg := MicrosoftCfg{
+			ApplicationID: MSInt["app_id"].(string),
+			ClientID:      MSInt["client_id"].(string),
+			ClientSecret:  MSInt["client_secret"].(string),
 		}
 		sysCfg := c.GetSysCfg()
 		if sysCfg == nil {
 			c.doAPIResponse(w, "获取系统配置失败", nil)
 			return
 		}
-		sysCfg.OidcConfig = oidcCfg
+		sysCfg.MicrosoftCfg = MSCfg
+		if err := c.db.Save(sysCfg).Error; err != nil {
+			c.doAPIResponse(w, "更新系统配置失败", nil)
+			return
+		}
+	case "set-github":
+		GHInt, ok := reqData["Github"].(map[string]interface{})
+		if !ok {
+			c.doAPIResponse(w, "用户请求Github解析失败", nil)
+			return
+		}
+		GHCfg := GithubCfg{
+			ClientID:     GHInt["client_id"].(string),
+			ClientSecret: GHInt["client_secret"].(string),
+		}
+		sysCfg := c.GetSysCfg()
+		if sysCfg == nil {
+			c.doAPIResponse(w, "获取系统配置失败", nil)
+			return
+		}
+		sysCfg.GithubCfg = GHCfg
+		if err := c.db.Save(sysCfg).Error; err != nil {
+			c.doAPIResponse(w, "更新系统配置失败", nil)
+			return
+		}
+	case "set-google":
+		GgInt, ok := reqData["Google"].(map[string]interface{})
+		if !ok {
+			c.doAPIResponse(w, "用户请求Google解析失败", nil)
+			return
+		}
+		GgCfg := GoogleCfg{
+			ClientID:     GgInt["client_id"].(string),
+			ClientSecret: GgInt["client_secret"].(string),
+		}
+		sysCfg := c.GetSysCfg()
+		if sysCfg == nil {
+			c.doAPIResponse(w, "获取系统配置失败", nil)
+			return
+		}
+		sysCfg.GoogleCfg = GgCfg
+		if err := c.db.Save(sysCfg).Error; err != nil {
+			c.doAPIResponse(w, "更新系统配置失败", nil)
+			return
+		}
+	case "set-apple":
+		AppInt, ok := reqData["Apple"].(map[string]interface{})
+		if !ok {
+			c.doAPIResponse(w, "用户请求Github解析失败", nil)
+			return
+		}
+		AppCfg := AppleCfg{
+			ClientID:   AppInt["client_id"].(string),
+			TeamID:     AppInt["team_id"].(string),
+			KeyID:      AppInt["key_id"].(string),
+			PrivateKey: AppInt["private_key"].(string),
+		}
+		sysCfg := c.GetSysCfg()
+		if sysCfg == nil {
+			c.doAPIResponse(w, "获取系统配置失败", nil)
+			return
+		}
+		sysCfg.AppleCfg = AppCfg
 		if err := c.db.Save(sysCfg).Error; err != nil {
 			c.doAPIResponse(w, "更新系统配置失败", nil)
 			return
