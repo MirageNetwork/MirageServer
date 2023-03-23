@@ -28,6 +28,11 @@ const (
 	RoleAdmin  = 1
 )
 
+var RoleName = map[string]int64{
+	"member": RoleMember,
+	"admin":  RoleAdmin,
+}
+
 const (
 	// value related to RFC 1123 and 952.
 	labelHostnameLength = 63
@@ -221,7 +226,19 @@ func (h *Mirage) RenameUser(oldName, newName string, orgName string) error {
 	return nil
 }
 
-// GetUser fetches a user by name.
+// ChangUserRole by userID
+func (h *Mirage) ChangUserRole(id tailcfg.UserID, role string) error {
+	if r, ok := RoleName[strings.ToLower(role)]; ok {
+		err := h.db.Select("Role").Updates(&User{
+			ID:   int64(id),
+			Role: r,
+		}).Error
+		return err
+	}
+	return ErrUserNotFound
+}
+
+// GetUserByID fetches a user by UserID.
 func (h *Mirage) GetUserByID(id tailcfg.UserID) (*User, error) {
 	user := User{}
 	if result := h.db.Preload("Org").First(&user, "id = ?", id); errors.Is(
