@@ -63,6 +63,11 @@ func (dp *DataPool) InitMirageDB() error {
 		return err
 	}
 
+	err = dp.db.AutoMigrate(&Organization{})
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 
@@ -225,6 +230,27 @@ func (i *SplitDNS) Scan(destination interface{}) error {
 // Value return json value, implement driver.Valuer interface.
 func (i SplitDNS) Value() (driver.Value, error) {
 	bytes, err := json.Marshal(i)
+
+	return string(bytes), err
+}
+
+// ACLPolicy struct to json implement
+func (a *ACLPolicy) Scan(destination interface{}) error {
+	switch value := destination.(type) {
+	case []byte:
+		return json.Unmarshal(value, a)
+
+	case string:
+		return json.Unmarshal([]byte(value), a)
+
+	default:
+		return fmt.Errorf("%w: unexpected data type %T", ErrMachineAddressesInvalid, destination)
+	}
+}
+
+// Value return json value, implement driver.Valuer interface.
+func (a ACLPolicy) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(a)
 
 	return string(bytes), err
 }

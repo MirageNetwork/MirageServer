@@ -177,7 +177,7 @@ func (h *Mirage) ConsoleSelfAPI(
 func (h *Mirage) verifyTokenIDandGetUser(
 	writer http.ResponseWriter,
 	req *http.Request,
-) string {
+) *User {
 	controlCodeCookie, err := req.Cookie("miragecontrol")
 	if err == http.ErrNoCookie {
 		errRes := adminTemplateConfig{ErrorMsg: "Token不存在"}
@@ -188,7 +188,7 @@ func (h *Mirage) verifyTokenIDandGetUser(
 				Err(err).
 				Msg("Failed to write response")
 		}
-		return ""
+		return nil
 	}
 	controlCode := controlCodeCookie.Value
 	controlCodeC, concontrolCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCode)
@@ -201,7 +201,7 @@ func (h *Mirage) verifyTokenIDandGetUser(
 				Err(err).
 				Msg("Failed to write response")
 		}
-		return ""
+		return nil
 	}
 	controlCodeItem := controlCodeC.(ControlCacheItem)
 	user, err := h.GetUserByID(controlCodeItem.uid)
@@ -214,10 +214,9 @@ func (h *Mirage) verifyTokenIDandGetUser(
 				Err(err).
 				Msg("Failed to write response")
 		}
-		return ""
+		return nil
 	}
-	userName := user.Name
-	return userName
+	return user
 }
 
 // 控制台获取设备信息列表的API
@@ -264,9 +263,8 @@ func (h *Mirage) ConsoleMachinesAPI(
 		}
 		return
 	}
-	userName := user.Name
 
-	UserMachines, err := h.ListMachinesByUser(userName)
+	UserMachines, err := h.ListMachinesByUser(user.ID)
 	if err != nil {
 		errRes := adminTemplateConfig{ErrorMsg: "查询用户节点列表失败"}
 		err = json.NewEncoder(writer).Encode(&errRes)
@@ -314,16 +312,27 @@ func (h *Mirage) ConsoleMachinesAPI(
 			AutomaticNameMode: machine.AutoGenName,
 		}
 		// 处理标签部分
-		/*		if machine.ForcedTags != nil && len(machine.ForcedTags) > 0 {
-					for _, tag := range machine.ForcedTags {
-						if _, ok := h.aclPolicy.TagOwners[tag]; ok {
-							tmpMachine.AllowedTags = append(tmpMachine.AllowedTags, tag)
-						} else {
-							tmpMachine.InvalidTags = append(tmpMachine.InvalidTags, tag)
-						}
-					}
+		if machine.ForcedTags != nil && len(machine.ForcedTags) > 0 {
+			org, err := h.GetOrgnaizationByID(user.OrgId)
+			if err != nil {
+				errRes := adminTemplateConfig{ErrorMsg: "查询设备组织失败"}
+				err = json.NewEncoder(writer).Encode(&errRes)
+				if err != nil {
+					log.Error().
+						Caller().
+						Err(err).
+						Msg("Failed to write response")
 				}
-		*/
+				return
+			}
+			for _, tag := range machine.ForcedTags {
+				if _, ok := org.AclPolicy.TagOwners[tag]; ok {
+					tmpMachine.AllowedTags = append(tmpMachine.AllowedTags, tag)
+				} else {
+					tmpMachine.InvalidTags = append(tmpMachine.InvalidTags, tag)
+				}
+			}
+		}
 		// 处理路由部分
 		machineRoutes, err := h.GetMachineRoutes(&machine)
 		if err != nil {
@@ -448,14 +457,9 @@ func (h *Mirage) getNetSettingAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(writer, req)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(writer, req)
+	if user.CheckEmpty() {
 		h.doAPIResponse(writer, "用户信息核对失败", nil)
-		return
-	}
-	user, err := h.GetUser(userName)
-	if err != nil {
-		h.doAPIResponse(writer, "查询用户失败:"+err.Error(), nil)
 		return
 	}
 	netsettingData := NetSettingResData{
@@ -467,7 +471,7 @@ func (h *Mirage) getNetSettingAPI(
 		MaxKeyDurationDays: 180,
 		NetworkLockEnabled: false, //未实现
 	}
-	netsettingData.MaxKeyDurationDays = int(user.ExpiryDuration)
+	netsettingData.MaxKeyDurationDays = int(user.Org.ExpiryDuration)
 	h.doAPIResponse(writer, "", netsettingData)
 }
 
@@ -476,8 +480,8 @@ func (h *Mirage) ConsoleUpdateKeyExpiryAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(writer, req)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(writer, req)
+	if user.CheckEmpty() {
 		h.doAPIResponse(writer, "用户信息核对失败", nil)
 		return
 	}
@@ -494,7 +498,7 @@ func (h *Mirage) ConsoleUpdateKeyExpiryAPI(
 		h.doAPIResponse(writer, "从请求获取新值失败:"+err.Error(), nil)
 		return
 	}
-	err = h.UpdateUserKeyExpiry(userName, uint(newExpiryDuration))
+	err = h.UpdateUserKeyExpiry(user, uint(newExpiryDuration))
 	if err != nil {
 		h.doAPIResponse(writer, "更新密钥过期时长失败:"+err.Error(), nil)
 		return
@@ -506,8 +510,8 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(writer, req)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(writer, req)
+	if user.CheckEmpty() {
 		h.doAPIResponse(writer, "用户信息核对失败", nil)
 		return
 	}
@@ -533,7 +537,7 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 		h.doAPIResponse(writer, "查询用户设备失败", nil)
 		return
 	}
-	if toUpdateMachine.User.Name != userName {
+	if toUpdateMachine.User.ID != user.ID {
 		h.doAPIResponse(writer, "用户没有该权限", nil)
 		return
 	}
@@ -635,8 +639,12 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 		} else {
 			invalidTags := []string{}
 			allowedTags := []string{}
+			org, err := h.GetOrgnaizationByID(user.OrgId)
+			if err != nil {
+				h.doAPIResponse(writer, msg, nil)
+			}
 			for _, tag := range setTags {
-				if _, ok := h.aclPolicy.TagOwners[tag]; ok {
+				if _, ok := org.AclPolicy.TagOwners[tag]; ok {
 					allowedTags = append(allowedTags, tag)
 				} else {
 					invalidTags = append(invalidTags, tag)
@@ -667,9 +675,9 @@ func (h *Mirage) ConsoleRemoveMachineAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(writer, req)
+	user := h.verifyTokenIDandGetUser(writer, req)
 	resData := removeMachineRes{}
-	if userName == "" {
+	if user.CheckEmpty() {
 		resData.Status = "Error"
 		resData.ErrMsg = "用户信息核对失败"
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -683,7 +691,7 @@ func (h *Mirage) ConsoleRemoveMachineAPI(
 		}
 		return
 	}
-	UserMachines, err := h.ListMachinesByUser(userName)
+	UserMachines, err := h.ListMachinesByUser(user.ID)
 	if err != nil {
 		resData.Status = "Error"
 		resData.ErrMsg = "用户设备检索失败"
@@ -770,7 +778,7 @@ func (h *Mirage) setMachineExpiry(machine *Machine) (string, error) {
 			return "", err
 		}
 	} else {
-		expiryDuration := time.Hour * 24 * time.Duration(machine.User.ExpiryDuration)
+		expiryDuration := time.Hour * 24 * time.Duration(machine.User.Org.ExpiryDuration)
 		newExpiry := time.Now().Add(expiryDuration)
 		err := h.RefreshMachine(machine, newExpiry)
 		if err != nil {

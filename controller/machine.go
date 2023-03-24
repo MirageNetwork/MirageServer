@@ -285,7 +285,23 @@ func (h *Mirage) ListPeers(machine *Machine) (Machines, error) {
 		Msg("Finding direct peers")
 
 	machines := Machines{}
-	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Where("node_key <> ?",
+	orgId := machine.User.OrgId
+	if orgId == 0 {
+		return h.ListMachines()
+	}
+	userIds := []int64{}
+	h.db.Model(&User{}).Where("org_id = ?", orgId).Select("id").Find(&userIds)
+	if len(userIds) == 0 {
+		return machines, nil
+	}
+	scopeFunc := func(tx *gorm.DB) *gorm.DB {
+		if len(userIds) == 1 {
+			return tx.Where("user_id = ?", userIds[0])
+		} else {
+			return tx.Where("user_id in ?", userIds)
+		}
+	}
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Scopes(scopeFunc).Where("node_key <> ?",
 		machine.NodeKey).Find(&machines).Error; err != nil {
 		log.Error().Err(err).Msg("Error accessing db")
 
@@ -309,15 +325,21 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 
 	// If ACLs rules are defined, filter visible host list with the ACLs
 	// else use the classic user scope
-	if h.aclPolicy != nil {
+	if machine.User.Org.AclPolicy != nil {
+		org, err := h.GetOrgnaizationByID(machine.User.OrgId)
+		if err != nil {
+			log.Error().Err(err).Msg("Error retrieving organization of machine")
+
+			return Machines{}, []tailcfg.NodeID{}, err
+		}
 		var machines []Machine
-		machines, err = h.ListMachines()
+		machines, err = h.ListMachinesByOrgID(org.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Error retrieving list of machines")
 
 			return Machines{}, []tailcfg.NodeID{}, err
 		}
-		peers, invalidNodeIDs = getFilteredByACLPeers(machines, h.aclRules, machine)
+		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, machine)
 	} else {
 		peers, err = h.ListPeers(machine)
 		if err != nil {
@@ -360,7 +382,7 @@ func (h *Mirage) getValidPeers(machine *Machine) (Machines, []tailcfg.NodeID, er
 
 func (h *Mirage) ListMachines() ([]Machine, error) {
 	machines := []Machine{}
-	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Find(&machines).Error; err != nil {
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Find(&machines).Error; err != nil {
 		return nil, err
 	}
 
@@ -369,7 +391,31 @@ func (h *Mirage) ListMachines() ([]Machine, error) {
 
 func (h *Mirage) ListMachinesByGivenName(givenName string) ([]Machine, error) {
 	machines := []Machine{}
-	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Where("given_name = ?", givenName).Find(&machines).Error; err != nil {
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Where("given_name = ?", givenName).Find(&machines).Error; err != nil {
+		return nil, err
+	}
+
+	return machines, nil
+}
+
+func (h *Mirage) ListMachinesByOrgID(orgId int64) ([]Machine, error) {
+	if orgId == 0 {
+		return h.ListMachines()
+	}
+	machines := []Machine{}
+	userIds := []int64{}
+	h.db.Model(&User{}).Where("org_id = ?", orgId).Select("id").Find(&userIds)
+	if len(userIds) == 0 {
+		return machines, nil
+	}
+	scopeFunc := func(tx *gorm.DB) *gorm.DB {
+		if len(userIds) == 1 {
+			return tx.Where("user_id = ?", userIds[0])
+		} else {
+			return tx.Where("user_id in ?", userIds)
+		}
+	}
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Scopes(scopeFunc).Find(&machines).Error; err != nil {
 		return nil, err
 	}
 
@@ -404,7 +450,7 @@ func (h *Mirage) GetUserMachineByGivenName(
 	givenName string, uid tailcfg.UserID,
 ) (*Machine, error) {
 	machine := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").First(&machine, "given_name = ? AND user_id = ?",
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").First(&machine, "given_name = ? AND user_id = ?",
 		givenName,
 		uid); result.Error != nil {
 		return nil, result.Error
@@ -418,7 +464,7 @@ func (h *Mirage) GetUserMachineByMachineKey(
 	machineKey key.MachinePublic, uid tailcfg.UserID,
 ) (*Machine, error) {
 	machine := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").First(&machine, "machine_key = ? AND user_id = ?",
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").First(&machine, "machine_key = ? AND user_id = ?",
 		MachinePublicKeyStripPrefix(machineKey),
 		uid); result.Error != nil {
 		return nil, result.Error
@@ -463,9 +509,26 @@ func (h *Mirage) GetMachinesInPrefix(ip netip.Prefix) []Machine {
 	return out
 }
 
+// cgao6
+// GetMachine finds a Machine by user and backendlogid and returns the Machine struct.
+func (h *Mirage) GetMachineNSBLID(userID int64, backendlogid string) (*Machine, error) {
+	machines, err := h.ListMachinesByUser(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, m := range machines {
+		if m.HostInfo.BackendLogID == backendlogid {
+			return &m, nil
+		}
+	}
+
+	return nil, ErrMachineNotFound
+}
+
 // GetMachine finds a Machine by name and user and returns the Machine struct.
-func (h *Mirage) GetMachine(user string, name string) (*Machine, error) {
-	machines, err := h.ListMachinesByUser(user)
+func (h *Mirage) GetMachine(userID int64, name string) (*Machine, error) {
+	machines, err := h.ListMachinesByUser(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -480,8 +543,8 @@ func (h *Mirage) GetMachine(user string, name string) (*Machine, error) {
 }
 
 // GetMachineByGivenName finds a Machine by given name and user and returns the Machine struct.
-func (h *Mirage) GetMachineByGivenName(user string, givenName string) (*Machine, error) {
-	machines, err := h.ListMachinesByUser(user)
+func (h *Mirage) GetMachineByGivenName(userID int64, givenName string) (*Machine, error) {
+	machines, err := h.ListMachinesByUser(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -498,11 +561,26 @@ func (h *Mirage) GetMachineByGivenName(user string, givenName string) (*Machine,
 // GetMachineByID finds a Machine by ID and returns the Machine struct.
 func (h *Mirage) GetMachineByID(id int64) (*Machine, error) {
 	m := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").Find(&Machine{ID: id}).First(&m); result.Error != nil {
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").Find(&Machine{ID: id}).First(&m); result.Error != nil {
 		return nil, result.Error
 	}
 
 	return &m, nil
+}
+
+// GetMachineOrgID finds a Machine's Org.
+func (h *Mirage) GetMachineOrgByID(machine *Machine) (*Organization, error) {
+	user := User{}
+	err := h.db.Where("id = ?", machine.UserID).Take(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	org := Organization{}
+	err = h.db.Where("id = ?", user.OrgId).Take(&org).Error
+	if err != nil {
+		return nil, err
+	}
+	return &org, nil
 }
 
 // GetMachineByMachineKey finds a Machine by its MachineKey and returns the Machine struct.
@@ -510,7 +588,7 @@ func (h *Mirage) GetMachineByMachineKey(
 	machineKey key.MachinePublic,
 ) (*Machine, error) {
 	m := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").First(&m, "machine_key = ?", MachinePublicKeyStripPrefix(machineKey)); result.Error != nil {
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").First(&m, "machine_key = ?", MachinePublicKeyStripPrefix(machineKey)); result.Error != nil {
 		return nil, result.Error
 	}
 
@@ -522,7 +600,7 @@ func (h *Mirage) GetMachineByNodeKey(
 	nodeKey key.NodePublic,
 ) (*Machine, error) {
 	machine := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").First(&machine, "node_key = ?",
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").First(&machine, "node_key = ?",
 		NodePublicKeyStripPrefix(nodeKey)); result.Error != nil {
 		return nil, result.Error
 	}
@@ -535,7 +613,7 @@ func (h *Mirage) GetMachineByAnyKey(
 	machineKey key.MachinePublic, nodeKey key.NodePublic, oldNodeKey key.NodePublic,
 ) (*Machine, error) {
 	machine := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").First(&machine, "machine_key = ? OR node_key = ? OR node_key = ?",
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").First(&machine, "machine_key = ? OR node_key = ? OR node_key = ?",
 		MachinePublicKeyStripPrefix(machineKey),
 		NodePublicKeyStripPrefix(nodeKey),
 		NodePublicKeyStripPrefix(oldNodeKey)); result.Error != nil {
@@ -557,6 +635,10 @@ func (h *Mirage) UpdateMachineFromDatabase(machine *Machine) error {
 
 // SetTags takes a Machine struct pointer and update the forced tags.
 func (h *Mirage) SetTags(machine *Machine, tags []string) error {
+	org, err := h.GetMachineOrgByID(machine)
+	if err != nil {
+		return fmt.Errorf("failed to update tags for machine in the database: %w", err)
+	}
 	newTags := []string{}
 	for _, tag := range tags {
 		if !contains(newTags, tag) {
@@ -564,7 +646,7 @@ func (h *Mirage) SetTags(machine *Machine, tags []string) error {
 		}
 	}
 	machine.ForcedTags = newTags
-	if err := h.UpdateACLRules(); err != nil && !errors.Is(err, errEmptyPolicy) {
+	if err := h.UpdateACLRulesOfOrg(org); err != nil && !errors.Is(err, errEmptyPolicy) {
 		return err
 	}
 	h.setLastStateChangeToNow()
@@ -605,7 +687,7 @@ func (h *Mirage) setAutoGenName(machine *Machine, newName string) (string, error
 			}
 			machine.GivenName = h.GenMachineName(machine.Hostname, machine.User.toTailscaleUser().ID, machine.MachineKey)
 		} else {
-			_, err := h.GetMachineByGivenName(machine.User.Name, newName)
+			_, err := h.GetMachineByGivenName(machine.User.ID, newName)
 			if err != nil && err != ErrMachineNotFound {
 				return "", fmt.Errorf("fail to check whether new name already exist: %w", err)
 			} else if err == nil {
@@ -876,7 +958,7 @@ func (h *Mirage) toNode(
 	}
 
 	var hostname string
-	if machine.User.EnableMagic { //[cgao6 removed] dnsConfig != nil && dnsConfig.Proxied { // MagicDNS
+	if machine.User.Org.EnableMagic { //[cgao6 removed] dnsConfig != nil && dnsConfig.Proxied { // MagicDNS
 		_, baseDomain := machine.User.GetDNSConfig(h.cfg.IPPrefixes)
 		hostname = fmt.Sprintf(
 			"%s.%s.%s",
@@ -899,7 +981,7 @@ func (h *Mirage) toNode(
 
 	online := machine.isOnline()
 
-	tags, _ := getTags(h.aclPolicy, machine, h.cfg.OIDC.StripEmaildomain)
+	tags, _ := getTags(machine.User.Org.AclPolicy, machine, h.cfg.OIDC.StripEmaildomain)
 	tags = lo.Uniq(append(tags, machine.ForcedTags...))
 
 	node := tailcfg.Node{
@@ -1197,7 +1279,10 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 	approvedRoutes := []Route{}
 
 	for _, advertisedRoute := range routes {
-		routeApprovers, err := h.aclPolicy.AutoApprovers.GetRouteApprovers(
+		if machine.User.Org.AclPolicy == nil {
+			continue
+		}
+		routeApprovers, err := machine.User.Org.AclPolicy.AutoApprovers.GetRouteApprovers(
 			netip.Prefix(advertisedRoute.Prefix),
 		)
 		if err != nil {
@@ -1213,7 +1298,7 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 			if approvedAlias == machine.User.Name {
 				approvedRoutes = append(approvedRoutes, advertisedRoute)
 			} else {
-				approvedIps, err := h.expandAlias(false, []Machine{*machine}, *h.aclPolicy, approvedAlias, h.cfg.OIDC.StripEmaildomain)
+				approvedIps, err := h.expandAlias(false, []Machine{*machine}, *(machine.User.Org.AclPolicy), approvedAlias, h.cfg.OIDC.StripEmaildomain)
 				if err != nil {
 					log.Err(err).
 						Str("alias", approvedAlias).

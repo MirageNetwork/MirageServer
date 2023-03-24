@@ -72,7 +72,16 @@ func (h *Mirage) generateMapResponse(
 	)
 
 	now := time.Now()
+	org, err := h.GetOrgnaizationByID(machine.User.OrgId)
+	if err != nil {
+		log.Error().
+			Caller().
+			Str("func", "generateMapResponse").
+			Err(err).
+			Msg("Failed to get organization of machine")
 
+		return nil, err
+	}
 	resp := tailcfg.MapResponse{
 		KeepAlive: false,
 		Node:      node,
@@ -102,12 +111,12 @@ func (h *Mirage) generateMapResponse(
 		CollectServices: "false",
 
 		// TODO: Only send if updated
-		PacketFilter: h.aclRules,
+		PacketFilter: org.AclRules,
 
 		UserProfiles: profiles,
 
 		// TODO: Only send if updated
-		SSHPolicy: h.sshPolicy,
+		SSHPolicy: org.SshPolicy,
 
 		ControlTime: &now,
 

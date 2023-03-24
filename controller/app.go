@@ -80,6 +80,7 @@ type Mirage struct {
 	stateCodeCache          *cache.Cache
 	controlCodeCache        *cache.Cache
 	machineControlCodeCache *cache.Cache
+	//organizationCache       *cache.Cache
 
 	longPollChanPool map[string]chan string
 
@@ -180,7 +181,7 @@ func (h *Mirage) expireEphemeralNodesWorker() {
 	}
 
 	for _, user := range users {
-		machines, err := h.ListMachinesByUser(user.Name)
+		machines, err := h.ListMachinesByUser(user.ID)
 		if err != nil {
 			log.Error().
 				Err(err).
@@ -225,7 +226,7 @@ func (h *Mirage) expireExpiredMachinesWorker() {
 	}
 
 	for _, user := range users {
-		machines, err := h.ListMachinesByUser(user.Name)
+		machines, err := h.ListMachinesByUser(user.ID)
 		if err != nil {
 			log.Error().
 				Err(err).

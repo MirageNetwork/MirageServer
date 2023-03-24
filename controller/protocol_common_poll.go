@@ -41,14 +41,16 @@ func (h *Mirage) handlePollCommon(
 	}
 
 	// update ACLRules with peer informations (to update server tags if necessary)
-	if h.aclPolicy != nil {
-		err := h.UpdateACLRules()
-		if err != nil {
-			log.Error().
-				Caller().
-				Str("machine", machine.Hostname).
-				Err(err)
-		}
+	if machine.User.Org.AclPolicy != nil {
+		/*
+			err := h.UpdateACLRules()
+			if err != nil {
+				log.Error().
+					Caller().
+					Str("machine", machine.Hostname).
+					Err(err)
+			}
+		*/
 
 		// update routes with peer information
 		err = h.EnableAutoApprovedRoutes(machine)

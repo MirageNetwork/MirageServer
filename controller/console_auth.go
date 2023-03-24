@@ -610,7 +610,7 @@ func (h *Mirage) finishOauthResponse(
 		return
 	}
 	// TODO:添加判断用户是否存在及自动创建逻辑
-	user, err := h.findOrCreateNewUserForOIDCCallback(stateItem.userName, stateItem.userDisName)
+	user, err := h.findOrCreateNewUserForOIDCCallback(stateItem.userName, stateItem.userDisName, OrgName, stateItem.provider)
 	if err != nil { // TODO: 后续这里理论上不会出错，因为会自动创建用户
 		h.ErrMessage(w, r, 500, "服务器用户获取出错")
 		return
@@ -781,11 +781,11 @@ func (h *Mirage) registerMachineFromConsole(
 		Str("machineKey", aCodeItem.mKey.ShortString()).
 		Str("nodeKey", nodeKey.ShortString()).
 		Str("userName", user.Name).
-		Str("expiresAt", fmt.Sprintf("%v", time.Now().AddDate(0, 0, int(user.ExpiryDuration)))).
+		Str("expiresAt", fmt.Sprintf("%v", time.Now().AddDate(0, 0, int(user.Org.ExpiryDuration)))).
 		Msg("Registering machine from console confirm")
 
 	now := time.Now()
-	expiration := time.Now().AddDate(0, 0, int(user.ExpiryDuration))
+	expiration := time.Now().AddDate(0, 0, int(user.Org.ExpiryDuration))
 	givenName := h.GenMachineName(aCodeItem.regReq.Hostinfo.Hostname, aCodeItem.uid, MachinePublicKeyStripPrefix(aCodeItem.mKey))
 	newmachine := Machine{
 		MachineKey:           MachinePublicKeyStripPrefix(aCodeItem.mKey),

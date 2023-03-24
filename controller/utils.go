@@ -348,3 +348,12 @@ func AbsolutePathFromConfigPath(path string) string {
 
 	return path
 }
+
+func GetShortId(longID int64) string {
+	shortID := ""
+	for longID > 0 {
+		shortID = string("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"[longID%62]) + shortID
+		longID /= 62
+	}
+	return shortID
+}

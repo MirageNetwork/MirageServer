@@ -20,8 +20,8 @@ func (h *Mirage) CAPIGetTags(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
@@ -29,7 +29,11 @@ func (h *Mirage) CAPIGetTags(
 	resData := TagsData{
 		TagOwners: []Tag{},
 	}
-	for tagName, owners := range h.aclPolicy.TagOwners {
+	org, err := h.GetOrgnaizationByID(user.OrgId)
+	if err != nil {
+		h.doAPIResponse(w, "用户组织信息获取失败", nil)
+	}
+	for tagName, owners := range org.AclPolicy.TagOwners {
 		resData.TagOwners = append(resData.TagOwners, Tag{
 			TagName: tagName,
 			Owners:  owners,
@@ -51,8 +55,8 @@ func (h *Mirage) CAPIPostTags(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
@@ -65,27 +69,33 @@ func (h *Mirage) CAPIPostTags(
 	json.NewDecoder(r.Body).Decode(&reqData)
 	switch reqData.State {
 	case "create":
-		if _, ok := h.aclPolicy.TagOwners["tag:"+reqData.TagName]; ok {
+		org, err := h.GetOrgnaizationByID(user.OrgId)
+		if err != nil {
+			h.doAPIResponse(w, "用户组织信息获取失败", nil)
+		}
+		acl := org.AclPolicy
+		if _, ok := acl.TagOwners["tag:"+reqData.TagName]; ok {
 			h.doAPIResponse(w, "occupied", nil)
 			return
 		}
-		if h.aclPolicy.TagOwners == nil {
-			h.aclPolicy.TagOwners = map[string][]string{}
-		}
-		h.aclPolicy.TagOwners["tag:"+reqData.TagName] = reqData.Owners
-		aclPath := AbsolutePathFromConfigPath(ACLPath)
-		err := h.SaveACLPolicy(aclPath)
+		acl.TagOwners["tag:"+reqData.TagName] = reqData.Owners
+		//aclPath := AbsolutePathFromConfigPath(ACLPath)
+		//err = h.SaveACLPolicy(aclPath)
+		err = h.SaveACLPolicyOfOrg(org)
 		if err != nil {
-			delete(h.aclPolicy.TagOwners, "tag:"+reqData.TagName)
+			//delete(acl.TagOwners, "tag:"+reqData.TagName)
 			h.doAPIResponse(w, "保存ACL策略失败:"+err.Error(), nil)
 			return
 		}
-		err = h.UpdateACLRules()
-		if err != nil {
-			delete(h.aclPolicy.TagOwners, "tag:"+reqData.TagName)
-			h.doAPIResponse(w, "更新ACL规则失败:"+err.Error(), nil)
-			return
-		}
+		/*
+			err = h.UpdateACLRulesOfOrg(org)
+			h.organizationCache.Delete(org.Name)
+			if err != nil {
+				delete(h.aclPolicy.TagOwners, "tag:"+reqData.TagName)
+				h.doAPIResponse(w, "更新ACL规则失败:"+err.Error(), nil)
+				return
+			}
+		*/
 		resData := CreateTagREQ{
 			TagName: reqData.TagName,
 			Owners:  reqData.Owners,
@@ -99,30 +109,42 @@ func (h *Mirage) CAPIDelTags(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userName := h.verifyTokenIDandGetUser(w, r)
-	if userName == "" {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
+	org, err := h.GetOrgnaizationByID(user.OrgId)
+	if err != nil {
+		h.doAPIResponse(w, "用户组织信息获取失败", nil)
+	}
 	targetTagName := strings.TrimPrefix(r.URL.Path, "/admin/api/acls/tags/")
-	owners, ok := h.aclPolicy.TagOwners["tag:"+targetTagName]
+	_, ok := org.AclPolicy.TagOwners["tag:"+targetTagName]
 	if !ok {
 		h.doAPIResponse(w, "该标签不存在", nil)
 		return
 	}
-	delete(h.aclPolicy.TagOwners, "tag:"+targetTagName)
-	aclPath := AbsolutePathFromConfigPath(ACLPath)
-	err := h.SaveACLPolicy(aclPath)
+	delete(org.AclPolicy.TagOwners, "tag:"+targetTagName)
+	err = h.SaveACLPolicyOfOrg(org)
 	if err != nil {
-		h.aclPolicy.TagOwners["tag:"+targetTagName] = owners
 		h.doAPIResponse(w, "保存ACL策略失败:"+err.Error(), nil)
 		return
 	}
-	err = h.UpdateACLRules()
-	if err != nil {
-		h.aclPolicy.TagOwners["tag:"+targetTagName] = owners
-		h.doAPIResponse(w, "更新ACL规则失败:"+err.Error(), nil)
-		return
-	}
+	/*
+		delete(h.aclPolicy.TagOwners, "tag:"+targetTagName)
+		aclPath := AbsolutePathFromConfigPath(ACLPath)
+		err = h.SaveACLPolicy(aclPath)
+		if err != nil {
+			h.aclPolicy.TagOwners["tag:"+targetTagName] = owners
+			h.doAPIResponse(w, "保存ACL策略失败:"+err.Error(), nil)
+			return
+		}
+		err = h.UpdateACLRules()
+		if err != nil {
+			h.aclPolicy.TagOwners["tag:"+targetTagName] = owners
+			h.doAPIResponse(w, "更新ACL规则失败:"+err.Error(), nil)
+			return
+		}
+	*/
 	h.doAPIResponse(w, "", targetTagName)
 }
