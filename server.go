@@ -108,30 +108,6 @@ func main() {
 					break
 				}
 
-				aclPath := controller.AbsolutePathFromConfigPath(controller.ACLPath)
-				if _, err = os.Stat(aclPath); err == nil {
-					err = app.LoadACLPolicy(aclPath)
-					if err != nil {
-						log.Error().Caller().Err(err).Msg("Error loading ACL policy")
-						msgChn <- controller.CtrlMsg{
-							Msg: "error",
-							Err: err,
-						}
-						break
-					}
-				} else {
-					log.Warn().Caller().Err(err).Msg("ACL policy not found: " + aclPath + " Will create default ACL policy")
-					err = app.CreateDefaultACLPolicy()
-					if err != nil {
-						log.Error().Caller().Err(err).Msg("Error creating default ACL policy")
-						msgChn <- controller.CtrlMsg{
-							Msg: "error",
-							Err: err,
-						}
-						break
-					}
-				}
-
 				err = app.Serve(ctrlChn)
 				if err != nil {
 					log.Error().Caller().Err(err).Msg("Error starting server")

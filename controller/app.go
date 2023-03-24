@@ -41,7 +41,6 @@ const (
 	DatabasePath = "db.sqlite"
 	DexDBPath    = "dexdb.sqlite"
 	DexDBType    = "sqlite3"
-	ACLPath      = "acl.hujson"
 	AuthPrefix   = "Bearer "
 
 	EphemeralNodeInactivityTimeout = 5 * time.Minute  //不得低于65s
@@ -453,17 +452,6 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 				log.Info().Msg("Mirage stopped")
 				cancel()
 				return
-			case "reload":
-				log.Info().Msg("Received reload message, reloading ACL and Config")
-				aclPath := AbsolutePathFromConfigPath(ACLPath)
-				err := h.LoadACLPolicy(aclPath)
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to reload ACL policy")
-				}
-				log.Info().
-					Str("path", aclPath).
-					Msg("ACL policy successfully reloaded, notifying nodes of change")
-				h.setLastStateChangeToNow()
 			}
 		}
 	}

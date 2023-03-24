@@ -87,14 +87,16 @@ func (user *User) CheckEmpty() bool {
 // CreateUser creates a new User. Returns error if could not be created
 // or another user already exists.
 func (h *Mirage) CreateUser(name string, disName string, orgName string, provider string) (*User, error) {
-	err := CheckForFQDNRules(name)
-	if err != nil {
-		return nil, err
-	}
+	/*
+		err := CheckForFQDNRules(name)
+		if err != nil {
+			return nil, err
+		}
+	*/
 	user := User{}
 	user.Name = name
 	user.Display_Name = disName
-	err = h.db.Transaction(func(tx *gorm.DB) error {
+	err := h.db.Transaction(func(tx *gorm.DB) error {
 		var org *Organization
 		var trxErr error
 		//需要先查询orgName是否存在
@@ -201,10 +203,12 @@ func (h *Mirage) RenameUser(oldName, newName string, orgName string, provider st
 	if err != nil {
 		return err
 	}
-	err = CheckForFQDNRules(newName)
-	if err != nil {
-		return err
-	}
+	/*
+		err = CheckForFQDNRules(newName)
+		if err != nil {
+			return err
+		}
+	*/
 	if isEx, err := h.CheckUserExistence(newName, orgName, provider); err != nil {
 		return err
 	} else if isEx {
@@ -304,10 +308,12 @@ func (h *Mirage) ListMachinesByUser(userID int64) ([]Machine, error) {
 
 // SetMachineUser assigns a Machine to a user.
 func (h *Mirage) SetMachineUser(machine *Machine, username, orgName, provider string) error {
-	err := CheckForFQDNRules(username)
-	if err != nil {
-		return err
-	}
+	/*
+		err := CheckForFQDNRules(username)
+		if err != nil {
+			return err
+		}
+	*/
 	user, err := h.GetUser(username, orgName, provider)
 	if err != nil {
 		return err

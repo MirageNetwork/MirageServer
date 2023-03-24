@@ -132,7 +132,7 @@ func GetOrgnaizationByNameInTx(tx *gorm.DB, name, provider string) (*Organizatio
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			err = ErrOrgNotFound
 		}
-		log.Error().
+		log.Debug().
 			Str("func", "GetOrgnaizationByName").
 			Err(err).
 			Msg("Could not get row")

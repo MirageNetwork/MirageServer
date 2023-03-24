@@ -151,7 +151,7 @@ func (h *Mirage) ConsoleSelfAPI(
 	userDisName := user.Display_Name
 	userNameHead := string([]rune(userDisName)[0])
 
-	userOrgName := userName
+	userOrgName := user.Organization.Name
 	// 用户所属组织将存于数据库，合并实现前，不设置配置文件中该项，均按个人用户处理
 
 	renderData := adminTemplateConfig{
