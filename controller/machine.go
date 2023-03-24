@@ -303,7 +303,7 @@ func (h *Mirage) ListPeers(machine *Machine) (Machines, error) {
 			return tx.Where("user_id in ?", userIds)
 		}
 	}
-	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Scopes(scopeFunc).Where("node_key <> ?",
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Organization").Scopes(scopeFunc).Where("node_key <> ?",
 		machine.NodeKey).Find(&machines).Error; err != nil {
 		log.Error().Err(err).Msg("Error accessing db")
 
@@ -384,7 +384,7 @@ func (h *Mirage) getValidPeers(machine *Machine) (Machines, []tailcfg.NodeID, er
 
 func (h *Mirage) ListMachines() ([]Machine, error) {
 	machines := []Machine{}
-	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Find(&machines).Error; err != nil {
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Organization").Find(&machines).Error; err != nil {
 		return nil, err
 	}
 
@@ -393,7 +393,7 @@ func (h *Mirage) ListMachines() ([]Machine, error) {
 
 func (h *Mirage) ListMachinesByGivenName(givenName string) ([]Machine, error) {
 	machines := []Machine{}
-	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Where("given_name = ?", givenName).Find(&machines).Error; err != nil {
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Organization").Where("given_name = ?", givenName).Find(&machines).Error; err != nil {
 		return nil, err
 	}
 
@@ -419,7 +419,7 @@ func (h *Mirage) ListMachinesByOrgID(orgId int64) ([]Machine, error) {
 			return tx.Where("user_id in ?", userIds)
 		}
 	}
-	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Org").Scopes(scopeFunc).Find(&machines).Error; err != nil {
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Organization").Scopes(scopeFunc).Find(&machines).Error; err != nil {
 		return nil, err
 	}
 
@@ -454,7 +454,7 @@ func (h *Mirage) GetUserMachineByGivenName(
 	givenName string, uid tailcfg.UserID,
 ) (*Machine, error) {
 	machine := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").First(&machine, "given_name = ? AND user_id = ?",
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Organization").First(&machine, "given_name = ? AND user_id = ?",
 		givenName,
 		uid); result.Error != nil {
 		return nil, result.Error
@@ -468,7 +468,7 @@ func (h *Mirage) GetUserMachineByMachineKey(
 	machineKey key.MachinePublic, uid tailcfg.UserID,
 ) (*Machine, error) {
 	machine := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").First(&machine, "machine_key = ? AND user_id = ?",
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Organization").First(&machine, "machine_key = ? AND user_id = ?",
 		MachinePublicKeyStripPrefix(machineKey),
 		uid); result.Error != nil {
 		return nil, result.Error
@@ -565,7 +565,7 @@ func (h *Mirage) GetMachineByGivenName(userID int64, givenName string) (*Machine
 // GetMachineByID finds a Machine by ID and returns the Machine struct.
 func (h *Mirage) GetMachineByID(id int64) (*Machine, error) {
 	m := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").Find(&Machine{ID: id}).First(&m); result.Error != nil {
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Organization").Find(&Machine{ID: id}).First(&m); result.Error != nil {
 		return nil, result.Error
 	}
 
@@ -592,7 +592,7 @@ func (h *Mirage) GetMachineByMachineKey(
 	machineKey key.MachinePublic,
 ) (*Machine, error) {
 	m := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").First(&m, "machine_key = ?", MachinePublicKeyStripPrefix(machineKey)); result.Error != nil {
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Organization").First(&m, "machine_key = ?", MachinePublicKeyStripPrefix(machineKey)); result.Error != nil {
 		return nil, result.Error
 	}
 
@@ -604,7 +604,7 @@ func (h *Mirage) GetMachineByNodeKey(
 	nodeKey key.NodePublic,
 ) (*Machine, error) {
 	machine := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").First(&machine, "node_key = ?",
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Organization").First(&machine, "node_key = ?",
 		NodePublicKeyStripPrefix(nodeKey)); result.Error != nil {
 		return nil, result.Error
 	}
@@ -617,7 +617,7 @@ func (h *Mirage) GetMachineByAnyKey(
 	machineKey key.MachinePublic, nodeKey key.NodePublic, oldNodeKey key.NodePublic,
 ) (*Machine, error) {
 	machine := Machine{}
-	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Org").First(&machine, "machine_key = ? OR node_key = ? OR node_key = ?",
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Organization").First(&machine, "machine_key = ? OR node_key = ? OR node_key = ?",
 		MachinePublicKeyStripPrefix(machineKey),
 		NodePublicKeyStripPrefix(nodeKey),
 		NodePublicKeyStripPrefix(oldNodeKey)); result.Error != nil {
