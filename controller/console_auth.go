@@ -427,6 +427,9 @@ func (h *Mirage) deviceReg(
 	h.sendDeviceRedirectPage(w, r, Hostname, Netname, MIP)
 }
 
+//go:embed templates/OrgSelector.html
+var OrgSelectTemplate string
+
 // 接受OIDC认证返回的GET，进行跳转和Token写入
 func (h *Mirage) oauthResponse(
 	w http.ResponseWriter,
@@ -459,6 +462,7 @@ func (h *Mirage) oauthResponse(
 	// TODO: 后续多Provider时从state码中读取对应的校验器
 	userName := ""
 	userDisName := ""
+	orgName := ""
 	switch qStateItem.provider {
 	case "Microsoft", "Google", "Github", "Apple", "Ali":
 		oauth2Token, err := h.oauth2Config.Exchange(r.Context(), code)
@@ -488,6 +492,55 @@ func (h *Mirage) oauthResponse(
 			h.ErrMessage(w, r, 500, "三方登录用户信息解析出错")
 			return
 		}
+		qStateItem.userName = userName
+		qStateItem.userDisName = userDisName
+		h.stateCodeCache.Set(qState, qStateItem, qStateExpiration.Sub(time.Now()))
+
+		if claims.Groups == nil || len(claims.Groups) == 0 {
+			orgName = userName
+		} else if len(claims.Groups) == 1 { // 对Github而言，至少有一个个人组织，是Groups中的最末一项
+			orgName = claims.Groups[0]
+		} else { // 渲染组织选择页面
+			if qStateItem.provider == "Github" { // 除Github之外其他情况有待讨论
+				orgSelectT := template.Must(template.New("orgSelector").Parse(OrgSelectTemplate))
+
+				config := map[string]interface{}{
+					"State":         qState,
+					"UserName":      strings.TrimSuffix(userName, "@github"),
+					"PersonalGroup": claims.Groups[len(claims.Groups)-1],
+					"Groups":        claims.Groups[:len(claims.Groups)-1],
+				}
+
+				var payload bytes.Buffer
+				if err := orgSelectT.Execute(&payload, config); err != nil {
+					log.Error().
+						Str("handler", "orgSelector").
+						Err(err).
+						Msg("Could not render orgSelector template")
+
+					w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+					w.WriteHeader(http.StatusInternalServerError)
+					_, err := w.Write([]byte("Could not render orgSelector template"))
+					if err != nil {
+						log.Error().
+							Caller().
+							Err(err).
+							Msg("Failed to write response")
+					}
+					return
+				}
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write(payload.Bytes())
+				if err != nil {
+					log.Error().
+						Caller().
+						Err(err).
+						Msg("Failed to write response")
+				}
+				return
+			}
+		}
 	case "WXScan":
 		url := h.cfg.wxScanURL + "/verify"
 		message := map[string]string{"code": code}
@@ -516,17 +569,54 @@ func (h *Mirage) oauthResponse(
 		if resData["status"] == "OK" {
 			userName = resData["user_name"]
 			userDisName = resData["display_name"]
+			orgName = userName + ".WeChat"
 		}
+
+		qStateItem.userName = userName
+		qStateItem.userDisName = userDisName
+		h.stateCodeCache.Set(qState, qStateItem, qStateExpiration.Sub(time.Now()))
 	}
 
+	h.finishOauthResponse(w, r, qState, orgName)
+}
+
+// 接受选择组织的请求
+func (h *Mirage) selectOrgForLogin(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	r.ParseForm()
+	state := r.Form["state"][0]
+	orgName := r.Form["org"][0]
+	h.finishOauthResponse(w, r, state, orgName)
+}
+
+// 真正完成登录或注册
+func (h *Mirage) finishOauthResponse(
+	w http.ResponseWriter,
+	r *http.Request,
+	state string,
+	OrgName string,
+) {
+	stateC, qStateExpiration, ok := h.stateCodeCache.GetWithExpiration(state)
+	if !ok {
+		h.ErrMessage(w, r, 409, "未知的state参数")
+		return
+	}
+	stateItem := stateC.(StateCacheItem)
+	// 对于任何已经之前经过认证的stateCode都往目标URL跳转，由目标URL校验是否放行
+	if stateItem.uid != -1 {
+		http.Redirect(w, r, stateItem.nextURL, http.StatusFound)
+		return
+	}
 	// TODO:添加判断用户是否存在及自动创建逻辑
-	user, err := h.findOrCreateNewUserForOIDCCallback(userName, userDisName)
+	user, err := h.findOrCreateNewUserForOIDCCallback(stateItem.userName, stateItem.userDisName)
 	if err != nil { // TODO: 后续这里理论上不会出错，因为会自动创建用户
 		h.ErrMessage(w, r, 500, "服务器用户获取出错")
 		return
 	}
-	qStateItem.uid = user.toTailscaleUser().ID
-	h.stateCodeCache.Set(qState, qStateItem, qStateExpiration.Sub(time.Now()))
+	stateItem.uid = user.toTailscaleUser().ID
+	h.stateCodeCache.Set(state, stateItem, qStateExpiration.Sub(time.Now()))
 	controlCode := h.GenStateCode()
 	h.controlCodeCache.Set(
 		controlCode,
@@ -535,7 +625,7 @@ func (h *Mirage) oauthResponse(
 		},
 		time.Now().AddDate(0, 1, 0).Sub(time.Now()),
 	)
-	machineKey := qStateItem.machineKey
+	machineKey := stateItem.machineKey
 	// 确认state来自机器注册用，需要记录与机器码对应关系，后续机器有新注册时要将原有对应control全部删除
 	if !machineKey.IsZero() {
 		machineControlCodes, machineControlCodeExpiration, ok := h.machineControlCodeCache.GetWithExpiration(machineKey.String())
@@ -561,15 +651,17 @@ func (h *Mirage) oauthResponse(
 		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, controlCodeCookie)
-	http.Redirect(w, r, qStateItem.nextURL, http.StatusFound)
+	http.Redirect(w, r, stateItem.nextURL, http.StatusFound)
 	return
 }
 
 type StateCacheItem struct {
-	nextURL    string
-	provider   string
-	uid        tailcfg.UserID
-	machineKey key.MachinePublic
+	nextURL     string
+	provider    string
+	uid         tailcfg.UserID
+	userName    string
+	userDisName string
+	machineKey  key.MachinePublic
 }
 
 type ControlCacheItem struct {
@@ -578,53 +670,6 @@ type ControlCacheItem struct {
 
 type MachineControlCodeCacheItem struct {
 	controlCodes []string
-}
-
-//go:embed templates/BadCode.html
-var errTemplate string
-
-// cgao6: 用这个向前端返回错误页面
-func (h *Mirage) ErrMessage(
-	w http.ResponseWriter,
-	r *http.Request,
-	code int,
-	msg string,
-) {
-	errT := template.Must(template.New("err").Parse(errTemplate))
-
-	config := map[string]interface{}{
-		"ErrCode": code,
-		"ErrMsg":  msg,
-	}
-
-	var payload bytes.Buffer
-	if err := errT.Execute(&payload, config); err != nil {
-		log.Error().
-			Str("handler", "ErrMessage").
-			Err(err).
-			Msg("Could not render Error template")
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write([]byte("Could not render Error template"))
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(code)
-	_, err := w.Write(payload.Bytes())
-	if err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Failed to write response")
-	}
 }
 
 //go:embed templates/connectDevice.html

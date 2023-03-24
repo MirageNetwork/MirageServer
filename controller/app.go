@@ -302,6 +302,7 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	//对于特殊路径"/a/oauth_response"是login到第三方后验证通过的回写token逻辑
 	router.HandleFunc("/a/oauth_response", h.oauthResponse).Methods(http.MethodGet)
 	router.HandleFunc("/a/{aCode}", h.deviceRegPortal).Methods(http.MethodGet)
+	router.HandleFunc("/a/oauth_response", h.selectOrgForLogin).Methods(http.MethodPost)
 	router.HandleFunc("/a/{aCode}", h.deviceReg).Methods(http.MethodPost)
 
 	// 控制台所需的全部API接口（由APIAuth身份验证放行）

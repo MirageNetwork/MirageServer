@@ -1,7 +1,10 @@
 package controller
 
 import (
+	"bytes"
+	_ "embed"
 	"encoding/json"
+	"html/template"
 	"net/http"
 
 	"github.com/rs/zerolog/log"
@@ -28,6 +31,53 @@ func (h *Mirage) doAPIResponse(writer http.ResponseWriter, msg string, data inte
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	writer.WriteHeader(http.StatusOK)
 	err := json.NewEncoder(writer).Encode(&res)
+	if err != nil {
+		log.Error().
+			Caller().
+			Err(err).
+			Msg("Failed to write response")
+	}
+}
+
+//go:embed templates/BadCode.html
+var errTemplate string
+
+// cgao6: 用这个向前端返回错误页面
+func (h *Mirage) ErrMessage(
+	w http.ResponseWriter,
+	r *http.Request,
+	code int,
+	msg string,
+) {
+	errT := template.Must(template.New("err").Parse(errTemplate))
+
+	config := map[string]interface{}{
+		"ErrCode": code,
+		"ErrMsg":  msg,
+	}
+
+	var payload bytes.Buffer
+	if err := errT.Execute(&payload, config); err != nil {
+		log.Error().
+			Str("handler", "ErrMessage").
+			Err(err).
+			Msg("Could not render Error template")
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Could not render Error template"))
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to write response")
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(code)
+	_, err := w.Write(payload.Bytes())
 	if err != nil {
 		log.Error().
 			Caller().
