@@ -247,18 +247,16 @@ func (h *Mirage) GetUserByID(id tailcfg.UserID) (*User, error) {
 
 // GetUser fetches a user by name.
 func (h *Mirage) GetUser(name, orgName, provider string) (*User, error) {
-	user := User{}
 	org, err := h.GetOrgnaizationByName(orgName, provider)
 	if err != nil {
 		return nil, err
 	}
-	if result := h.db.First(&User{
+	user := User{}
+	err = h.db.Where(&User{
 		Name:  name,
 		OrgId: org.ID,
-	}); errors.Is(
-		result.Error,
-		gorm.ErrRecordNotFound,
-	) {
+	}).Take(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound
 	}
 	user.Org = *org
