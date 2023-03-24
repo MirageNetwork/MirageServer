@@ -152,10 +152,12 @@ func (h *Mirage) RenameUser(oldName, newName string) error {
 	if err != nil {
 		return err
 	}
-	err = CheckForFQDNRules(newName)
-	if err != nil {
-		return err
-	}
+	/*
+		err = CheckForFQDNRules(newName)
+		if err != nil {
+			return err
+		}
+	*/
 	_, err = h.GetUser(newName)
 	if err == nil {
 		return ErrUserExists
@@ -211,10 +213,12 @@ func (h *Mirage) ListUsers() ([]User, error) {
 
 // ListMachinesByUser gets all the nodes in a given user.
 func (h *Mirage) ListMachinesByUser(name string) ([]Machine, error) {
-	err := CheckForFQDNRules(name)
-	if err != nil {
-		return nil, err
-	}
+	/*
+		err := CheckForFQDNRules(name)
+		if err != nil {
+			return nil, err
+		}
+	*/
 	user, err := h.GetUser(name)
 	if err != nil {
 		return nil, err
@@ -230,10 +234,12 @@ func (h *Mirage) ListMachinesByUser(name string) ([]Machine, error) {
 
 // SetMachineUser assigns a Machine to a user.
 func (h *Mirage) SetMachineUser(machine *Machine, username string) error {
-	err := CheckForFQDNRules(username)
-	if err != nil {
-		return err
-	}
+	/*
+		err := CheckForFQDNRules(username)
+		if err != nil {
+			return err
+		}
+	*/
 	user, err := h.GetUser(username)
 	if err != nil {
 		return err
