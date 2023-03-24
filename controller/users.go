@@ -235,7 +235,7 @@ func (h *Mirage) ChangUserRole(id tailcfg.UserID, role string) error {
 // GetUserByID fetches a user by UserID.
 func (h *Mirage) GetUserByID(id tailcfg.UserID) (*User, error) {
 	user := User{}
-	if result := h.db.Preload("Org").First(&user, "id = ?", id); errors.Is(
+	if result := h.db.Preload("Organization").First(&user, "id = ?", id); errors.Is(
 		result.Error,
 		gorm.ErrRecordNotFound,
 	) {
@@ -267,7 +267,7 @@ func (h *Mirage) GetUser(name, orgName, provider string) (*User, error) {
 /*
 func (h *Mirage) GetUser(name string) (*User, error) {
 	user := User{}
-	if result := h.db.Preload("Org").First(&user, "name = ?", name); errors.Is(
+	if result := h.db.Preload("Organization").First(&user, "name = ?", name); errors.Is(
 		result.Error,
 		gorm.ErrRecordNotFound,
 	) {
@@ -281,7 +281,7 @@ func (h *Mirage) GetUser(name string) (*User, error) {
 // ListUsers gets all the existing users.
 func (h *Mirage) ListUsers() ([]User, error) {
 	users := []User{}
-	if err := h.db.Preload("Org").Find(&users).Error; err != nil {
+	if err := h.db.Preload("Organization").Find(&users).Error; err != nil {
 		return nil, err
 	}
 
