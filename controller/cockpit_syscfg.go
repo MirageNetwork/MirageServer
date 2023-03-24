@@ -32,30 +32,16 @@ type SysConfig struct {
 
 	IdaasConfig ALIConfig
 
-	OidcConfig OIDCConfig
+	//	OidcConfig OIDCConfig
+	DexSecret string
+
+	MicrosoftCfg MicrosoftCfg
+	GithubCfg    GithubCfg
+	GoogleCfg    GoogleCfg
+	AppleCfg     AppleCfg
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-func (s *SysConfig) toSrvConfig() (*Config, error) {
-	return &Config{
-		ServerURL:              s.ServerURL,
-		Addr:                   s.Addr,
-		IPPrefixes:             []netip.Prefix{netip.Prefix(s.Mip4), netip.Prefix(s.Mip6)},
-		BaseDomain:             s.Basedomain,
-		DERPURL:                s.DerpUrl,
-		AllowRouteDueToMachine: s.RouteAccessDueMachine,
-
-		ESURL: s.EsUrl,
-		ESKey: s.EsKey,
-
-		wxScanURL: s.WXScanURL,
-
-		SMS:   s.SMSConfig,
-		IDaaS: s.IdaasConfig,
-		OIDC:  s.OidcConfig,
-	}, nil
 }
 
 type GeneralCfg struct {
@@ -72,9 +58,13 @@ type GeneralCfg struct {
 
 	WXScanURL string `json:"wxscan_url"`
 
-	SMSConfig   SMSConfig  `json:"sms"`
-	IDaaSConfig ALIConfig  `json:"idaas"`
-	OIDCConfig  OIDCConfig `json:"oidc"`
+	SMSConfig   SMSConfig `json:"sms"`
+	IDaaSConfig ALIConfig `json:"idaas"`
+
+	MicrosoftCfg MicrosoftCfg `json:"microsoft"`
+	GithubCfg    GithubCfg    `json:"github"`
+	GoogleCfg    GoogleCfg    `json:"google"`
+	AppleCfg     AppleCfg     `json:"apple"`
 }
 
 func (s *SysConfig) toGeneralCfg() GeneralCfg {
@@ -92,10 +82,60 @@ func (s *SysConfig) toGeneralCfg() GeneralCfg {
 
 		WXScanURL: s.WXScanURL,
 
-		SMSConfig:   s.SMSConfig,
-		IDaaSConfig: s.IdaasConfig,
-		OIDCConfig:  s.OidcConfig,
+		SMSConfig:    s.SMSConfig,
+		IDaaSConfig:  s.IdaasConfig,
+		MicrosoftCfg: s.MicrosoftCfg,
+		GithubCfg:    s.GithubCfg,
+		GoogleCfg:    s.GoogleCfg,
+		AppleCfg:     s.AppleCfg,
 	}
+}
+func (s *SysConfig) toSrvConfig() (*Config, error) {
+	dexCfg, err := s.toDexConfig()
+	if err != nil {
+		return nil, err
+	}
+	idps := []string{}
+	if s.MicrosoftCfg.ClientID != "" && s.MicrosoftCfg.ClientSecret != "" {
+		idps = append(idps, "Microsoft")
+	}
+	if s.GithubCfg.ClientID != "" && s.GithubCfg.ClientSecret != "" {
+		idps = append(idps, "Github")
+	}
+	if s.GoogleCfg.ClientID != "" && s.GoogleCfg.ClientSecret != "" {
+		idps = append(idps, "Google")
+	}
+	if s.AppleCfg.ClientID != "" && s.AppleCfg.KeyID != "" && s.AppleCfg.TeamID != "" && s.AppleCfg.PrivateKey != "" {
+		idps = append(idps, "Apple")
+	}
+
+	OidcConfig := OIDCConfig{
+		Issuer:       "https://" + s.ServerURL + "/issuer",
+		ClientID:     "MirageServer",
+		ClientSecret: s.DexSecret,
+		Scope:        []string{"openid", "profile", "email", "groups", "name"},
+		ExtraParams:  map[string]string{"prompt": "login"},
+	}
+
+	return &Config{
+		ServerURL:              s.ServerURL,
+		Addr:                   s.Addr,
+		IPPrefixes:             []netip.Prefix{netip.Prefix(s.Mip4), netip.Prefix(s.Mip6)},
+		BaseDomain:             s.Basedomain,
+		DERPURL:                s.DerpUrl,
+		AllowRouteDueToMachine: s.RouteAccessDueMachine,
+
+		ESURL: s.EsUrl,
+		ESKey: s.EsKey,
+
+		wxScanURL: s.WXScanURL,
+
+		SMS:       s.SMSConfig,
+		IDaaS:     s.IdaasConfig,
+		OIDC:      OidcConfig,
+		DexConfig: dexCfg,
+		IdpList:   idps,
+	}, nil
 }
 
 type AdminCredential webauthn.Credential
@@ -113,5 +153,92 @@ func (ac *AdminCredential) Scan(value interface{}) error {
 
 func (ac AdminCredential) Value() (driver.Value, error) {
 	bytes, err := json.Marshal(ac)
+	return string(bytes), err
+}
+
+type MicrosoftCfg struct {
+	ApplicationID string `json:"app_id"`
+	ClientID      string `json:"client_id"`
+	ClientSecret  string `json:"client_secret"`
+}
+
+func (mscfg *MicrosoftCfg) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, mscfg)
+	case string:
+		return json.Unmarshal([]byte(v), mscfg)
+	default:
+		return fmt.Errorf("cannot parse microsoft config: unexpected data type %T", value)
+	}
+}
+
+func (mscfg MicrosoftCfg) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(mscfg)
+	return string(bytes), err
+}
+
+type GithubCfg struct {
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+}
+
+func (ghCfg *GithubCfg) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, ghCfg)
+	case string:
+		return json.Unmarshal([]byte(v), ghCfg)
+	default:
+		return fmt.Errorf("cannot parse github config: unexpected data type %T", value)
+	}
+}
+
+func (ghCfg GithubCfg) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(ghCfg)
+	return string(bytes), err
+}
+
+type GoogleCfg struct {
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+}
+
+func (ghCfg *GoogleCfg) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, ghCfg)
+	case string:
+		return json.Unmarshal([]byte(v), ghCfg)
+	default:
+		return fmt.Errorf("cannot parse github config: unexpected data type %T", value)
+	}
+}
+
+func (ghCfg GoogleCfg) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(ghCfg)
+	return string(bytes), err
+}
+
+type AppleCfg struct {
+	ClientID   string `json:"client_id"`
+	TeamID     string `json:"team_id"`
+	KeyID      string `json:"key_id"`
+	PrivateKey string `json:"private_key"`
+}
+
+func (ghCfg *AppleCfg) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, ghCfg)
+	case string:
+		return json.Unmarshal([]byte(v), ghCfg)
+	default:
+		return fmt.Errorf("cannot parse github config: unexpected data type %T", value)
+	}
+}
+
+func (ghCfg AppleCfg) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(ghCfg)
 	return string(bytes), err
 }

@@ -1,0 +1,3 @@
+[submodule "dex"]
+	path = dex
+	url = https://github.com/MirageNetwork/dex.git

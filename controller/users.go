@@ -94,7 +94,11 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string, provide
 		return nil, err
 	}
 	var count int64
-	err = h.db.Model(&User{}).Where("name = ?", name).Count(&count).Error
+	err = h.db.Model(&User{}).Where(&User{
+		Name:     name,
+		OrgName:  orgName,
+		Provider: provider,
+	}).Count(&count).Error
 	if err != nil {
 		return nil, err
 	}

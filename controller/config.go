@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/netip"
 	"time"
+
+	"github.com/dexidp/dex/server"
 )
 
 const (
@@ -36,6 +38,9 @@ type Config struct {
 
 	IDaaS ALIConfig
 	SMS   SMSConfig
+
+	DexConfig *server.Config
+	IdpList   []string
 }
 
 type SMSConfig struct {
