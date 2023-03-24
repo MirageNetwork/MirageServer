@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"time"
 
 	"github.com/bwmarrin/snowflake"
@@ -128,6 +129,9 @@ func GetOrgnaizationByNameInTx(tx *gorm.DB, name, provider string) (*Organizatio
 	}
 	var org Organization
 	if err := tx.Where("name = ? and provider = ?", name, provider).Take(&org).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			err = ErrOrgNotFound
+		}
 		log.Error().
 			Str("func", "GetOrgnaizationByName").
 			Err(err).

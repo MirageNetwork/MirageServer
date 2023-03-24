@@ -45,14 +45,14 @@ var invalidCharsInUserRegex = regexp.MustCompile("[^a-z0-9-.]+")
 // At the end of the day, users in Tailscale are some kind of 'bubbles' or users
 // that contain our machines.
 type User struct {
-	ID            int64  `gorm:"primary_key;unique;not null"`
-	StableID      string `gorm:"unique"`
-	Name          string `gorm:"uniqueIndex:idx_user_org_id"`
-	OrgId         int64  `gorm:"uniqueIndex:idx_user_org_id"`
-	Org           Organization
-	Display_Name  string //`gorm:"unique"`
-	Role          int64
-	IsBelongToOrg bool `gorm:"default:false"`
+	ID           int64  `gorm:"primary_key;unique;not null"`
+	StableID     string `gorm:"unique"`
+	Name         string `gorm:"uniqueIndex:idx_user_org_id"`
+	OrgId        int64  `gorm:"uniqueIndex:idx_user_org_id"`
+	Org          Organization
+	Display_Name string //`gorm:"unique"`
+	Role         int64
+	//IsBelongToOrg bool `gorm:"default:false"`
 
 	//TODO 哪些字段是user也需要的
 	/*
@@ -97,23 +97,17 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string, provide
 	err = h.db.Transaction(func(tx *gorm.DB) error {
 		var org *Organization
 		var trxErr error
-		//个人用户: orgName 为空, 然后赋值为userName
-		if len(orgName) == 0 {
-			org, trxErr = CreateOrgnaizationInTx(tx, name, disName, provider)
+		//需要先查询orgName是否存在
+		org, trxErr = GetOrgnaizationByNameInTx(tx, orgName, provider)
+		// 不存在: 创建组织
+		if errors.Is(trxErr, ErrOrgNotFound) {
+			org, trxErr = CreateOrgnaizationInTx(tx, orgName, orgName, provider)
 			user.Role = RoleAdmin
-		} else {
-			//企业用户,需要先查询orgName是否存在
-			org, trxErr = GetOrgnaizationByNameInTx(tx, orgName, provider)
-			// 不存在: 创建组织
-			if errors.Is(trxErr, gorm.ErrRecordNotFound) {
-				org, trxErr = CreateOrgnaizationInTx(tx, orgName, orgName, provider)
-				user.Role = RoleAdmin
-				// 其他错误, 报错返回
-			} else if trxErr == nil && org.ID == 0 {
-				trxErr = ErrOrgNotFound
-			}
-			user.IsBelongToOrg = true
+			// 其他错误, 报错返回
+		} else if trxErr == nil && org.ID == 0 {
+			trxErr = ErrOrgNotFound
 		}
+		//user.IsBelongToOrg = true
 		if trxErr == nil {
 			user.OrgId = org.ID
 			user.Org = *org
@@ -162,17 +156,20 @@ func (h *Mirage) DestroyUser(name, orgName, provider string) error {
 		}
 	}
 
-	return h.db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Unscoped().Delete(&user).Error
-		if err != nil {
-			return err
-		}
-		if !user.IsBelongToOrg {
-			err = DestroyOrgnaizationInTx(tx, orgName, provider)
-		}
-		//TODO Organization 删除失败是否回滚
-		return nil
-	})
+	return h.db.Unscoped().Delete(&user).Error
+	/*
+		return h.db.Transaction(func(tx *gorm.DB) error {
+			err := tx.Unscoped().Delete(&user).Error
+			if err != nil {
+				return err
+			}
+			if !user.IsBelongToOrg {
+				err = DestroyOrgnaizationInTx(tx, orgName, provider)
+			}
+			//TODO Organization 删除失败是否回滚
+			return nil
+		})
+	*/
 }
 
 // Update User's node key expiry duration.
