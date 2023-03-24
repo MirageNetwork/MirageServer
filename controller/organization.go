@@ -13,6 +13,7 @@ const (
 	ErrOrgExists       = Error("Organization already exists")
 	ErrOrgNotFound     = Error("Organization not found")
 	ErrCreateOrgParams = Error("Invalid create organization paramters")
+	ErrGetOrgParams    = Error("Invalid get organization paramters")
 	DefaultExpireTime  = 180
 )
 
@@ -59,7 +60,7 @@ func (m *Mirage) CreateOrgnaization(name, displayName, provider string) (*Organi
 }
 
 func CreateOrgnaizationInTx(tx *gorm.DB, name, displayName, provider string) (*Organization, error) {
-	if len(name) == 0 || len(displayName) == 0 {
+	if len(name) == 0 || len(displayName) == 0 || len(provider) == 0 {
 		return nil, ErrCreateOrgParams
 	}
 	var count int64
@@ -102,6 +103,15 @@ func (m *Mirage) GetOrgnaizationByName(name, provider string) (*Organization, er
 	return org, err
 }
 
+func (m *Mirage) GetOrgnaizationIDByName(name, provider string) (int64, error) {
+	var id int64
+	err := m.db.Model(&Organization{}).Where(&Organization{
+		Name:     name,
+		Provider: provider,
+	}).Take(&id).Error
+	return id, err
+}
+
 func (m *Mirage) GetOrgnaizationByID(id int64) (*Organization, error) {
 	org := &Organization{}
 	err := m.db.Where(&Organization{ID: id}).Take(org).Error
@@ -113,6 +123,9 @@ func (m *Mirage) GetOrgnaizationByID(id int64) (*Organization, error) {
 }
 
 func GetOrgnaizationByNameInTx(tx *gorm.DB, name, provider string) (*Organization, error) {
+	if len(name) == 0 || len(provider) == 0 {
+		return nil, ErrGetOrgParams
+	}
 	var org Organization
 	if err := tx.Where("name = ? and provider = ?", name, provider).Take(&org).Error; err != nil {
 		log.Error().

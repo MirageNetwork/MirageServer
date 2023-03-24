@@ -47,12 +47,10 @@ var invalidCharsInUserRegex = regexp.MustCompile("[^a-z0-9-.]+")
 type User struct {
 	ID            int64  `gorm:"primary_key;unique;not null"`
 	StableID      string `gorm:"unique"`
-	Name          string `gorm:"uniqueIndex:idx_user_org;uniqueIndex:idx_user_org_id"`
-	OrgName       string `gorm:"uniqueIndex:idx_user_org"`
-	Provider      string `gorm:"uniqueIndex:idx_user_org"`
+	Name          string `gorm:"uniqueIndex:idx_user_org_id"`
 	OrgId         int64  `gorm:"uniqueIndex:idx_user_org_id"`
 	Org           Organization
-	Display_Name  string `gorm:"unique"`
+	Display_Name  string //`gorm:"unique"`
 	Role          int64
 	IsBelongToOrg bool `gorm:"default:false"`
 
@@ -93,18 +91,6 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string, provide
 	if err != nil {
 		return nil, err
 	}
-	var count int64
-	err = h.db.Model(&User{}).Where(&User{
-		Name:     name,
-		OrgName:  orgName,
-		Provider: provider,
-	}).Count(&count).Error
-	if err != nil {
-		return nil, err
-	}
-	if count > 0 {
-		return nil, ErrUserExists
-	}
 	user := User{}
 	user.Name = name
 	user.Display_Name = disName
@@ -131,8 +117,6 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string, provide
 		if trxErr == nil {
 			user.OrgId = org.ID
 			user.Org = *org
-			user.OrgName = org.Name
-			user.Provider = provider
 			trxErr = tx.Create(&user).Error
 		}
 		if trxErr != nil {
@@ -200,8 +184,15 @@ func (h *Mirage) UpdateUserKeyExpiry(user *User, newDuration uint) error {
 }
 
 func (h *Mirage) CheckUserExistence(name, orgName, provider string) (bool, error) {
+	orgID, err := h.GetOrgnaizationIDByName(orgName, provider)
+	if err != nil {
+		return false, err
+	}
 	var count int64
-	err := h.db.Model(&User{}).Where("name = ?", name).Where("org_name = ?", orgName).Where("provider = ?", provider).Count(&count).Error
+	err = h.db.Model(&User{}).Where(&User{
+		Name:  name,
+		OrgId: orgID,
+	}).Count(&count).Error
 	return count > 0, err
 }
 
@@ -260,16 +251,20 @@ func (h *Mirage) GetUserByID(id tailcfg.UserID) (*User, error) {
 // GetUser fetches a user by name.
 func (h *Mirage) GetUser(name, orgName, provider string) (*User, error) {
 	user := User{}
-	if result := h.db.Preload("Org").First(&User{
-		Name:     name,
-		OrgName:  orgName,
-		Provider: provider,
+	org, err := h.GetOrgnaizationByName(orgName, provider)
+	if err != nil {
+		return nil, err
+	}
+	if result := h.db.First(&User{
+		Name:  name,
+		OrgId: org.ID,
 	}); errors.Is(
 		result.Error,
 		gorm.ErrRecordNotFound,
 	) {
 		return nil, ErrUserNotFound
 	}
+	user.Org = *org
 
 	return &user, nil
 }
