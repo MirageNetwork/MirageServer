@@ -94,7 +94,7 @@ func (h *Mirage) doDexLogin(w http.ResponseWriter, r *http.Request, stateCode, p
 	}
 	extras = append(extras, oauth2.SetAuthURLParam("connector_id", provider))
 
-	log.Error().Msg("之后会跳转到：" + fmt.Sprintf(
+	log.Trace().Msg("之后会跳转到：" + fmt.Sprintf(
 		"https://%s/%s",
 		h.cfg.ServerURL,
 		"a/oauth_response",
