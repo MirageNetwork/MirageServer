@@ -47,10 +47,10 @@ var invalidCharsInUserRegex = regexp.MustCompile("[^a-z0-9-.]+")
 type User struct {
 	ID            int64  `gorm:"primary_key;unique;not null"`
 	StableID      string `gorm:"unique"`
-	Name          string `gorm:"uniqueIndex:idx_user_org"`
+	Name          string `gorm:"uniqueIndex:idx_user_org;uniqueIndex:idx_user_org_id"`
 	OrgName       string `gorm:"uniqueIndex:idx_user_org"`
 	Provider      string `gorm:"uniqueIndex:idx_user_org"`
-	OrgId         int64
+	OrgId         int64  `gorm:"uniqueIndex:idx_user_org_id"`
 	Org           Organization
 	Display_Name  string `gorm:"unique"`
 	Role          int64
