@@ -326,7 +326,7 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 	// If ACLs rules are defined, filter visible host list with the ACLs
 	// else use the classic user scope
 	if machine.User.Org.AclPolicy != nil {
-		org, err := h.GetOrgnaizationByName(machine.User.OrgName)
+		org, err := h.GetOrgnaizationByID(machine.User.OrgId)
 		if err != nil {
 			log.Error().Err(err).Msg("Error retrieving organization of machine")
 

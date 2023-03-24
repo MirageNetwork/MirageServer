@@ -451,6 +451,7 @@ func (h *Mirage) oauthResponse(
 	userName := ""
 	userDisName := ""
 	orgName := ""
+	provider := ""
 	switch qStateItem.provider {
 	case "Ali":
 		oauth2Token, err := h.oauth2Config.Exchange(r.Context(), code)
@@ -511,7 +512,7 @@ func (h *Mirage) oauthResponse(
 
 	// TODO:添加判断用户是否存在及自动创建逻辑
 	// TODO:orgName的获取
-	user, err := h.findOrCreateNewUserForOIDCCallback(userName, userDisName, orgName)
+	user, err := h.findOrCreateNewUserForOIDCCallback(userName, userDisName, orgName, provider)
 	if err != nil { // TODO: 后续这里理论上不会出错，因为会自动创建用户
 		h.ErrMessage(w, r, 500, "服务器用户获取出错")
 		return

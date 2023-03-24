@@ -19,11 +19,12 @@ const (
 type Organization struct {
 	ID             int64  `gorm:"primary_key;unique;not null"`
 	StableID       string `gorm:"unique"`
-	Name           string `gorm:"unique"`
+	Name           string `gorm:"uniqueIndex:idx_name_provider"`
 	DisplayName    string
-	ExpiryDuration uint `gorm:"default:180"`
-	EnableMagic    bool `gorm:"default:false"`
-	OverrideLocal  bool `gorm:"default:false"`
+	Provider       string `gorm:"uniqueIndex:idx_name_provider"`
+	ExpiryDuration uint   `gorm:"default:180"`
+	EnableMagic    bool   `gorm:"default:false"`
+	OverrideLocal  bool   `gorm:"default:false"`
 	Nameservers    StringList
 	SplitDns       SplitDNS
 	AclPolicy      *ACLPolicy
@@ -47,9 +48,9 @@ func (o *Organization) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-func (m *Mirage) CreateOrgnaization(name, displayName string) (*Organization, error) {
+func (m *Mirage) CreateOrgnaization(name, displayName, provider string) (*Organization, error) {
 	tx := m.db.Session(&gorm.Session{})
-	org, err := CreateOrgnaizationInTx(tx, name, displayName)
+	org, err := CreateOrgnaizationInTx(tx, name, displayName, provider)
 	if err != nil {
 		return nil, err
 	}
@@ -57,12 +58,12 @@ func (m *Mirage) CreateOrgnaization(name, displayName string) (*Organization, er
 	return org, nil
 }
 
-func CreateOrgnaizationInTx(tx *gorm.DB, name, displayName string) (*Organization, error) {
+func CreateOrgnaizationInTx(tx *gorm.DB, name, displayName, provider string) (*Organization, error) {
 	if len(name) == 0 || len(displayName) == 0 {
 		return nil, ErrCreateOrgParams
 	}
 	var count int64
-	if err := tx.Model(&Organization{}).Where("name = ?", name).Count(&count).Error; err != nil {
+	if err := tx.Model(&Organization{}).Where("name = ? and provider = ?", name, provider).Count(&count).Error; err != nil {
 		return nil, err
 	}
 	if count > 0 {
@@ -71,6 +72,7 @@ func CreateOrgnaizationInTx(tx *gorm.DB, name, displayName string) (*Organizatio
 	org := Organization{}
 	org.Name = name
 	org.DisplayName = displayName
+	org.Provider = provider
 	org.AclPolicy = &ACLPolicy{
 		ACLs: []ACL{{
 			Action:       "accept",
@@ -91,8 +93,8 @@ func CreateOrgnaizationInTx(tx *gorm.DB, name, displayName string) (*Organizatio
 	return &org, nil
 }
 
-func (m *Mirage) GetOrgnaizationByName(name string) (*Organization, error) {
-	org, err := GetOrgnaizationByNameInTx(m.db.Session(&gorm.Session{}), name)
+func (m *Mirage) GetOrgnaizationByName(name, provider string) (*Organization, error) {
+	org, err := GetOrgnaizationByNameInTx(m.db.Session(&gorm.Session{}), name, provider)
 	if err != nil {
 		return nil, err
 	}
@@ -100,9 +102,19 @@ func (m *Mirage) GetOrgnaizationByName(name string) (*Organization, error) {
 	return org, err
 }
 
-func GetOrgnaizationByNameInTx(tx *gorm.DB, name string) (*Organization, error) {
+func (m *Mirage) GetOrgnaizationByID(id int64) (*Organization, error) {
+	org := &Organization{}
+	err := m.db.Where(&Organization{ID: id}).Take(org).Error
+	if err != nil {
+		return nil, err
+	}
+	m.UpdateACLRulesOfOrg(org)
+	return org, err
+}
+
+func GetOrgnaizationByNameInTx(tx *gorm.DB, name, provider string) (*Organization, error) {
 	var org Organization
-	if err := tx.Where("name = ?", name).Take(&org).Error; err != nil {
+	if err := tx.Where("name = ? and provider = ?", name, provider).Take(&org).Error; err != nil {
 		log.Error().
 			Str("func", "GetOrgnaizationByName").
 			Err(err).
@@ -113,19 +125,19 @@ func GetOrgnaizationByNameInTx(tx *gorm.DB, name string) (*Organization, error) 
 	return &org, nil
 }
 
-func (m *Mirage) DestroyOrgnaization(orgName string) error {
+func (m *Mirage) DestroyOrgnaization(orgName, provider string) error {
 	tx := m.db.Session(&gorm.Session{})
-	err := DestroyOrgnaizationInTx(tx, orgName)
+	err := DestroyOrgnaizationInTx(tx, orgName, provider)
 	return err
 }
 
-func DestroyOrgnaizationInTx(tx *gorm.DB, orgName string) error {
+func DestroyOrgnaizationInTx(tx *gorm.DB, orgName, provider string) error {
 	var count int64
-	tx.Model(&Organization{}).Where("name = ?", orgName).Count(&count)
+	tx.Model(&Organization{}).Where("name = ? and provider = ?", orgName, provider).Count(&count)
 	if count == 0 {
 		return ErrOrgNotFound
 	}
-	if result := tx.Unscoped().Delete(&Organization{Name: orgName}); result.Error != nil {
+	if result := tx.Unscoped().Delete(&Organization{Name: orgName, Provider: provider}); result.Error != nil {
 		return result.Error
 	}
 	return nil

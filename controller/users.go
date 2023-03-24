@@ -49,6 +49,7 @@ type User struct {
 	StableID      string `gorm:"unique"`
 	Name          string `gorm:"uniqueIndex:idx_user_org"`
 	OrgName       string `gorm:"uniqueIndex:idx_user_org"`
+	Provider      string `gorm:"uniqueIndex:idx_user_org"`
 	OrgId         int64
 	Org           Organization
 	Display_Name  string `gorm:"unique"`
@@ -87,7 +88,7 @@ func (user *User) CheckEmpty() bool {
 
 // CreateUser creates a new User. Returns error if could not be created
 // or another user already exists.
-func (h *Mirage) CreateUser(name string, disName string, orgName string) (*User, error) {
+func (h *Mirage) CreateUser(name string, disName string, orgName string, provider string) (*User, error) {
 	err := CheckForFQDNRules(name)
 	if err != nil {
 		return nil, err
@@ -108,14 +109,14 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string) (*User,
 		var trxErr error
 		//个人用户: orgName 为空, 然后赋值为userName
 		if len(orgName) == 0 {
-			org, trxErr = CreateOrgnaizationInTx(tx, name, disName)
+			org, trxErr = CreateOrgnaizationInTx(tx, name, disName, provider)
 			user.Role = RoleAdmin
 		} else {
 			//企业用户,需要先查询orgName是否存在
-			org, trxErr = GetOrgnaizationByNameInTx(tx, orgName)
+			org, trxErr = GetOrgnaizationByNameInTx(tx, orgName, provider)
 			// 不存在: 创建组织
 			if errors.Is(trxErr, gorm.ErrRecordNotFound) {
-				org, trxErr = CreateOrgnaizationInTx(tx, orgName, orgName)
+				org, trxErr = CreateOrgnaizationInTx(tx, orgName, orgName, provider)
 				user.Role = RoleAdmin
 				// 其他错误, 报错返回
 			} else if trxErr == nil && org.ID == 0 {
@@ -127,6 +128,7 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string) (*User,
 			user.OrgId = org.ID
 			user.Org = *org
 			user.OrgName = org.Name
+			user.Provider = provider
 			trxErr = tx.Create(&user).Error
 		}
 		if trxErr != nil {
@@ -147,8 +149,8 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string) (*User,
 
 // DestroyUser destroys a User. Returns error if the User does
 // not exist or if there are machines associated with it.
-func (h *Mirage) DestroyUser(name, orgName string) error {
-	user, err := h.GetUser(name, orgName)
+func (h *Mirage) DestroyUser(name, orgName, provider string) error {
+	user, err := h.GetUser(name, orgName, provider)
 	if err != nil {
 		return ErrUserNotFound
 	}
@@ -178,7 +180,7 @@ func (h *Mirage) DestroyUser(name, orgName string) error {
 			return err
 		}
 		if !user.IsBelongToOrg {
-			err = DestroyOrgnaizationInTx(tx, orgName)
+			err = DestroyOrgnaizationInTx(tx, orgName, provider)
 		}
 		//TODO Organization 删除失败是否回滚
 		return nil
@@ -193,17 +195,17 @@ func (h *Mirage) UpdateUserKeyExpiry(user *User, newDuration uint) error {
 	return h.UpdateOrgExpiry(user, newDuration)
 }
 
-func (h *Mirage) CheckUserExistence(name, orgName string) (bool, error) {
+func (h *Mirage) CheckUserExistence(name, orgName, provider string) (bool, error) {
 	var count int64
-	err := h.db.Model(&User{}).Where("name = ?", name).Where("org_name = ?", orgName).Count(&count).Error
+	err := h.db.Model(&User{}).Where("name = ?", name).Where("org_name = ?", orgName).Where("provider = ?", provider).Count(&count).Error
 	return count > 0, err
 }
 
 // RenameUser renames a User. Returns error if the User does
 // not exist or if another User exists with the new name.
-func (h *Mirage) RenameUser(oldName, newName string, orgName string) error {
+func (h *Mirage) RenameUser(oldName, newName string, orgName string, provider string) error {
 	var err error
-	oldUser, err := h.GetUser(oldName, orgName)
+	oldUser, err := h.GetUser(oldName, orgName, provider)
 	if err != nil {
 		return err
 	}
@@ -211,7 +213,7 @@ func (h *Mirage) RenameUser(oldName, newName string, orgName string) error {
 	if err != nil {
 		return err
 	}
-	if isEx, err := h.CheckUserExistence(newName, orgName); err != nil {
+	if isEx, err := h.CheckUserExistence(newName, orgName, provider); err != nil {
 		return err
 	} else if isEx {
 		return ErrUserExists
@@ -252,11 +254,12 @@ func (h *Mirage) GetUserByID(id tailcfg.UserID) (*User, error) {
 }
 
 // GetUser fetches a user by name.
-func (h *Mirage) GetUser(name, orgName string) (*User, error) {
+func (h *Mirage) GetUser(name, orgName, provider string) (*User, error) {
 	user := User{}
 	if result := h.db.Preload("Org").First(&User{
-		Name:    name,
-		OrgName: orgName,
+		Name:     name,
+		OrgName:  orgName,
+		Provider: provider,
 	}); errors.Is(
 		result.Error,
 		gorm.ErrRecordNotFound,
@@ -306,12 +309,12 @@ func (h *Mirage) ListMachinesByUser(userID int64) ([]Machine, error) {
 }
 
 // SetMachineUser assigns a Machine to a user.
-func (h *Mirage) SetMachineUser(machine *Machine, username, orgName string) error {
+func (h *Mirage) SetMachineUser(machine *Machine, username, orgName, provider string) error {
 	err := CheckForFQDNRules(username)
 	if err != nil {
 		return err
 	}
-	user, err := h.GetUser(username, orgName)
+	user, err := h.GetUser(username, orgName, provider)
 	if err != nil {
 		return err
 	}

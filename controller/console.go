@@ -313,7 +313,7 @@ func (h *Mirage) ConsoleMachinesAPI(
 		}
 		// 处理标签部分
 		if machine.ForcedTags != nil && len(machine.ForcedTags) > 0 {
-			org, err := h.GetOrgnaizationByName(user.OrgName)
+			org, err := h.GetOrgnaizationByID(user.OrgId)
 			if err != nil {
 				errRes := adminTemplateConfig{ErrorMsg: "查询设备组织失败"}
 				err = json.NewEncoder(writer).Encode(&errRes)
@@ -639,7 +639,7 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 		} else {
 			invalidTags := []string{}
 			allowedTags := []string{}
-			org, err := h.GetOrgnaizationByName(user.OrgName)
+			org, err := h.GetOrgnaizationByID(user.OrgId)
 			if err != nil {
 				h.doAPIResponse(writer, msg, nil)
 			}

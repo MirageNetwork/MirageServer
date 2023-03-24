@@ -72,7 +72,7 @@ func (h *Mirage) generateMapResponse(
 	)
 
 	now := time.Now()
-	org, err := h.GetOrgnaizationByName(machine.User.OrgName)
+	org, err := h.GetOrgnaizationByID(machine.User.OrgId)
 	if err != nil {
 		log.Error().
 			Caller().
