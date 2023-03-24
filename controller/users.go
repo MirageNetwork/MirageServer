@@ -45,13 +45,13 @@ var invalidCharsInUserRegex = regexp.MustCompile("[^a-z0-9-.]+")
 // At the end of the day, users in Tailscale are some kind of 'bubbles' or users
 // that contain our machines.
 type User struct {
-	ID           int64  `gorm:"primary_key;unique;not null"`
-	StableID     string `gorm:"unique"`
-	Name         string `gorm:"uniqueIndex:idx_user_org_id"`
-	OrgId        int64  `gorm:"uniqueIndex:idx_user_org_id"`
-	Org          Organization
-	Display_Name string //`gorm:"unique"`
-	Role         int64
+	ID             int64  `gorm:"primary_key;unique;not null"`
+	StableID       string `gorm:"unique"`
+	Name           string `gorm:"uniqueIndex:idx_user_org_id"`
+	OrganizationID int64  `gorm:"uniqueIndex:idx_user_org_id"`
+	Organization   Organization
+	Display_Name   string //`gorm:"unique"`
+	Role           int64
 	//IsBelongToOrg bool `gorm:"default:false"`
 
 	//TODO 哪些字段是user也需要的
@@ -109,8 +109,8 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string, provide
 		}
 		//user.IsBelongToOrg = true
 		if trxErr == nil {
-			user.OrgId = org.ID
-			user.Org = *org
+			user.OrganizationID = org.ID
+			user.Organization = *org
 			trxErr = tx.Create(&user).Error
 		}
 		if trxErr != nil {
@@ -174,7 +174,7 @@ func (h *Mirage) DestroyUser(name, orgName, provider string) error {
 
 // Update User's node key expiry duration.
 func (h *Mirage) UpdateUserKeyExpiry(user *User, newDuration uint) error {
-	if user == nil || user.OrgId == 0 {
+	if user == nil || user.OrganizationID == 0 {
 		return ErrOrgNotFound
 	}
 	return h.UpdateOrgExpiry(user, newDuration)
@@ -187,8 +187,8 @@ func (h *Mirage) CheckUserExistence(name, orgName, provider string) (bool, error
 	}
 	var count int64
 	err = h.db.Model(&User{}).Where(&User{
-		Name:  name,
-		OrgId: orgID,
+		Name:           name,
+		OrganizationID: orgID,
 	}).Count(&count).Error
 	return count > 0, err
 }
@@ -253,13 +253,13 @@ func (h *Mirage) GetUser(name, orgName, provider string) (*User, error) {
 	}
 	user := User{}
 	err = h.db.Where(&User{
-		Name:  name,
-		OrgId: org.ID,
+		Name:           name,
+		OrganizationID: org.ID,
 	}).Take(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound
 	}
-	user.Org = *org
+	user.Organization = *org
 
 	return &user, nil
 }
@@ -433,7 +433,7 @@ func CheckForFQDNRules(name string) error {
 func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, string) {
 	dnsConfig := &tailcfg.DNSConfig{}
 
-	nameserversStr := me.Org.Nameservers
+	nameserversStr := me.Organization.Nameservers
 
 	nameservers := []netip.Addr{}
 	resolvers := []*dnstype.Resolver{}
@@ -464,7 +464,7 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 
 	dnsConfig.Nameservers = nameservers
 
-	if me.Org.OverrideLocal {
+	if me.Organization.OverrideLocal {
 		dnsConfig.Resolvers = resolvers
 	} else {
 		dnsConfig.FallbackResolvers = resolvers
@@ -473,7 +473,7 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 	//cgao6: split DNS related here
 	dnsConfig.Routes = make(map[string][]*dnstype.Resolver)
 	domains := []string{}
-	restrictedDNS := me.Org.SplitDns
+	restrictedDNS := me.Organization.SplitDns
 	for domain, restrictedNameservers := range restrictedDNS {
 		restrictedResolvers := make(
 			[]*dnstype.Resolver,
@@ -523,7 +523,7 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 		dnsConfig.ExtraRecords = extraRecords
 	}
 
-	dnsConfig.Proxied = me.Org.EnableMagic
+	dnsConfig.Proxied = me.Organization.EnableMagic
 
 	if dnsConfig.Proxied { // if MagicDNS
 		magicDNSDomains := generateMagicDNSRootDomains(ipPrefixesCfg)
@@ -547,9 +547,9 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 }
 
 func (h *Mirage) UpdateDNSConfig(user *User, newDNSCfg DNSData) error {
-	if user == nil || user.Org.ID == 0 {
+	if user == nil || user.Organization.ID == 0 {
 		return ErrOrgNotFound
 	}
-	org := &user.Org
+	org := &user.Organization
 	return h.UpdateOrgDNSConfig(org, newDNSCfg)
 }

@@ -285,12 +285,14 @@ func (h *Mirage) ListPeers(machine *Machine) (Machines, error) {
 		Msg("Finding direct peers")
 
 	machines := Machines{}
-	orgId := machine.User.OrgId
+	orgId := machine.User.OrganizationID
 	if orgId == 0 {
 		return h.ListMachines()
 	}
 	userIds := []int64{}
-	h.db.Model(&User{}).Where("org_id = ?", orgId).Select("id").Find(&userIds)
+	h.db.Model(&User{}).Where(&User{
+		OrganizationID: orgId,
+	}).Select("id").Find(&userIds)
 	if len(userIds) == 0 {
 		return machines, nil
 	}
@@ -325,8 +327,8 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 
 	// If ACLs rules are defined, filter visible host list with the ACLs
 	// else use the classic user scope
-	if machine.User.Org.AclPolicy != nil {
-		org, err := h.GetOrgnaizationByID(machine.User.OrgId)
+	if machine.User.Organization.AclPolicy != nil {
+		org, err := h.GetOrgnaizationByID(machine.User.OrganizationID)
 		if err != nil {
 			log.Error().Err(err).Msg("Error retrieving organization of machine")
 
@@ -404,7 +406,9 @@ func (h *Mirage) ListMachinesByOrgID(orgId int64) ([]Machine, error) {
 	}
 	machines := []Machine{}
 	userIds := []int64{}
-	h.db.Model(&User{}).Where("org_id = ?", orgId).Select("id").Find(&userIds)
+	h.db.Model(&User{}).Where(&User{
+		OrganizationID: orgId,
+	}).Select("id").Find(&userIds)
 	if len(userIds) == 0 {
 		return machines, nil
 	}
@@ -576,7 +580,7 @@ func (h *Mirage) GetMachineOrgByID(machine *Machine) (*Organization, error) {
 		return nil, err
 	}
 	org := Organization{}
-	err = h.db.Where("id = ?", user.OrgId).Take(&org).Error
+	err = h.db.Where("id = ?", user.OrganizationID).Take(&org).Error
 	if err != nil {
 		return nil, err
 	}
@@ -958,7 +962,7 @@ func (h *Mirage) toNode(
 	}
 
 	var hostname string
-	if machine.User.Org.EnableMagic { //[cgao6 removed] dnsConfig != nil && dnsConfig.Proxied { // MagicDNS
+	if machine.User.Organization.EnableMagic { //[cgao6 removed] dnsConfig != nil && dnsConfig.Proxied { // MagicDNS
 		_, baseDomain := machine.User.GetDNSConfig(h.cfg.IPPrefixes)
 		hostname = fmt.Sprintf(
 			"%s.%s.%s",
@@ -981,7 +985,7 @@ func (h *Mirage) toNode(
 
 	online := machine.isOnline()
 
-	tags, _ := getTags(machine.User.Org.AclPolicy, machine, h.cfg.OIDC.StripEmaildomain)
+	tags, _ := getTags(machine.User.Organization.AclPolicy, machine, h.cfg.OIDC.StripEmaildomain)
 	tags = lo.Uniq(append(tags, machine.ForcedTags...))
 
 	node := tailcfg.Node{
@@ -1279,10 +1283,10 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 	approvedRoutes := []Route{}
 
 	for _, advertisedRoute := range routes {
-		if machine.User.Org.AclPolicy == nil {
+		if machine.User.Organization.AclPolicy == nil {
 			continue
 		}
-		routeApprovers, err := machine.User.Org.AclPolicy.AutoApprovers.GetRouteApprovers(
+		routeApprovers, err := machine.User.Organization.AclPolicy.AutoApprovers.GetRouteApprovers(
 			netip.Prefix(advertisedRoute.Prefix),
 		)
 		if err != nil {
@@ -1298,7 +1302,7 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 			if approvedAlias == machine.User.Name {
 				approvedRoutes = append(approvedRoutes, advertisedRoute)
 			} else {
-				approvedIps, err := h.expandAlias(false, []Machine{*machine}, *(machine.User.Org.AclPolicy), approvedAlias, h.cfg.OIDC.StripEmaildomain)
+				approvedIps, err := h.expandAlias(false, []Machine{*machine}, *(machine.User.Organization.AclPolicy), approvedAlias, h.cfg.OIDC.StripEmaildomain)
 				if err != nil {
 					log.Err(err).
 						Str("alias", approvedAlias).

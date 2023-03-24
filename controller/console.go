@@ -313,7 +313,7 @@ func (h *Mirage) ConsoleMachinesAPI(
 		}
 		// 处理标签部分
 		if machine.ForcedTags != nil && len(machine.ForcedTags) > 0 {
-			org, err := h.GetOrgnaizationByID(user.OrgId)
+			org, err := h.GetOrgnaizationByID(user.OrganizationID)
 			if err != nil {
 				errRes := adminTemplateConfig{ErrorMsg: "查询设备组织失败"}
 				err = json.NewEncoder(writer).Encode(&errRes)
@@ -471,7 +471,7 @@ func (h *Mirage) getNetSettingAPI(
 		MaxKeyDurationDays: 180,
 		NetworkLockEnabled: false, //未实现
 	}
-	netsettingData.MaxKeyDurationDays = int(user.Org.ExpiryDuration)
+	netsettingData.MaxKeyDurationDays = int(user.Organization.ExpiryDuration)
 	h.doAPIResponse(writer, "", netsettingData)
 }
 
@@ -639,7 +639,7 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 		} else {
 			invalidTags := []string{}
 			allowedTags := []string{}
-			org, err := h.GetOrgnaizationByID(user.OrgId)
+			org, err := h.GetOrgnaizationByID(user.OrganizationID)
 			if err != nil {
 				h.doAPIResponse(writer, msg, nil)
 			}
@@ -778,7 +778,7 @@ func (h *Mirage) setMachineExpiry(machine *Machine) (string, error) {
 			return "", err
 		}
 	} else {
-		expiryDuration := time.Hour * 24 * time.Duration(machine.User.Org.ExpiryDuration)
+		expiryDuration := time.Hour * 24 * time.Duration(machine.User.Organization.ExpiryDuration)
 		newExpiry := time.Now().Add(expiryDuration)
 		err := h.RefreshMachine(machine, newExpiry)
 		if err != nil {
