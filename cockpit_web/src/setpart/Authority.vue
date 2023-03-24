@@ -1,6 +1,10 @@
 <script setup>
 import { onMounted, ref, watch, computed } from "vue";
 import Toast from "../components/Toast.vue";
+import MicrosoftHelp from "./help/Microsoft.vue";
+import GithubHelp from "./help/Github.vue";
+import GoogleHelp from "./help/Google.vue";
+import AppleHelp from "./help/Apple.vue";
 
 const devMode = ref(true);
 
@@ -13,6 +17,11 @@ watch(toastShow, () => {
     }, 5000);
   }
 });
+
+const microsoftHelpShow = ref(false);
+const githubHelpShow = ref(false);
+const googleHelpShow = ref(false);
+const appleHelpShow = ref(false);
 
 const ESURL = ref("");
 const ESKey = ref("");
@@ -802,8 +811,30 @@ onMounted(() => {
             ></path>
           </svg>
           <h3 class="text-xl font-semibold tracking-tight ml-4 min-w-fit">
-            Microsoft身份认证服务设置
+            Microsoft 认证设置
           </h3>
+          <div
+            @click="microsoftHelpShow = true"
+            class="tooltip flex items-center text-stone-300"
+            data-tip="点击查看帮助"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="1em"
+              height="1em"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.35"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="ml-1"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
           <div class="w-full flex justify-end">
             <button
               :disabled="Microsoft.client_id == '' || Microsoft.client_secret == ''"
@@ -860,8 +891,30 @@ onMounted(() => {
             ></path>
           </svg>
           <h3 class="text-xl font-semibold tracking-tight ml-4 min-w-fit">
-            GitHub身份认证服务设置
+            GitHub 认证设置
           </h3>
+          <div
+            @click="githubHelpShow = true"
+            class="tooltip flex items-center text-stone-300"
+            data-tip="点击查看帮助"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="1em"
+              height="1em"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.35"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="ml-1"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
           <div class="w-full flex justify-end">
             <button
               :disabled="Github.client_id == '' || Github.client_secret == ''"
@@ -933,8 +986,30 @@ onMounted(() => {
             ></path>
           </svg>
           <h3 class="text-xl font-semibold tracking-tight ml-4 min-w-fit">
-            Google身份认证服务设置
+            Google 认证设置
           </h3>
+          <div
+            @click="googleHelpShow = true"
+            class="tooltip flex items-center text-stone-300"
+            data-tip="点击查看帮助"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="1em"
+              height="1em"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.35"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="ml-1"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
           <div class="w-full flex justify-end">
             <button
               :disabled="Google.client_id == '' || Google.client_secret == ''"
@@ -991,8 +1066,30 @@ onMounted(() => {
             ></path>
           </svg>
           <h3 class="text-xl font-semibold tracking-tight ml-4 min-w-fit">
-            Apple身份认证服务设置
+            Apple 认证设置
           </h3>
+          <div
+            @click="appleHelpShow = true"
+            class="tooltip flex items-center text-stone-300"
+            data-tip="点击查看帮助"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="1em"
+              height="1em"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.35"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="ml-1"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
           <div class="w-full flex justify-end">
             <button
               :disabled="
@@ -1065,6 +1162,16 @@ onMounted(() => {
     </div>
   </div>
 
+  <!-- 菜单弹出提示框显示 -->
+  <Teleport to="body">
+    <MicrosoftHelp
+      v-if="microsoftHelpShow"
+      @close="microsoftHelpShow = false"
+    ></MicrosoftHelp>
+    <GithubHelp v-if="githubHelpShow" @close="githubHelpShow = false"></GithubHelp>
+    <GoogleHelp v-if="googleHelpShow" @close="googleHelpShow = false"></GoogleHelp>
+    <AppleHelp v-if="appleHelpShow" @close="appleHelpShow = false"></AppleHelp>
+  </Teleport>
   <!-- 提示框显示 -->
   <Teleport to=".toast-container">
     <Toast :show="toastShow" :msg="toastMsg" @close="toastShow = false"></Toast>
@@ -1098,14 +1205,14 @@ onMounted(() => {
 
 .tooltip:before {
   max-width: 16rem;
-  font-size: small;
+  font-size: x-small;
   font-weight: 300;
   border-radius: 0.375rem;
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+  padding-top: 0rem;
+  padding-bottom: 0rem;
   border-width: 1px;
   border-color: #e1dfde;
 }
