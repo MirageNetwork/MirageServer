@@ -2,9 +2,20 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import UserMenu from "./components/UserMenu.vue";
+import Toast from "./components/Toast.vue";
 
 const router = useRouter();
 const route = useRoute();
+
+const toastShow = ref(false);
+const toastMsg = ref("");
+watch(toastShow, () => {
+  if (toastShow.value) {
+    setTimeout(function () {
+      toastShow.value = false;
+    }, 5000);
+  }
+});
 
 router.afterEach((to, from) => {
   getServiceState();
@@ -91,6 +102,10 @@ function doServiceSwitch() {
     axios
       .post("/cockpit/api/service/start")
       .then((res) => {
+        if (res.data["status"] != "success") {
+          toastMsg.value = res.data["status"].substring(6);
+          toastShow.value = true;
+        }
         serviceState.value = res.data["data"] ? "running" : "stopped";
       })
       .catch((err) => {
@@ -445,6 +460,10 @@ function doLogout() {
       </div>
     </section>
   </main>
+
+  <Teleport to=".toast-container">
+    <Toast :show="toastShow" :msg="toastMsg" @close="toastShow = false"></Toast>
+  </Teleport>
 </template>
 
 <style>

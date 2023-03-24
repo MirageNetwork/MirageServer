@@ -253,16 +253,14 @@ onMounted(() => {
       <h1 class="mr-2" tabindex="-1">基本配置</h1>
     </div>
     <div class="text-gray-600 mt-3">
-      <p>
-        此页为启动蜃境控制器所必须的基本配置信息，只有均正确设置完成，蜃境控制器才会正常启动服务，请务必确保其中配置信息的正确性
-      </p>
+      <p>此页为蜃境控制器启动所必须的基本配置信息，请务必确保正确性</p>
     </div>
     <div class="mt-6 space-y-6">
       <div>
         <header class="max-w-2xl">
           <h3 class="text-xl font-semibold tracking-tight">控制器服务监听</h3>
         </header>
-        <p class="mt-3 text-gray-600">设置控制器（同时也是租户的控制台）服务监听地址</p>
+        <p class="mt-3 text-gray-600">设置控制器（及控制台）服务监听地址</p>
         <p class="text-gray-400 text-sm">
           默认为 <code class="bg-gray-200 text-xs rounded px-1">:8080</code>
         </p>
@@ -280,7 +278,7 @@ onMounted(() => {
             {{ setSrvAddrText }}
           </button>
         </div>
-        <p class="mt-3 text-gray-600">设置控制器（同时也是租户的控制台）服务域名</p>
+        <p class="mt-3 text-gray-600">设置控制器（及控制台）服务域名</p>
         <p class="text-gray-400 text-sm">
           参考形式
           <code class="bg-gray-200 text-xs rounded px-1">sdp.mirage.com</code
@@ -357,9 +355,9 @@ onMounted(() => {
         <p class="text-gray-400 text-sm">
           默认值
           <code class="bg-gray-200 text-xs rounded px-1">mira.net</code
-          >，在默认值情形下某个具体入网设备在其组织启用幻域后，将可通过形式如
+          >，启用幻域后，将可通过形式如
           <code class="bg-gray-200 text-xs rounded px-1">win11.orgcode.mira.net</code>
-          的域名进行访问
+          的域名访问节点
         </p>
         <div
           class="mt-1 max-w-sm flex border border-stone-200 hover:border-stone-400 rounded-md relative overflow-hidden min-w-0"

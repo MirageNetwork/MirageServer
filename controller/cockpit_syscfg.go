@@ -108,6 +108,9 @@ func (s *SysConfig) toSrvConfig() (*Config, error) {
 	if s.AppleCfg.ClientID != "" && s.AppleCfg.KeyID != "" && s.AppleCfg.TeamID != "" && s.AppleCfg.PrivateKey != "" {
 		idps = append(idps, "Apple")
 	}
+	if s.WXScanURL != "" {
+		idps = append(idps, "WeChat")
+	}
 
 	OidcConfig := OIDCConfig{
 		Issuer:       "https://" + s.ServerURL + "/issuer",

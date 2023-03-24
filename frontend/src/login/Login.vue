@@ -232,7 +232,11 @@ onMounted(() => {
       阿里云 IDaaS 登录
     </button>
   </form>
-  <form v-if="!showWXMiniCode" @submit.prevent="startWXScan" class="mb-3">
+  <form
+    v-if="IDPs.includes('WeChat') && !showWXMiniCode"
+    @submit.prevent="startWXScan"
+    class="mb-3"
+  >
     <input type="hidden" name="provider" value="WXScan" />
     <input type="hidden" name="next_url" :value="next_url" />
     <button

@@ -336,10 +336,7 @@ onMounted(() => {
       <h1 class="mr-2" tabindex="-1">第三方服务</h1>
     </div>
     <div class="text-gray-600 mt-3">
-      <p>
-        此页为蜃境控制器服务所需的第三方服务信息，包括日志服务、短信服务、身份鉴别服务等。
-      </p>
-      <p class="text-gray-400 text-sm">在蜃境控制台完成对应适配前，均为必填</p>
+      <p>此页为蜃境控制器服务所需的第三方服务信息，包括日志服务、身份鉴别服务等。</p>
     </div>
     <div class="mt-6 space-y-6">
       <!---->

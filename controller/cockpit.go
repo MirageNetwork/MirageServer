@@ -385,19 +385,19 @@ func (c *Cockpit) CheckCfgValid() (cfg *Config, ok bool) {
 		if err != nil {
 			return
 		}
-		if cfg.ServerURL == "" || cfg.Addr == "" || cfg.IPPrefixes == nil || cfg.BaseDomain == "" || cfg.DERPURL == "" || cfg.wxScanURL == "" {
-			return
-		}
-		if cfg.OIDC.Issuer == "" || cfg.OIDC.ClientID == "" || cfg.OIDC.ClientSecret == "" {
+		if cfg.ServerURL == "" || cfg.Addr == "" || cfg.IPPrefixes == nil || cfg.BaseDomain == "" || cfg.DERPURL == "" {
 			return
 		}
 		/*
-			if cfg.IDaaS.App == "" || cfg.IDaaS.ClientID == "" || cfg.IDaaS.ClientKey == "" || cfg.IDaaS.Instance == "" || cfg.IDaaS.OrgID == "" {
+			if cfg.OIDC.Issuer == "" || cfg.OIDC.ClientID == "" || cfg.OIDC.ClientSecret == "" {
 				return
 			}
-			if cfg.SMS.ID == "" || cfg.SMS.Key == "" || cfg.SMS.Sign == "" || cfg.SMS.Template == "" {
-				return
-			}
+				if cfg.IDaaS.App == "" || cfg.IDaaS.ClientID == "" || cfg.IDaaS.ClientKey == "" || cfg.IDaaS.Instance == "" || cfg.IDaaS.OrgID == "" {
+					return
+				}
+				if cfg.SMS.ID == "" || cfg.SMS.Key == "" || cfg.SMS.Sign == "" || cfg.SMS.Template == "" {
+					return
+				}
 		*/
 		ok = true
 	}
