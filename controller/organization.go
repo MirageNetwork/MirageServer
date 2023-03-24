@@ -162,7 +162,7 @@ func DestroyOrgnaizationInTx(tx *gorm.DB, orgName, provider string) error {
 
 func (m *Mirage) UpdateOrgExpiry(user *User, newDuration uint) error {
 	err := m.db.Select("expiry_duration").Updates(&Organization{
-		ID:             user.OrgId,
+		ID:             user.OrganizationID,
 		ExpiryDuration: newDuration,
 	}).Error
 	return err

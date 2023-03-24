@@ -29,7 +29,7 @@ func (h *Mirage) CAPIGetTags(
 	resData := TagsData{
 		TagOwners: []Tag{},
 	}
-	org, err := h.GetOrgnaizationByID(user.OrgId)
+	org, err := h.GetOrgnaizationByID(user.OrganizationID)
 	if err != nil {
 		h.doAPIResponse(w, "用户组织信息获取失败", nil)
 	}
@@ -69,7 +69,7 @@ func (h *Mirage) CAPIPostTags(
 	json.NewDecoder(r.Body).Decode(&reqData)
 	switch reqData.State {
 	case "create":
-		org, err := h.GetOrgnaizationByID(user.OrgId)
+		org, err := h.GetOrgnaizationByID(user.OrganizationID)
 		if err != nil {
 			h.doAPIResponse(w, "用户组织信息获取失败", nil)
 		}
@@ -114,7 +114,7 @@ func (h *Mirage) CAPIDelTags(
 		h.doAPIResponse(w, "用户信息核对失败", nil)
 		return
 	}
-	org, err := h.GetOrgnaizationByID(user.OrgId)
+	org, err := h.GetOrgnaizationByID(user.OrganizationID)
 	if err != nil {
 		h.doAPIResponse(w, "用户组织信息获取失败", nil)
 	}

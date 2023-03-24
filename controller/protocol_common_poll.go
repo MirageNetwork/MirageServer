@@ -41,7 +41,7 @@ func (h *Mirage) handlePollCommon(
 	}
 
 	// update ACLRules with peer informations (to update server tags if necessary)
-	if machine.User.Org.AclPolicy != nil {
+	if machine.User.Organization.AclPolicy != nil {
 		/*
 			err := h.UpdateACLRules()
 			if err != nil {
