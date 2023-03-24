@@ -65,7 +65,7 @@ func (w esClientWriter) WriteLevel(l zerolog.Level, p []byte) (n int, err error)
 		}
 		res, err := req.Do(context.Background(), esClient)
 		if err != nil {
-			log.Error().Msgf("ESLog Error!")
+			log.Warn().Msgf("ESLog Error!")
 			return len(p), nil
 		}
 		defer res.Body.Close()
