@@ -25,5 +25,9 @@ func (h *Mirage) ConsoleLogout(
 		}
 		http.SetCookie(w, delCookie)
 	}
-	http.Redirect(w, r, "/", http.StatusFound)
+	nextURL := r.URL.Query().Get("next_url")
+	if nextURL == "" {
+		nextURL = "/"
+	}
+	http.Redirect(w, r, nextURL, http.StatusFound)
 }

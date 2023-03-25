@@ -85,3 +85,50 @@ func (h *Mirage) ErrMessage(
 			Msg("Failed to write response")
 	}
 }
+
+//go:embed templates/memberNoConsole.html
+var noConsoleTemplate string
+
+// cgao6: 用这个向前端返回普通用户无权登录控制台
+func (h *Mirage) renderNoConsole(
+	w http.ResponseWriter,
+	r *http.Request,
+	userName string,
+	orgName string,
+) {
+	noConsoleT := template.Must(template.New("noConsole").Parse(noConsoleTemplate))
+
+	config := map[string]interface{}{
+		"UserName": userName,
+		"OrgName":  orgName,
+	}
+
+	var payload bytes.Buffer
+	if err := noConsoleT.Execute(&payload, config); err != nil {
+		log.Error().
+			Str("handler", "ErrMessage").
+			Err(err).
+			Msg("Could not render noConsole template")
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Could not render noConsole template"))
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to write response")
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write(payload.Bytes())
+	if err != nil {
+		log.Error().
+			Caller().
+			Err(err).
+			Msg("Failed to write response")
+	}
+}

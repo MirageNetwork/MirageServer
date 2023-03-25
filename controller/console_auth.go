@@ -191,7 +191,7 @@ func (h *Mirage) ConsoleAuth(next http.Handler) http.Handler {
 			http.Redirect(w, r, "/login?"+r.URL.RawQuery, http.StatusFound)
 			return
 		}
-		_, controcontrolCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCodeCookie.Value)
+		controlCodeC, controcontrolCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCodeCookie.Value)
 		if !ok || controcontrolCodeExpiration.Compare(time.Now()) != 1 {
 			log.Debug().
 				Caller().
@@ -201,6 +201,23 @@ func (h *Mirage) ConsoleAuth(next http.Handler) http.Handler {
 			newQuery.Add("next_url", nextURL)
 			r.URL.RawQuery = newQuery.Encode()
 			http.Redirect(w, r, "/login?"+r.URL.RawQuery, http.StatusFound)
+			return
+		}
+		controlCodeItem := controlCodeC.(ControlCacheItem)
+		user, err := h.GetUserByID(controlCodeItem.uid)
+		if err != nil {
+			log.Debug().
+				Caller().
+				Msg("could not verifyIDTokenForOIDCCallback")
+			nextURL := r.URL.Path
+			newQuery := r.URL.Query()
+			newQuery.Add("next_url", nextURL)
+			r.URL.RawQuery = newQuery.Encode()
+			http.Redirect(w, r, "/login?"+r.URL.RawQuery, http.StatusFound)
+			return
+		}
+		if user.Role != RoleAdmin {
+			h.renderNoConsole(w, r, user.Name, user.Organization.Name)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -228,14 +245,42 @@ func (h *Mirage) APIAuth(next http.Handler) http.Handler {
 			json.NewEncoder(w).Encode(&renderData)
 			return
 		}
-		_, controcontrolCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCodeCookie.Value)
+		controlCodeC, controcontrolCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCodeCookie.Value)
 		if !ok || controcontrolCodeExpiration.Compare(time.Now()) != 1 {
 			log.Debug().
 				Caller().
 				Msg("could not verifyIDTokenForOIDCCallback")
 			renderData := APICheckRes{
 				NeedReauth: true,
-				Reason:     "IDaaS无法校验",
+				Reason:     "Cookie无法校验",
+			}
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(&renderData)
+			return
+		}
+		controlCodeItem := controlCodeC.(ControlCacheItem)
+		user, err := h.GetUserByID(controlCodeItem.uid)
+		if err != nil {
+			log.Debug().
+				Caller().
+				Msg("could not verifyIDTokenForOIDCCallback")
+			renderData := APICheckRes{
+				NeedReauth: true,
+				Reason:     "用户查询失败",
+			}
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(&renderData)
+			return
+		}
+		if user.Role != RoleAdmin {
+			log.Debug().
+				Caller().
+				Msg("非管理员用户访问API")
+			renderData := APICheckRes{
+				NeedReauth: true,
+				Reason:     "无相应权限",
 			}
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusUnauthorized)

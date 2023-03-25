@@ -290,6 +290,7 @@ func (h *Mirage) initRouter(router *mux.Router) {
 		log.Fatal().Msg(err.Error())
 	}
 
+	router.HandleFunc("/logout", h.ConsoleLogout).Methods(http.MethodGet)
 	//注册
 	router.PathPrefix("/api/register").HandlerFunc(h.RegisterUserAPI).Methods(http.MethodPost)
 	router.PathPrefix("/api/idps").HandlerFunc(h.ListIdps).Methods(http.MethodGet)
@@ -339,7 +340,7 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	console_router.PathPrefix("/api/acls/tags/").HandlerFunc(h.CAPIDelTags).Methods(http.MethodDelete)
 
 	// TODO: 登出及页面转至VUE，要考虑logout是否有必要发消息给服务端
-	console_router.HandleFunc("/logout", h.ConsoleLogout).Methods(http.MethodGet)
+	//cgao6: 改成不需检查登录信息	console_router.HandleFunc("/logout", h.ConsoleLogout).Methods(http.MethodGet)
 	console_router.PathPrefix("").Handler(http.StripPrefix("/admin", http.FileServer(http.FS(adminDir))))
 
 	// 核心与客户端通信协议，不动
