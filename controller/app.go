@@ -81,6 +81,8 @@ type Mirage struct {
 	machineControlCodeCache *cache.Cache
 	//organizationCache       *cache.Cache
 
+	tcdCache *cache.Cache
+
 	longPollChanPool map[string]chan string
 
 	ipAllocationMutex sync.Mutex
@@ -124,6 +126,7 @@ func NewMirage(cfg *Config, db *gorm.DB) (*Mirage, error) {
 		stateCodeCache:          stateCodeCache,
 		controlCodeCache:        controlCodeCache,
 		machineControlCodeCache: machineControlCodeCache,
+		tcdCache:                cache.New(0, 0),
 		longPollChanPool:        longPollChanPool,
 		smsCodeCache:            smsCodeCache,
 		shutdownChan:            make(chan struct{}),
@@ -317,6 +320,7 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	console_router.HandleFunc("/api/self", h.ConsoleSelfAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/machines", h.ConsoleMachinesAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/dns", h.CAPIGetDNS).Methods(http.MethodGet)
+	console_router.HandleFunc("/api/tcd/offers", h.CAPIGetTCDOffers).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/netsettings", h.getNetSettingAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/keys", h.CAPIGetKeys).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/acls/tags", h.CAPIGetTags).Methods(http.MethodGet)
@@ -328,6 +332,7 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	console_router.HandleFunc("/api/keys", h.CAPIPostKeys).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/acls/tags", h.CAPIPostTags).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/dns", h.CAPIPostDNS).Methods(http.MethodPost)
+	console_router.HandleFunc("/api/tcd", h.CAPIPostTCD).Methods(http.MethodPost)
 
 	// DELETE(删除类)API
 	console_router.PathPrefix("/api/keys/").HandlerFunc(h.CAPIDelKeys).Methods(http.MethodDelete)

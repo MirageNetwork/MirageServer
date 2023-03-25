@@ -155,7 +155,7 @@ func (h *Mirage) ConsoleSelfAPI(
 	// 用户所属组织将存于数据库，合并实现前，不设置配置文件中该项，均按个人用户处理
 
 	renderData := adminTemplateConfig{
-		Basedomain:   h.cfg.BaseDomain,
+		Basedomain:   user.Organization.MagicDnsDomain,
 		UserNameHead: userNameHead,
 		UserName:     userDisName,
 		UserAccount:  userName,
@@ -426,7 +426,7 @@ func (h *Mirage) ConsoleMachinesAPI(
 	}
 
 	renderData := adminTemplateConfig{
-		Basedomain: h.cfg.BaseDomain,
+		Basedomain: user.Organization.MagicDnsDomain,
 		MList:      mlist,
 	}
 

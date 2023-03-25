@@ -104,7 +104,7 @@ func (h *Mirage) generateMapResponse(
 		DNSConfig: dnsConfig,
 
 		// TODO: Only send if updated
-		Domain: h.cfg.BaseDomain,
+		Domain: org.Name,
 
 		// Do not instruct clients to collect services, we do not
 		// support or do anything with them

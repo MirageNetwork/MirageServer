@@ -965,9 +965,8 @@ func (h *Mirage) toNode(
 	if machine.User.Organization.EnableMagic { //[cgao6 removed] dnsConfig != nil && dnsConfig.Proxied { // MagicDNS
 		_, baseDomain := machine.User.GetDNSConfig(h.cfg.IPPrefixes)
 		hostname = fmt.Sprintf(
-			"%s.%s.%s",
+			"%s.%s",
 			machine.GivenName,
-			machine.User.Name,
 			baseDomain,
 		)
 		if len(hostname) > maxHostnameLength {

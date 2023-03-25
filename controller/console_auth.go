@@ -309,7 +309,7 @@ func (h *Mirage) deviceRegPortal(
 		//未绑定用户，显示connectDevice
 		user, _ := h.GetUserByID(controlCodeItem.uid)
 		Hostname := aCodeItem.regReq.Hostinfo.Hostname
-		Netname := user.Name
+		Netname := user.Organization.Name
 		Nodekey := aCodeItem.regReq.NodeKey.String()
 		OS := aCodeItem.regReq.Hostinfo.OS + "(" + aCodeItem.regReq.Hostinfo.OSVersion + ")"
 		ClientVer := aCodeItem.regReq.Hostinfo.IPNVersion
@@ -329,7 +329,7 @@ func (h *Mirage) deviceRegPortal(
 		return
 	}
 	Hostname := machine.GivenName
-	Netname := machine.User.Name
+	Netname := machine.User.Organization.Name
 	MIP := machine.IPAddresses[0].String()
 	if len(machine.IPAddresses) > 1 && machine.IPAddresses[1].Is4() {
 		MIP = machine.IPAddresses[1].String()
@@ -399,7 +399,7 @@ func (h *Mirage) deviceReg(
 			return
 		}
 		Hostname := machine.GivenName
-		Netname := machine.User.Name
+		Netname := machine.User.Organization.Name
 		MIP := machine.IPAddresses[0].String()
 		if len(machine.IPAddresses) > 1 && machine.IPAddresses[1].Is4() {
 			MIP = machine.IPAddresses[1].String()
@@ -419,7 +419,7 @@ func (h *Mirage) deviceReg(
 	h.longPollChanPool[aCode] <- "ok" // longpoll的救赎
 
 	Hostname := machine.GivenName
-	Netname := machine.User.Name
+	Netname := machine.User.Organization.Name
 	MIP := machine.IPAddresses[0].String()
 	if len(machine.IPAddresses) > 1 && machine.IPAddresses[1].Is4() {
 		MIP = machine.IPAddresses[1].String()

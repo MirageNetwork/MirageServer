@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type DNSData struct {
@@ -129,4 +130,87 @@ func (h *Mirage) CAPIDelDNS(
 		return
 	}
 	h.doAPIResponse(w, "", targetKeyID)
+}
+
+type TCDOffer struct {
+	TCD   string `json:"tcd"`
+	Token string `json:"token"`
+}
+
+type TCDOffers struct {
+	TCDs []TCDOffer `json:"tcds"`
+}
+
+// 接受/admin/api/tcd/offers的Get请求，用于获取新一轮随机TCD
+func (h *Mirage) CAPIGetTCDOffers(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败", nil)
+		return
+	}
+	if oldTCDOffers, ok := h.tcdCache.Get(user.Organization.StableID); ok {
+		for _, tcd := range oldTCDOffers.([]TCDOffer) {
+			h.tcdCache.Delete(tcd.TCD)
+		}
+	}
+	newTCDOffers := TCDOffers{
+		TCDs: make([]TCDOffer, 0),
+	}
+	count := 4
+	for count > 0 {
+		tmpTCD, err := h.GenNewMagicDNSDomain(h.db)
+		if err != nil {
+			continue
+		}
+		tmpTCDToken := h.GenStateCode()
+		if _, ok := h.tcdCache.Get(tmpTCD); ok {
+			continue
+		}
+		h.tcdCache.Set(tmpTCD, tmpTCDToken, 24*time.Hour)
+		newTCDOffers.TCDs = append(newTCDOffers.TCDs, TCDOffer{
+			TCD:   tmpTCD,
+			Token: tmpTCDToken,
+		})
+		count--
+	}
+	h.tcdCache.Set(user.Organization.StableID, newTCDOffers.TCDs, 24*time.Hour)
+	h.doAPIResponse(w, "", newTCDOffers)
+}
+
+// 接受/admin/api/tcd的Post请求，用于更新TCD
+func (h *Mirage) CAPIPostTCD(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	user := h.verifyTokenIDandGetUser(w, r)
+	if user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败", nil)
+		return
+	}
+	err := r.ParseForm()
+	if err != nil {
+		h.doAPIResponse(w, "用户请求解析失败:"+err.Error(), nil)
+		return
+	}
+	reqData := TCDOffer{}
+	json.NewDecoder(r.Body).Decode(&reqData)
+	token, ok := h.tcdCache.Get(reqData.TCD)
+	if !ok || token != reqData.Token {
+		h.doAPIResponse(w, "请求的新蜃境网域名称有误", nil)
+		return
+	}
+	err = h.UpdateMagicDNSDomain(user.OrganizationID, reqData.TCD)
+	if err != nil {
+		h.doAPIResponse(w, "更新蜃境网域名称失败", nil)
+		return
+	}
+	if oldTCDOffers, ok := h.tcdCache.Get(user.Organization.StableID); ok {
+		for _, tcd := range oldTCDOffers.([]TCDOffer) {
+			h.tcdCache.Delete(tcd.TCD)
+		}
+	}
+	h.doAPIResponse(w, "", nil)
 }

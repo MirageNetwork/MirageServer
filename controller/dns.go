@@ -194,11 +194,7 @@ func getMapResponseDNSConfig(
 		// Only inject the Search Domain of the current user - shared nodes should use their full FQDN
 		dnsConfig.Domains = append(
 			dnsConfig.Domains,
-			fmt.Sprintf(
-				"%s.%s",
-				machine.User.Name,
-				baseDomain,
-			),
+			baseDomain,
 		)
 
 		/* cgao6: due to we need to add uncomparable field to User, can't use mapset any more
@@ -214,7 +210,7 @@ func getMapResponseDNSConfig(
 			userSet = append(userSet, p.User)
 		}
 		for _, user := range userSet { //cgao6: same as above .ToSlice() {
-			dnsRoute := fmt.Sprintf("%v.%v", user.Name, baseDomain)
+			dnsRoute := user.Organization.MagicDnsDomain
 			dnsConfig.Routes[dnsRoute] = nil
 		}
 	} /* else {

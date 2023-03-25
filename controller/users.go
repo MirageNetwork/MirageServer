@@ -103,7 +103,7 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string, provide
 		org, trxErr = GetOrgnaizationByNameInTx(tx, orgName, provider)
 		// 不存在: 创建组织
 		if errors.Is(trxErr, ErrOrgNotFound) {
-			org, trxErr = CreateOrgnaizationInTx(tx, orgName, orgName, provider)
+			org, trxErr = h.CreateOrgnaizationInTx(tx, orgName, provider)
 			user.Role = RoleAdmin
 			// 其他错误, 报错返回
 		} else if trxErr == nil && org.ID == 0 {
@@ -332,7 +332,7 @@ func (n *User) toTailscaleUser() *tailcfg.User {
 		LoginName:     n.Name,
 		DisplayName:   n.Display_Name,
 		ProfilePicURL: "",
-		Domain:        "headscale.net",
+		Domain:        n.Organization.MagicDnsDomain,
 		Logins:        []tailcfg.LoginID{},
 		Created:       time.Time{},
 	}
@@ -346,7 +346,7 @@ func (n *User) toTailscaleLogin() *tailcfg.Login {
 		LoginName:     n.Name,
 		DisplayName:   n.Name,
 		ProfilePicURL: "",
-		Domain:        "headscale.net",
+		Domain:        n.Organization.MagicDnsDomain,
 	}
 
 	return &login
@@ -542,12 +542,7 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 		}
 	}
 
-	var baseDomain string
-	if viper.IsSet("base_domain") {
-		baseDomain = viper.GetString("base_domain")
-	} else {
-		baseDomain = "headscale.net" // does not really matter when MagicDNS is not enabled
-	}
+	baseDomain := me.Organization.MagicDnsDomain
 
 	return dnsConfig, baseDomain
 }

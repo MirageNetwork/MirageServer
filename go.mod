@@ -3,13 +3,13 @@ module MirageNetwork/MirageServer
 go 1.20
 
 require (
-	github.com/dexidp/dex v0.0.0-00010101000000-000000000000
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.4
 	github.com/alibabacloud-go/dysmsapi-20170525/v3 v3.0.5
 	github.com/alibabacloud-go/eiam-developerapi-20220225/v2 v2.0.1
 	github.com/alibabacloud-go/tea v1.1.20
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.1
 	github.com/coreos/go-oidc/v3 v3.5.0
+	github.com/dexidp/dex v0.0.0-00010101000000-000000000000
 	github.com/glebarez/sqlite v1.7.0
 	github.com/gorilla/mux v1.8.0
 	github.com/klauspost/compress v1.16.3
@@ -27,7 +27,9 @@ require (
 	gorm.io/gorm v1.24.6
 	tailscale.com v1.38.1
 )
+
 replace github.com/dexidp/dex => ./dex
+
 require (
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.4 // indirect
 	github.com/alibabacloud-go/debug v0.0.0-20190504072949-9472017b5c68 // indirect
@@ -83,6 +85,7 @@ require (
 	github.com/mdlayher/socket v0.4.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/sethvargo/go-diceware v0.3.0
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect

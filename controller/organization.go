@@ -2,10 +2,12 @@ package controller
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/snowflake"
 	"github.com/rs/zerolog/log"
+	"github.com/sethvargo/go-diceware/diceware"
 	"gorm.io/gorm"
 	"tailscale.com/tailcfg"
 )
@@ -22,11 +24,11 @@ type Organization struct {
 	ID             int64  `gorm:"primary_key;unique;not null"`
 	StableID       string `gorm:"unique"`
 	Name           string `gorm:"uniqueIndex:idx_name_provider"`
-	DisplayName    string
 	Provider       string `gorm:"uniqueIndex:idx_name_provider"`
 	ExpiryDuration uint   `gorm:"default:180"`
 	EnableMagic    bool   `gorm:"default:false"`
-	OverrideLocal  bool   `gorm:"default:false"`
+	MagicDnsDomain string
+	OverrideLocal  bool `gorm:"default:false"`
 	Nameservers    StringList
 	SplitDns       SplitDNS
 	AclPolicy      *ACLPolicy
@@ -50,18 +52,43 @@ func (o *Organization) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-func (m *Mirage) CreateOrgnaization(name, displayName, provider string) (*Organization, error) {
-	tx := m.db.Session(&gorm.Session{})
-	org, err := CreateOrgnaizationInTx(tx, name, displayName, provider)
+func (m *Mirage) GenNewMagicDNSDomain(tx *gorm.DB) (string, error) {
+	list, err := diceware.Generate(2)
 	if err != nil {
-		return nil, err
+		log.Error().Err(err).Msg("Could not generate passphrase")
+		return "", err
 	}
-	m.UpdateACLRulesOfOrg(org)
-	return org, nil
+	tmpMagicDNSDomain := strings.Join(list, "-") + "." + m.cfg.BaseDomain
+	for {
+		if errors.Is(tx.First(&Organization{}, "magic_dns_domain = ?", tmpMagicDNSDomain).Error, gorm.ErrRecordNotFound) {
+			break
+		}
+		list, err = diceware.Generate(2)
+		if err != nil {
+			log.Error().Err(err).Msg("Could not generate passphrase")
+			return "", err
+		}
+		tmpMagicDNSDomain = strings.Join(list, "-") + "." + m.cfg.BaseDomain
+	}
+	return tmpMagicDNSDomain, nil
 }
 
-func CreateOrgnaizationInTx(tx *gorm.DB, name, displayName, provider string) (*Organization, error) {
-	if len(name) == 0 || len(displayName) == 0 || len(provider) == 0 {
+func (m *Mirage) UpdateMagicDNSDomain(orgID int64, netMagicDomain string) error {
+	org, err := m.GetOrgnaizationByID(orgID)
+	if err != nil {
+		return err
+	}
+	org.MagicDnsDomain = netMagicDomain
+	err = m.db.Save(org).Error
+	if err != nil {
+		return err
+	}
+	m.setLastStateChangeToNow()
+	return nil
+}
+
+func (m *Mirage) CreateOrgnaizationInTx(tx *gorm.DB, name, provider string) (*Organization, error) {
+	if len(name) == 0 || len(provider) == 0 {
 		return nil, ErrCreateOrgParams
 	}
 	var count int64
@@ -73,7 +100,6 @@ func CreateOrgnaizationInTx(tx *gorm.DB, name, displayName, provider string) (*O
 	}
 	org := Organization{}
 	org.Name = name
-	org.DisplayName = displayName
 	org.Provider = provider
 	org.AclPolicy = &ACLPolicy{
 		ACLs: []ACL{{
@@ -84,6 +110,18 @@ func CreateOrgnaizationInTx(tx *gorm.DB, name, displayName, provider string) (*O
 		}},
 	}
 	org.ExpiryDuration = DefaultExpireTime
+
+	//cgao6: 添加组织幻域域名roll生成
+	newMagicDNSDomain, err := m.GenNewMagicDNSDomain(tx)
+	if err != nil {
+		log.Error().
+			Str("func", "CreateOrgnaization").
+			Err(err).
+			Msg("Could not generate magic dns domain")
+		return nil, err
+	}
+	org.MagicDnsDomain = newMagicDNSDomain
+
 	if err := tx.Create(&org).Error; err != nil {
 		log.Error().
 			Str("func", "CreateOrgnaization").

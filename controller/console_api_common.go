@@ -22,7 +22,7 @@ func (h *Mirage) ListIdps(
 // @data 响应数据：key值为data的json对象
 func (h *Mirage) doAPIResponse(writer http.ResponseWriter, msg string, data interface{}) {
 	res := APIResponse{}
-	if data != nil {
+	if msg == "" {
 		res.Status = "success"
 		res.Data = data
 	} else {
