@@ -393,7 +393,7 @@ func (h *Mirage) handleAuthKeyCommon(
 	} else {
 		now := time.Now().UTC()
 
-		givenName := h.GenMachineName(registerRequest.Hostinfo.Hostname, pak.User.toTailscaleUser().ID, MachinePublicKeyStripPrefix(machineKey))
+		givenName := h.GenMachineName(registerRequest.Hostinfo.Hostname, pak.UserID, pak.User.OrganizationID, MachinePublicKeyStripPrefix(machineKey))
 		if err != nil {
 			log.Error().
 				Caller().

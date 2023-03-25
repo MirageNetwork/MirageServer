@@ -426,27 +426,55 @@ func (h *Mirage) ListMachinesByOrgID(orgId int64) ([]Machine, error) {
 	return machines, nil
 }
 
-// cgao6: 根据MachineKey和用户
+// cgao6: 根据MachineKey和组织
+// 情况1：不同组织的机器无所谓
+// 情况2：同组织内，不允许同名，除非：同设备（MKey）且同用户
 func (h *Mirage) GenMachineName(
 	referName string,
-	uid tailcfg.UserID,
+	userId int64,
+	orgId int64,
 	machineKey string,
 ) string {
 	giveName := referName
 	suffix := 1
-	m, err := h.GetUserMachineByGivenName(giveName, uid)
-	if err == nil && m.MachineKey != machineKey {
+	m, err := h.GetOrgMachineByGivenName(giveName, orgId)
+	if err == nil && (m.MachineKey != machineKey || m.UserID != userId) {
 		giveName = giveName + "-" + strconv.Itoa(suffix)
-		m, err = h.GetUserMachineByGivenName(giveName, uid)
+		m, err = h.GetOrgMachineByGivenName(giveName, orgId)
 	}
-	for err == nil && m.MachineKey != machineKey {
+	for err == nil && (m.MachineKey != machineKey || m.UserID != userId) {
 		giveName = strings.TrimSuffix(giveName, "-"+strconv.Itoa(suffix))
 		suffix++
 		giveName = giveName + "-" + strconv.Itoa(suffix)
-		m, err = h.GetUserMachineByGivenName(giveName, uid)
+		m, err = h.GetOrgMachineByGivenName(giveName, orgId)
 	}
 
 	return giveName
+}
+
+func (h *Mirage) GetOrgMachineByGivenName(
+	giveName string, orgId int64,
+) (*Machine, error) {
+	machine := Machine{}
+	userIds := []int64{}
+	h.db.Model(&User{}).Where(&User{
+		OrganizationID: orgId,
+	}).Select("id").Find(&userIds)
+	if len(userIds) == 0 {
+		return &machine, nil
+	}
+	scopeFunc := func(tx *gorm.DB) *gorm.DB {
+		if len(userIds) == 1 {
+			return tx.Where("user_id = ? AND given_name = ?", userIds[0], giveName)
+		} else {
+			return tx.Where("user_id in ? AND given_name = ?", userIds, giveName)
+		}
+	}
+	if err := h.db.Preload("AuthKey").Preload("AuthKey.User").Preload("User").Preload("User.Organization").Scopes(scopeFunc).First(&machine).Error; err != nil {
+		return nil, err
+	}
+
+	return &machine, nil
 }
 
 // cgao6: 根据Machine GivenName和用户查询机器
@@ -686,13 +714,13 @@ func (h *Mirage) setAutoGenName(machine *Machine, newName string) (string, error
 	}
 	if !(machine.AutoGenName && machine.GivenName == newName) {
 		if isAutoGen {
-			if machine.AutoGenName == isAutoGen {
+			if machine.AutoGenName {
 				return machine.GivenName, nil
 			}
-			machine.GivenName = h.GenMachineName(machine.Hostname, machine.User.toTailscaleUser().ID, machine.MachineKey)
+			machine.GivenName = h.GenMachineName(machine.Hostname, machine.UserID, machine.User.OrganizationID, machine.MachineKey)
 		} else {
-			_, err := h.GetMachineByGivenName(machine.User.ID, newName)
-			if err != nil && err != ErrMachineNotFound {
+			_, err := h.GetOrgMachineByGivenName(newName, machine.User.OrganizationID)
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 				return "", fmt.Errorf("fail to check whether new name already exist: %w", err)
 			} else if err == nil {
 				return machine.GivenName, nil

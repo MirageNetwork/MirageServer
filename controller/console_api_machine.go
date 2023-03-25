@@ -349,10 +349,12 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 		h.doAPIResponse(writer, "查询用户设备失败", nil)
 		return
 	}
-	if toUpdateMachine.User.ID != user.ID {
-		h.doAPIResponse(writer, "用户没有该权限", nil)
-		return
-	}
+	/*
+		if toUpdateMachine.User.ID != user.ID {
+			h.doAPIResponse(writer, "用户没有该权限", nil)
+			return
+		}
+	*/
 	reqState, ok := reqData["state"].(string)
 	if !ok {
 		h.doAPIResponse(writer, "用户请求state解析失败", nil)
