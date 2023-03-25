@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/rs/zerolog/log"
 )
@@ -15,6 +17,12 @@ func (h *Mirage) ListIdps(
 	r *http.Request,
 ) {
 	h.doAPIResponse(w, "", h.cfg.IdpList)
+}
+
+// 全部API响应报文框架
+type APIResponse struct {
+	Status string      `json:"status"`
+	Data   interface{} `json:"data"`
 }
 
 // API调用的统一响应发报
@@ -131,4 +139,27 @@ func (h *Mirage) renderNoConsole(
 			Err(err).
 			Msg("Failed to write response")
 	}
+}
+
+func convExpiryToStr(duration time.Duration) string {
+	if duration.Seconds() <= 0 {
+		return "已过期"
+	} else if duration.Hours()/24/365 >= 1 {
+		return "还剩一年以上有效期"
+	} else if duration.Hours()/24/30 >= 1 {
+		return "有效期还剩" + strconv.FormatInt(int64(duration.Hours()/24/30), 10) + "个月" + strconv.FormatInt(int64(duration.Hours()/24)-int64(duration.Hours()/24/30)*30, 10) + "天"
+	} else if duration.Hours()/24 >= 1 {
+		return "有效期还剩" + strconv.FormatInt(int64(duration.Hours()/24), 10) + "天"
+	} else if duration.Hours() >= 1 {
+		return "有效期还剩" + strconv.FormatInt(int64(duration.Hours()), 10) + "小时"
+	} else if duration.Minutes() >= 1 {
+		return "有效期还剩" + strconv.FormatInt(int64(duration.Minutes()), 10) + "分钟"
+	} else {
+		return "马上就要过期"
+	}
+}
+
+func Time2SHString(t time.Time) string {
+	tz, _ := time.LoadLocation("Asia/Shanghai")
+	return t.In(tz).Format("2006年01月02日 15:04:05")
 }
