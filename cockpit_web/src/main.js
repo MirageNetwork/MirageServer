@@ -23,7 +23,6 @@ const router = createRouter({
 const app = createApp(App)
 app.config.errorHandler = (err) => {
     /* 处理错误 */
-    console.log(err)
 }
 app.use(router)
 app.use(VueClickAway)

@@ -89,11 +89,11 @@ function doLogout() {
         logoutDone();
         return;
       }
-      console.log("Get Logout Response ", response.data["status"]);
     })
     .catch(function (error) {
       // 处理错误情况
-      console.log(error);
+      toastMsg.value = "登出失败:" + error;
+      toastShow.value = true;
     });
 }
 function getServiceState() {
@@ -103,7 +103,8 @@ function getServiceState() {
       serviceState.value = res.data["data"] ? "running" : "stopped";
     })
     .catch((err) => {
-      console.log(err);
+      toastMsg.value = "获取服务状态失败:" + err;
+      toastShow.value = true;
     });
 }
 function goLogin() {

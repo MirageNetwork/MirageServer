@@ -177,7 +177,6 @@ function addExtra() {
     OIDC.value["extra"][newExtra.value["k"]] &&
     OIDC.value["extra"][newExtra.value["k"]] != ""
   ) {
-    console.log(OIDC.value["extra"][newExtra.value["k"]]);
     toastMsg.value = "已存在该Extra";
     toastShow.value = true;
     return;
@@ -323,7 +322,8 @@ onMounted(() => {
     })
     .catch(function (error) {
       // 处理错误情况
-      alert(error);
+      toastMsg.value = error;
+      toastShow.value = true;
     });
 });
 </script>

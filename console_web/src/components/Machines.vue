@@ -159,7 +159,8 @@ onMounted(() => {
     })
     .catch(function (error) {
       // 处理错误情况
-      console.log(error);
+      toastMsg.value = "更新页面出错：" + error;
+      toastShow.value = true;
     });
 });
 onUnmounted(() => {
@@ -194,7 +195,8 @@ function setExpires(id) {
       }
     })
     .catch(function (error) {
-      console.log(error);
+      toastMsg.value = "失败：" + error;
+      toastShow.value = true;
     });
 }
 function removeMachine(id) {
@@ -209,16 +211,17 @@ function removeMachine(id) {
         toastShow.value = true;
         delete MList.value[id];
       } else {
-        alert("失败：" + response.data["errmsg"]);
+        toastMsg.value = "失败：" + response.data["status"];
+        toastShow.value = true;
       }
     })
     .catch(function (error) {
-      console.log(error);
+      toastMsg.value = "失败：" + error;
+      toastShow.value = true;
     });
 }
 
 function hostnameUpdateDone(newName, newAutomaticNameMode, wantClose) {
-  console.log("hostnameUpdateDone", newName, newAutomaticNameMode, wantClose);
   MList.value[currentMID.value]["name"] = newName;
   MList.value[currentMID.value]["automaticNameMode"] = newAutomaticNameMode;
   nextTick(() => {

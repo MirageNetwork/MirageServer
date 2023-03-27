@@ -127,11 +127,6 @@ function showNSMenu(e) {
     currentDomain.value =
       NSMenuBtn.value.parentNode.parentNode.parentNode.previousElementSibling.firstChild.nextElementSibling.innerText;
   }
-  /*
-    console.log("currentResolver:  " + currentResolver.value)
-    console.log("currentDomain:  " + currentDomain.value)
-    console.log("currentCfgDomains:  " + JSON.stringify(DNSCfgRemovedCurrent.value))
-  */
   NSMenuShow.value = true;
 }
 
@@ -184,14 +179,14 @@ onMounted(() => {
       if (response.data["status"] == "success") {
         DNSCfg.value = response.data["data"];
       } else {
-        if (response.data["status"].substring(6) == "用户信息核对失败") {
-          //TODO:token失效跳转
-        }
+        toastMsg.value = "获取DNS配置失败" + response.data["status"].substring[6];
+        toastShow.value = true;
       }
     })
     .catch(function (error) {
       // 处理错误情况
-      alert(error);
+      toastMsg.value = "获取DNS配置失败" + error;
+      toastShow.value = true;
     });
 });
 
@@ -216,11 +211,11 @@ function updateTCD(wantedTCD) {
           } else {
             toastMsg.value = response.data["status"].substring(6);
             toastShow.value = true;
-            console.log(response.data["status"]);
           }
         })
         .catch(function (error) {
-          console.log(error);
+          toastMsg.value = "更新失败:" + error;
+          toastShow.value = true;
         });
       break;
     }
@@ -243,11 +238,13 @@ function switchMagicDNS(newStatus) {
             toastMsg.value = newStatus == "on" ? "已启用幻域" : "已禁用幻域";
             toastShow.value = true;
           } else {
-            console.log(response.data["status"]);
+            toastMsg.value = response.data["status"].substring(6);
+            toastShow.value = true;
           }
         })
         .catch(function (error) {
-          console.log(error);
+          toastMsg.value = "更新失败:" + error;
+          toastShow.value = true;
         });
       break;
     case "off":
@@ -271,11 +268,13 @@ function switchOverride(event) {
       if (response.data["status"] == "success") {
         DNSCfg.value = response.data["data"];
       } else {
-        console.log(response.data["status"]);
+        toastMsg.value = response.data["status"].substring(6);
+        toastShow.value = true;
       }
     })
     .catch(function (error) {
-      console.log(error);
+      toastMsg.value = "更新失败:" + error;
+      toastShow.value = true;
     });
 }
 function newNSAdded(newDNSCfg) {
@@ -294,11 +293,13 @@ function removeNS() {
       if (response.data["status"] == "success") {
         DNSCfg.value = response.data["data"];
       } else {
-        console.log(response.data["status"]);
+        toastMsg.value = response.data["status"].substring(6);
+        toastShow.value = true;
       }
     })
     .catch(function (error) {
-      console.log(error);
+      toastMsg.value = "更新失败:" + error;
+      toastShow.value = true;
     })
     .then(function () {
       currentDomain.value = "";

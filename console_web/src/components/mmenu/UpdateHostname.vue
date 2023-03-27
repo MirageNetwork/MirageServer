@@ -123,7 +123,6 @@ function updateName() {
           wantNameOccupied.value = true;
           emit("update-fail", "目标主机名已存在！");
         } else {
-          console.log("unexpected case happended during the hostname updating!");
           emit("update-fail", "意外情形发生了！");
         }
       } else {
@@ -131,7 +130,6 @@ function updateName() {
       }
     })
     .catch(function (error) {
-      console.log(error);
       emit("update-fail", error);
     });
   inputBlocking.value = false;

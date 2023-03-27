@@ -240,7 +240,8 @@ onMounted(() => {
     })
     .catch(function (error) {
       // 处理错误情况
-      alert(error);
+      toastMsg.value = error;
+      toastShow.value = true;
     });
 });
 </script>

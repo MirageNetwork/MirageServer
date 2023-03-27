@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, computed } from "vue";
+import Toast from "../Toast.vue";
 import { useDisScroll } from "/src/utils.js";
 
 const emit = defineEmits(["refresh-offers", "update-tcd"]);
@@ -10,6 +11,17 @@ const props = defineProps({
   currenttcd: String,
   tcdoffers: Array,
 });
+
+const toastShow = ref(false);
+const toastMsg = ref("");
+watch(toastShow, () => {
+  if (toastShow.value) {
+    setTimeout(function () {
+      toastShow.value = false;
+    }, 5000);
+  }
+});
+
 const wantedTCD = ref("");
 
 function getTCDOffers() {
@@ -20,17 +32,18 @@ function getTCDOffers() {
       if (response.data["status"] == "success") {
         emit("refresh-offers", response.data["data"]["tcds"]);
       } else {
-        console.log(response.data["status"]);
+        toastMsg.value = "获取蜃境名称失败:" + response.data["status"].substring[6];
+        toastShow.value = true;
       }
     })
     .catch(function (error) {
-      console.log(error);
+      toastMsg.value = "获取蜃境名称失败:" + error;
+      toastShow.value = true;
     });
 }
 
 function setWantedTCD(newWantedTCD) {
   wantedTCD.value = newWantedTCD;
-  console.log("new Wanted TCD: " + wantedTCD.value);
 }
 </script>
 
@@ -143,6 +156,11 @@ function setWantedTCD(newWantedTCD) {
       </button>
     </div>
   </div>
+
+  <!-- 提示框显示 -->
+  <Teleport to=".toast-container">
+    <Toast :show="toastShow" :msg="toastMsg" @close="toastShow = false"></Toast>
+  </Teleport>
 </template>
 
 <style scoped>

@@ -10,7 +10,7 @@ import VueClickAway from "vue3-click-away"
 const app = createApp(Login)
 app.config.errorHandler = (err) => {
     /* 处理错误 */
-    console.log(err)
+    
 }
 app.use(VueClickAway)
 app.mount('#app-root')

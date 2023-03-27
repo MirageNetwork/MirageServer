@@ -19,9 +19,6 @@ watch(toastShow, () => {
 
 router.afterEach((to, from) => {
   getServiceState();
-  console.log("route changed: current route is " + currentRoute.value);
-  console.log("needRegister: " + needRegister.value);
-  console.log("needReauth: " + needReauth.value);
 });
 
 //界面控制部分
@@ -95,7 +92,8 @@ function doServiceSwitch() {
         serviceState.value = res.data["data"] ? "running" : "stopped";
       })
       .catch((err) => {
-        console.log(err);
+        toastMsg.value = err;
+        toastShow.value = true;
       });
   } else if (serviceSwitch.value.checked == true && serviceState.value == "stopped") {
     serviceState.value = "starting";
@@ -109,7 +107,8 @@ function doServiceSwitch() {
         serviceState.value = res.data["data"] ? "running" : "stopped";
       })
       .catch((err) => {
-        console.log(err);
+        toastMsg.value = err;
+        toastShow.value = true;
       });
   }
 }
@@ -121,7 +120,8 @@ function getServiceState() {
       serviceState.value = res.data["data"] ? "running" : "stopped";
     })
     .catch((err) => {
-      console.log(err);
+      toastMsg.value = err;
+      toastShow.value = true;
     });
 }
 
@@ -219,11 +219,11 @@ function doLogout() {
         logoutDone();
         return;
       }
-      console.log("Get Logout Response ", response.data["status"]);
     })
     .catch(function (error) {
       // 处理错误情况
-      console.log(error);
+      toastMsg.value = error;
+      toastShow.value = true;
     });
 }
 </script>

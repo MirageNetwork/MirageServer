@@ -142,10 +142,8 @@ onMounted(() => {
     })
     .catch(function (error) {
       // 处理错误情况
-      alert(error);
-    })
-    .then(function () {
-      // 总是会执行
+      toastMsg.value = "获取机器列表失败：" + error;
+      toastShow.value = true;
     });
   axios
     .get("/admin/api/acls/tags")
@@ -157,7 +155,8 @@ onMounted(() => {
     })
     .catch(function (error) {
       // 处理错误情况
-      console.log(error);
+      toastMsg.value = "获取标签失败：" + error;
+      toastShow.value = true;
     });
 });
 //服务端请求
@@ -184,7 +183,8 @@ function setExpires() {
       }
     })
     .catch(function (error) {
-      console.log(error);
+      toastMsg.value = "失败：" + error;
+      toastShow.value = true;
     });
 }
 function removeMachine() {
@@ -201,11 +201,13 @@ function removeMachine() {
 
         router.push("/machines");
       } else {
-        alert("失败：" + response.data["errmsg"]);
+        toastMsg.value = "失败：" + response.data["status"].substring(6);
+        toastShow.value = true;
       }
     })
     .catch(function (error) {
-      console.log(error);
+      toastMsg.value = "失败：" + error;
+      toastShow.value = true;
     });
 }
 function hostnameUpdateDone(newName, newAutomaticNameMode, wantClose) {

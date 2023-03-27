@@ -72,15 +72,12 @@ function showRemoveUser() {
   userBtnShow.value = false;
   closeUserMenu();
   getMachines().then(function (mlist) {
-    console.log("所有机器： ", mlist, "长度： ", mlist.length);
     targetUserMList.value = [];
     for (var i in mlist) {
-      console.log(mlist[i]["user"], "______", selectUser.value["loginName"]);
       if (mlist[i]["user"] == selectUser.value["loginName"]) {
         targetUserMList.value = targetUserMList.value.concat(mlist[i]);
       }
     }
-    console.log("马上要删除这些机器的主人： ", targetUserMList.value);
     removeUserShow.value = true;
   });
 }
@@ -98,7 +95,7 @@ function doChangeRole() {
     })
     .then(function (response) {
       if (response.data["status"] != "success") {
-        toastMsg.value = response.data["msg"];
+        toastMsg.value = response.data["status"].substring(6);
         toastShow.value = true;
       } else {
         let newRoleChn = "普通成员";
@@ -133,7 +130,7 @@ function doRemoveUser() {
     })
     .then(function (response) {
       if (response.data["status"] != "success") {
-        toastMsg.value = response.data["msg"];
+        toastMsg.value = response.data["status"].substring(6);
         toastShow.value = true;
       } else {
         removeUserShow.value = false;
@@ -207,7 +204,8 @@ onMounted(() => {
     })
     .catch(function (error) {
       // 处理错误情况
-      console.log(error);
+      toastMsg.value = "获取标签所有者信息出错：" + error;
+      toastShow.value = true;
     });
 });
 onUnmounted(() => {
@@ -262,11 +260,13 @@ function removeUser(id) {
         toastShow.value = true;
         delete MList.value[id];
       } else {
-        alert("失败：" + response.data["errmsg"]);
+        toastMsg.value = "移除设备出错：" + response.data["status"];
+        toastShow.value = true;
       }
     })
     .catch(function (error) {
-      console.log(error);
+      toastMsg.value = "移除设备出错：" + error;
+      toastShow.value = true;
     });
 }
 </script>

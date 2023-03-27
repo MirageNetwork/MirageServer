@@ -28,11 +28,11 @@ func (h *Mirage) getNetSettingAPI(
 		return
 	}
 	netsettingData := NetSettingResData{
-		FileSharing:        false,         //未实现
-		ServicesCollection: false,         //未实现
-		HttpsEnabled:       false,         //未实现
-		Provider:           "Mirage SaaS", //在个人版尚未开启更多验证方式时暂时统一设置
-		MachineAuthNeeded:  false,         //未实现
+		FileSharing:        false, //未实现
+		ServicesCollection: false, //未实现
+		HttpsEnabled:       false, //未实现
+		Provider:           user.Organization.Provider,
+		MachineAuthNeeded:  false, //未实现
 		MaxKeyDurationDays: 180,
 		NetworkLockEnabled: false, //未实现
 	}
