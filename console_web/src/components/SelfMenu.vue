@@ -6,8 +6,8 @@ useDisScroll();
 
 const selfMenu = ref(null);
 const props = defineProps({
-  userName: String,
-  userAccount: String,
+  selfName: String,
+  selfAccount: String,
   toleft: Number,
   totop: Number,
 });
@@ -49,9 +49,9 @@ const closeMe = (event) => {
     >
       <div class="block px-4 py-2">
         <div>
-          <strong>{{ userName }} </strong>
+          <strong>{{ selfName }} </strong>
         </div>
-        <div class="opacity-75">{{ userAccount }}</div>
+        <div class="opacity-75">{{ selfAccount }}</div>
       </div>
       <div class="my-1 border-b border-base-300"></div>
       <div
