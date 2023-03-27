@@ -319,6 +319,7 @@ func (h *Mirage) initRouter(router *mux.Router) {
 
 	// GET(查询类)API
 	console_router.HandleFunc("/api/self", h.ConsoleSelfAPI).Methods(http.MethodGet)
+	console_router.HandleFunc("/api/users", h.CAPIGetUsers).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/machines", h.ConsoleMachinesAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/dns", h.CAPIGetDNS).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/tcd/offers", h.CAPIGetTCDOffers).Methods(http.MethodGet)
@@ -327,6 +328,7 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	console_router.HandleFunc("/api/acls/tags", h.CAPIGetTags).Methods(http.MethodGet)
 
 	// POST(更新类)API
+	console_router.HandleFunc("/api/users", h.CAPIPostUsers).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/machines", h.ConsoleMachinesUpdateAPI).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/machine/remove", h.ConsoleRemoveMachineAPI).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/netsetting/updatekeyexpiry", h.ConsoleUpdateKeyExpiryAPI).Methods(http.MethodPost)

@@ -183,7 +183,7 @@ func (h *Mirage) ConsoleAuth(next http.Handler) http.Handler {
 		}
 		controlCodeCookie, err := r.Cookie("miragecontrol")
 		if err == http.ErrNoCookie {
-			log.Error().Msg("未能从Cookie读取到OIDC Token！")
+			log.Warn().Msg("未能从Cookie读取到OIDC Token！")
 			nextURL := r.URL.Path
 			newQuery := r.URL.Query()
 			newQuery.Add("next_url", nextURL)
@@ -216,7 +216,7 @@ func (h *Mirage) ConsoleAuth(next http.Handler) http.Handler {
 			http.Redirect(w, r, "/login?"+r.URL.RawQuery, http.StatusFound)
 			return
 		}
-		if user.Role != RoleAdmin {
+		if user.Role != RoleOwner {
 			h.renderNoConsole(w, r, user.Name, user.Organization.Name)
 			return
 		}
@@ -235,7 +235,7 @@ func (h *Mirage) APIAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		controlCodeCookie, err := r.Cookie("miragecontrol")
 		if err == http.ErrNoCookie {
-			log.Error().Msg("未能从Cookie读取到OIDC Token！")
+			log.Warn().Msg("未能从Cookie读取到OIDC Token！")
 			renderData := APICheckRes{
 				NeedReauth: true,
 				Reason:     "未读取到Token",
@@ -274,7 +274,7 @@ func (h *Mirage) APIAuth(next http.Handler) http.Handler {
 			json.NewEncoder(w).Encode(&renderData)
 			return
 		}
-		if user.Role != RoleAdmin {
+		if user.Role != RoleOwner {
 			log.Debug().
 				Caller().
 				Msg("非管理员用户访问API")

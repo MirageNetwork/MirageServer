@@ -23,14 +23,19 @@ const (
 	ErrInvalidUserName   = Error("Invalid user name")
 )
 
-const (
+const ( // TODO: 重新规划映射关系
 	RoleMember = 0
-	RoleAdmin  = 1
+	RoleOwner  = 1
 )
 
-var RoleName = map[string]int64{
+var RoleValue = map[string]int64{
 	"member": RoleMember,
-	"admin":  RoleAdmin,
+	"owner":  RoleOwner,
+}
+
+var RoleStr = map[int64]string{
+	RoleMember: "member",
+	RoleOwner:  "owner",
 }
 
 const (
@@ -104,7 +109,7 @@ func (h *Mirage) CreateUser(name string, disName string, orgName string, provide
 		// 不存在: 创建组织
 		if errors.Is(trxErr, ErrOrgNotFound) {
 			org, trxErr = h.CreateOrgnaizationInTx(tx, orgName, provider)
-			user.Role = RoleAdmin
+			user.Role = RoleOwner
 			// 其他错误, 报错返回
 		} else if trxErr == nil && org.ID == 0 {
 			trxErr = ErrOrgNotFound
@@ -226,7 +231,7 @@ func (h *Mirage) RenameUser(oldName, newName string, orgName string, provider st
 
 // ChangUserRole by userID
 func (h *Mirage) ChangUserRole(id tailcfg.UserID, role string) error {
-	if r, ok := RoleName[strings.ToLower(role)]; ok {
+	if r, ok := RoleValue[strings.ToLower(role)]; ok {
 		err := h.db.Select("Role").Updates(&User{
 			ID:   int64(id),
 			Role: r,
@@ -247,6 +252,17 @@ func (h *Mirage) GetUserByID(id tailcfg.UserID) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+func (h *Mirage) ListOrgUsers(orgID int64) ([]User, error) {
+	var users []User
+	err := h.db.Preload("Organization").Where(&User{
+		OrganizationID: orgID,
+	}).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 // GetUser fetches a user by name.

@@ -7,6 +7,7 @@ import Machines from './components/Machines.vue'
 import Machine from './components/Machine.vue'
 import DNS from './components/DNS.vue'
 import Settings from './components/Settings.vue'
+import Users from './components/Users.vue'
 
 
 const routes = [
@@ -16,6 +17,7 @@ const routes = [
     { path: '/dns', component: DNS },
     { path: '/settings', redirect: '/settings/general' },
     { path: '/settings/:setpart', component: Settings },
+    { path: '/users', component: Users },
 ]
 const router = createRouter({
     history: createWebHashHistory(),

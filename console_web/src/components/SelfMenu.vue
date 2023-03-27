@@ -4,7 +4,7 @@ import { useDisScroll } from "../utils.js";
 
 useDisScroll();
 
-const userMenu = ref(null);
+const selfMenu = ref(null);
 const props = defineProps({
   userName: String,
   userAccount: String,
@@ -12,7 +12,7 @@ const props = defineProps({
   totop: Number,
 });
 const menuLeft = computed(() => {
-  return String(String(props.toleft + 32 - userMenu.value?.clientWidth));
+  return String(String(props.toleft + 32 - selfMenu.value?.clientWidth));
 });
 const menuTop = computed(() => {
   return String(props.totop + 40);
@@ -26,7 +26,7 @@ const closeMe = (event) => {
 
 <template>
   <div
-    ref="userMenu"
+    ref="selfMenu"
     class="shadow-lg border border-base-300 rounded-md z-20"
     v-click-away="closeMe"
     :style="

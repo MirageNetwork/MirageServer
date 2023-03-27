@@ -60,26 +60,26 @@ const machineBtnShow = ref(false);
 const delConfirmShow = ref(false);
 function showDelConfirm() {
   machineBtnShow.value = false;
-  closeMachineMenu(currentMID.value);
+  closeMachineMenu();
   delConfirmShow.value = true;
 }
 const editTagsShow = ref(false);
 function showEditTags() {
   machineBtnShow.value = false;
-  closeMachineMenu(currentMID.value);
+  closeMachineMenu();
   editTagsShow.value = true;
 }
 
 const updateHostnameShow = ref(false);
 function showUpdateHostname() {
   machineBtnShow.value = false;
-  closeMachineMenu(currentMID.value);
+  closeMachineMenu();
   updateHostnameShow.value = true;
 }
 const setSubnetShow = ref(false);
 function showSetSubnet() {
   machineBtnShow.value = false;
-  closeMachineMenu(currentMID.value);
+  closeMachineMenu();
   setSubnetShow.value = true;
 }
 
@@ -298,12 +298,7 @@ function copyMIPv6() {
       <header class="mb-8">
         <div class="flex justify-between items-center">
           <div class="flex items-center">
-            <h1
-              class="text-3xl font-semibold tracking-tight leading-tight mb-2"
-              tabindex="-1"
-            >
-              设备
-            </h1>
+            <h1 class="text-3xl font-semibold tracking-tight leading-tight mb-2">设备</h1>
           </div>
         </div>
       </header>
