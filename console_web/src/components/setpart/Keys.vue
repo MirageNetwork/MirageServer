@@ -125,7 +125,7 @@ function isInvalidTag(tag) {
     <div
       class="text-3xl font-semibold tracking-tight leading-tight mb-2 flex items-center"
     >
-      <h1 class="mr-2" tabindex="-1">密钥管理</h1>
+      <h1 class="mr-2" tabindex="-1">密钥</h1>
     </div>
     <div class="text-gray-600 mt-3 mb-10">
       <p>查看和管理您的<strong>授权密钥</strong>和<strong>API密钥</strong></p>

@@ -99,7 +99,7 @@ function doRemoveTag() {
     <div
       class="text-3xl font-semibold tracking-tight leading-tight mb-2 flex items-center"
     >
-      <h1 class="mr-2" tabindex="-1">标签管理</h1>
+      <h1 class="mr-2" tabindex="-1">标签</h1>
     </div>
     <div class="text-gray-600 mt-3 mb-10">
       <p>查看和管理您的<strong>标签</strong>(<strong>Tag</strong>)</p>

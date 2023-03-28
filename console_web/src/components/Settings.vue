@@ -6,13 +6,14 @@ import Tags from "./setpart/Tags.vue";
 import Keys from "./setpart/Keys.vue";
 import DeviceManagement from "./setpart/DeviceManagement.vue";
 import UserManagement from "./setpart/UserManagement.vue";
+import Subscription from "./setpart/Subscription.vue";
 
 //路由及选择器页面控制
 const setPartContent = {
   general: General,
   tags: Tags,
   "device-management": DeviceManagement,
-  billing: General, //TODO
+  billing: Subscription,
   "user-management": UserManagement,
   keys: Keys,
 };
@@ -71,7 +72,7 @@ onMounted(() => {
                   'text-gray-700': currentSetPart != 'user-management',
                 }"
                 to="/settings/user-management"
-                >用户管理</router-link
+                >用户</router-link
               >
               <router-link
                 class="flex font-medium mt-4"
@@ -80,7 +81,7 @@ onMounted(() => {
                   'text-gray-700': currentSetPart != 'device-management',
                 }"
                 to="/settings/device-management"
-                >设备管理</router-link
+                >设备</router-link
               >
               <router-link
                 class="flex font-medium mt-4"
@@ -89,7 +90,7 @@ onMounted(() => {
                   'text-gray-700': currentSetPart != 'billing',
                 }"
                 to="/settings/billing"
-                >账单管理</router-link
+                >账单</router-link
               >
               <router-link
                 class="flex font-medium mt-4"
@@ -98,7 +99,7 @@ onMounted(() => {
                   'text-gray-700': currentSetPart != 'tags',
                 }"
                 to="/settings/tags"
-                >标签管理</router-link
+                >标签</router-link
               >
             </div>
           </div>
@@ -127,7 +128,7 @@ onMounted(() => {
                   'text-gray-700': currentSetPart != 'keys',
                 }"
                 to="/settings/keys"
-                >密钥管理</router-link
+                >密钥</router-link
               >
             </div>
           </div>
@@ -140,13 +141,13 @@ onMounted(() => {
           >
             <optgroup label="网络配置">
               <option value="general">通用</option>
-              <option value="user-management">用户管理</option>
-              <option value="device-management">设备管理</option>
-              <option value="billing">账单管理</option>
-              <option value="tags">标签管理</option>
+              <option value="user-management">用户</option>
+              <option value="device-management">设备</option>
+              <option value="billing">账单</option>
+              <option value="tags">标签</option>
             </optgroup>
             <optgroup label="个人设置">
-              <option value="keys">密钥管理</option>
+              <option value="keys">密钥</option>
             </optgroup>
           </select>
         </div>

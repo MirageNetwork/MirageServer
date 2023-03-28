@@ -38,7 +38,7 @@ onMounted(() => {
     <div
       class="text-3xl font-semibold tracking-tight leading-tight mb-2 flex items-center"
     >
-      <h1 class="mr-2" tabindex="-1">用户管理</h1>
+      <h1 class="mr-2" tabindex="-1">用户</h1>
     </div>
     <div class="text-gray-600 mt-3 mb-10">
       <p>管理您的蜃境网络用户配置</p>
