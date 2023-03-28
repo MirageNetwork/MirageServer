@@ -10,7 +10,7 @@ import VueClickAway from "vue3-click-away"
 
 
 const routes = [
-    { path: '/', redirect: 'setting' },
+    { path: '/', redirect: '/tenants' },
     { path: '/regAdmin', component: RegAdmin },
     { path: '/login', component: Login },
     { path: '/setting', redirect: '/setting/general' },

@@ -264,10 +264,53 @@ func (c *Cockpit) DestroyTenant(tenant *Organization) error {
 	return c.db.Unscoped().Delete(&tenant).Error
 }
 
+func (c *Cockpit) GetUser(name string, orgID int64) (*User, error) {
+	user := User{}
+	err := c.db.Where(&User{
+		Name:           name,
+		OrganizationID: orgID,
+	}).Take(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrUserNotFound
+	}
+
+	return &user, nil
+}
+
+func (c *Cockpit) TransferOwner(srcId, destId int64) error {
+	return c.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Select("Role").Updates(&User{ID: srcId, Role: RoleMember})
+		if result.Error != nil || result.RowsAffected == 0 {
+			return ErrChangeUserRole
+		}
+		result = tx.Select("Role").Updates(&User{ID: destId, Role: RoleOwner})
+		if result.Error != nil || result.RowsAffected == 0 {
+			return ErrChangeUserRole
+		}
+		return nil
+	})
+}
+
+func (c *Cockpit) UpdateTenant(org *Organization) error {
+	err := c.db.Save(org).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // 请求报文：
 type TenantActionREQ struct {
-	TenantID string `json:"tenantID"`
-	Action   string `json:"action"`
+	TenantID string           `json:"tenantID"`
+	Action   string           `json:"action"`
+	NewValue TenantUpdateData `json:"newValue"`
+}
+
+type TenantUpdateData struct {
+	MagicDomain string `json:"magicDomain"`
+	Owner       string `json:"owner"`
+	Provider    string `json:"provider"`
+	Name        string `json:"name"`
 }
 
 // 接受/admin/api/users的Post请求，用于对用户操作
@@ -283,23 +326,67 @@ func (c *Cockpit) CAPIPostTenants(
 	reqData := TenantActionREQ{}
 	json.NewDecoder(r.Body).Decode(&reqData)
 
+	targetTenantID, err := strconv.ParseInt(reqData.TenantID, 10, 64)
+	if err != nil {
+		c.doAPIResponse(w, "目标租户ID解析失败:"+err.Error(), nil)
+		return
+	}
+	targetTenant, err := c.GetTenantByID(targetTenantID)
+	if err != nil {
+		c.doAPIResponse(w, "目标租户获取失败:"+err.Error(), nil)
+		return
+	}
+
 	switch reqData.Action {
 	case "delete_tenant":
 		// 删除租户
-		targetTenantID, err := strconv.ParseInt(reqData.TenantID, 10, 64)
-		if err != nil {
-			c.doAPIResponse(w, "目标租户ID解析失败:"+err.Error(), nil)
-			return
-		}
-		targetTenant, err := c.GetTenantByID(targetTenantID)
-		if err != nil {
-			c.doAPIResponse(w, "目标租户获取失败:"+err.Error(), nil)
-			return
-		}
 		if err = c.DestroyTenant(targetTenant); err != nil {
 			c.doAPIResponse(w, "目标租户删除失败:"+err.Error(), nil)
 			return
 		}
 		c.doAPIResponse(w, "", nil)
+		return
+	case "update_tenant":
+		// 更新租户配置
+		if reqData.NewValue.MagicDomain != "" {
+			targetTenant.MagicDnsDomain = reqData.NewValue.MagicDomain
+		}
+
+		if reqData.NewValue.Name != "" {
+			targetTenant.Name = reqData.NewValue.Name
+		}
+		switch reqData.NewValue.Provider {
+		case "Microsoft", "Github", "Google", "Apple", "WXScan":
+			targetTenant.Provider = reqData.NewValue.Provider
+		default:
+			c.doAPIResponse(w, "目标租户更新失败:不支持的Provider", nil)
+		}
+		c.UpdateTenant(targetTenant)
+
+		// 更新租户Owner
+		newOwner, err := c.GetUser(reqData.NewValue.Owner, targetTenant.ID)
+		if err != nil {
+			c.doAPIResponse(w, "目标租户更新失败:新Owner不存在", nil)
+			return
+		}
+		users, err := c.ListTenantUsers(targetTenant.ID)
+		if err != nil {
+			c.doAPIResponse(w, "目标租户更新失败:获取租户用户列表失败", nil)
+			return
+		}
+		for _, user := range users {
+			if user.Role == RoleOwner {
+				if user.ID != newOwner.ID {
+					err = c.TransferOwner(user.ID, newOwner.ID)
+					if err != nil {
+						c.doAPIResponse(w, "目标租户更新失败:更改Owner失败", nil)
+						return
+					}
+				}
+				break
+			}
+		}
+		c.doAPIResponse(w, "", nil)
+		return
 	}
 }

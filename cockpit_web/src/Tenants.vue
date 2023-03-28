@@ -3,6 +3,7 @@ import { ref, computed, nextTick, onMounted, onUnmounted, watch, watchEffect } f
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
 import TenantMenu from "./components/TenantMenu.vue";
 import RemoveTenant from "./umenu/RemoveTenant.vue";
+import EditTenant from "./umenu/EditTenant.vue";
 import Toast from "./components/Toast.vue";
 
 //与框架交互部分
@@ -58,8 +59,14 @@ const removeTenantShow = ref(false);
 function showRemoveTenant() {
   tenantBtnShow.value = false;
   closeTenantMenu();
-
   removeTenantShow.value = true;
+}
+
+const editTenantShow = ref(false);
+function showEditTenant() {
+  tenantBtnShow.value = false;
+  closeTenantMenu();
+  editTenantShow.value = true;
 }
 
 function doRemoveTenant() {
@@ -75,6 +82,30 @@ function doRemoveTenant() {
       } else {
         removeTenantShow.value = false;
         toastMsg.value = "已删除 " + selectTenant.value["name"];
+        toastShow.value = true;
+        getTenants().then().catch();
+      }
+    })
+    .catch(function (error) {
+      toastMsg.value = error;
+      toastShow.value = true;
+    });
+}
+
+function doUpdateTenant(newV) {
+  axios
+    .post("/cockpit/api/tenants", {
+      tenantID: selectTenant.value["id"],
+      action: "update_tenant",
+      newValue: newV,
+    })
+    .then(function (response) {
+      if (response.data["status"] != "success") {
+        toastMsg.value = response.data["status"].substring(6);
+        toastShow.value = true;
+      } else {
+        editTenantShow.value = false;
+        toastMsg.value = "已更新 " + selectTenant.value["name"] + " 租户配置";
         toastShow.value = true;
         getTenants().then().catch();
       }
@@ -422,12 +453,13 @@ onBeforeRouteLeave(() => {
       :select-tenant="selectTenant"
       @close="closeTenantMenu"
       @showdialog-removetenant="showRemoveTenant"
+      @showdialog-edittenant="showEditTenant"
     ></TenantMenu>
   </Teleport>
 
   <!-- 菜单弹出提示框显示 -->
   <Teleport to="body">
-    <!-- 移除用户提示框显示 -->
+    <!-- 移除租户提示框显示 -->
     <RemoveTenant
       v-if="removeTenantShow"
       :select-tenant="selectTenant"
@@ -435,6 +467,15 @@ onBeforeRouteLeave(() => {
       @confirm-remove="doRemoveTenant"
     >
     </RemoveTenant>
+
+    <!-- 编辑租户提示框显示 -->
+    <EditTenant
+      v-if="editTenantShow"
+      :select-tenant="selectTenant"
+      @close="editTenantShow = false"
+      @update-tenant="doUpdateTenant"
+    >
+    </EditTenant>
   </Teleport>
 </template>
 

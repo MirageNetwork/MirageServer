@@ -58,7 +58,12 @@ const closeMe = (event) => {
         共 {{ selectTenant.subnetCount }} 子网路由
       </div>
       <div class="my-1 border-b border-base-300"></div>
-      <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100">编辑租户…</div>
+      <div
+        @click="$emit('showdialog-edittenant')"
+        class="block px-4 py-2 cursor-pointer hover:bg-gray-100"
+      >
+        编辑租户…
+      </div>
       <div class="my-1 border-b border-base-300"></div>
       <div
         @click="$emit('showdialog-removetenant')"
