@@ -10,10 +10,6 @@ const props = defineProps({
   selectTenant: Object,
 });
 
-const selectrTenantRole = computed(() => {
-  return "普通成员";
-});
-
 const confirmText = ref("");
 </script>
 
@@ -29,13 +25,13 @@ const confirmText = ref("");
       style="pointer-events: auto"
     >
       <header class="flex items-center justify-between space-x-4 mb-5 mr-8">
-        <div class="font-semibold text-lg truncate">删除用户</div>
+        <div class="font-semibold text-lg truncate">删除租户</div>
       </header>
       <form @submit.prevent="">
         <p class="mb-4">
           删除
-          <strong>{{ selectTenant.name }} ({{ selectrTenantRole }})</strong>
-          将会删除他的所有设备。
+          <strong> {{ selectTenant.name }} </strong>
+          将会删除该租户全部信息。
         </p>
         <p class="mb-2 mt-6">
           输入
@@ -65,7 +61,7 @@ const confirmText = ref("");
             :disabled="confirmText != selectTenant.name"
             class="btn border-0 bg-red-500 hover:bg-red-900 disabled:bg-red-500/60 text-white disabled:text-white/60 h-9 min-h-fit"
           >
-            删除用户
+            删除租户
           </button>
         </footer>
       </form>

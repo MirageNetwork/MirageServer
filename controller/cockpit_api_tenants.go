@@ -11,7 +11,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
-	"tailscale.com/tailcfg"
 )
 
 type TenantsData struct {
@@ -185,6 +184,86 @@ func (c *Cockpit) CAPIGetTenant(
 	c.doAPIResponse(w, "", resData)
 }
 
+func (c *Cockpit) GetTenantByID(id int64) (*Organization, error) {
+	org := &Organization{}
+	err := c.db.Where(&Organization{ID: id}).Take(org).Error
+	if err != nil {
+		return nil, err
+	}
+	return org, err
+}
+
+func (c *Cockpit) HardDeleteMachine(machine *Machine) error {
+	if err := c.db.Unscoped().Delete(&machine).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Cockpit) ListPreAuthKeys(userID int64) ([]PreAuthKey, error) {
+	keys := []PreAuthKey{}
+	if err := c.db.Preload("User").Preload("ACLTags").Where(&PreAuthKey{UserID: userID}).Find(&keys).Error; err != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}
+func (c *Cockpit) DestroyPreAuthKey(pak PreAuthKey) error {
+	return c.db.Transaction(func(db *gorm.DB) error {
+		if result := db.Unscoped().Where(PreAuthKeyACLTag{PreAuthKeyID: pak.ID}).Delete(&PreAuthKeyACLTag{}); result.Error != nil {
+			return result.Error
+		}
+
+		if result := db.Unscoped().Delete(pak); result.Error != nil {
+			return result.Error
+		}
+
+		return nil
+	})
+}
+
+func (c *Cockpit) DestroyUser(user *User) error {
+	keys, err := c.ListPreAuthKeys(user.ID)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return err
+	}
+	for _, key := range keys {
+		err = c.DestroyPreAuthKey(key)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.db.Unscoped().Delete(&user).Error
+}
+
+func (c *Cockpit) DestroyTenant(tenant *Organization) error {
+	machines, err := c.ListMachinesByTenantID(tenant.ID)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return err
+	}
+	for _, machine := range machines {
+		err = c.HardDeleteMachine(&machine)
+		if err != nil {
+			return err
+		}
+	}
+
+	users, err := c.ListTenantUsers(tenant.ID)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return err
+	}
+	for _, user := range users {
+		err = c.DestroyUser(&user)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.db.Unscoped().Delete(&tenant).Error
+}
+
 // 请求报文：
 type TenantActionREQ struct {
 	TenantID string `json:"tenantID"`
@@ -192,75 +271,35 @@ type TenantActionREQ struct {
 }
 
 // 接受/admin/api/users的Post请求，用于对用户操作
-func (h *Mirage) CAPIPostTenants(
+func (c *Cockpit) CAPIPostTenants(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(w, r)
-	if user.CheckEmpty() {
-		h.doAPIResponse(w, "用户信息核对失败", nil)
-		return
-	}
 	err := r.ParseForm()
 	if err != nil {
-		h.doAPIResponse(w, "用户请求解析失败:"+err.Error(), nil)
+		c.doAPIResponse(w, "用户请求解析失败:"+err.Error(), nil)
 		return
 	}
 	reqData := TenantActionREQ{}
 	json.NewDecoder(r.Body).Decode(&reqData)
 
 	switch reqData.Action {
-	case "set_owner":
-		if user.Role != RoleOwner {
-			h.doAPIResponse(w, "权限不足", nil)
-			return
-		}
-		targetUID, err := strconv.ParseInt(reqData.TenantID, 10, 64)
+	case "delete_tenant":
+		// 删除租户
+		targetTenantID, err := strconv.ParseInt(reqData.TenantID, 10, 64)
 		if err != nil {
-			h.doAPIResponse(w, "目标用户ID解析失败:"+err.Error(), nil)
+			c.doAPIResponse(w, "目标租户ID解析失败:"+err.Error(), nil)
 			return
 		}
-		err = h.TransferOwner(tailcfg.UserID(user.ID), tailcfg.UserID(targetUID))
+		targetTenant, err := c.GetTenantByID(targetTenantID)
 		if err != nil {
-			h.doAPIResponse(w, "修改用户角色失败:"+err.Error(), nil)
+			c.doAPIResponse(w, "目标租户获取失败:"+err.Error(), nil)
 			return
 		}
-		h.doAPIResponse(w, "", nil)
-	case "delete_user":
-		targetUID, err := strconv.ParseInt(reqData.TenantID, 10, 64)
-		if err != nil {
-			h.doAPIResponse(w, "目标用户ID解析失败:"+err.Error(), nil)
+		if err = c.DestroyTenant(targetTenant); err != nil {
+			c.doAPIResponse(w, "目标租户删除失败:"+err.Error(), nil)
 			return
 		}
-		targetUser, err := h.GetUserByID(tailcfg.UserID(targetUID))
-		if err != nil {
-			h.doAPIResponse(w, "目标用户信息获取失败:"+err.Error(), nil)
-			return
-		}
-		if targetUser.Role == RoleOwner {
-			h.doAPIResponse(w, "无法删除Owner，请联系我们", nil)
-			return
-		}
-		mlist, err := h.ListMachinesByUser(targetUID)
-		if err != nil {
-			h.doAPIResponse(w, "目标用户设备列表获取失败:"+err.Error(), nil)
-			return
-		}
-		for _, m := range mlist {
-			if m.ForcedTags != nil && len([]string(m.ForcedTags)) > 0 {
-				continue
-			}
-			err = h.HardDeleteMachine(&m)
-			if err != nil {
-				h.doAPIResponse(w, "目标用户设备删除失败:"+err.Error(), nil)
-				return
-			}
-		}
-		err = h.DestroyUser(targetUser.Name, targetUser.Organization.Name, targetUser.Organization.Provider)
-		if err != nil {
-			h.doAPIResponse(w, "目标用户删除失败:"+err.Error(), nil)
-			return
-		}
-		h.doAPIResponse(w, "", nil)
+		c.doAPIResponse(w, "", nil)
 	}
 }

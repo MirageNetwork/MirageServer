@@ -127,6 +127,7 @@ func (c *Cockpit) createRouter() *mux.Router {
 	cockpit_router.HandleFunc("/api/setting/general", c.SetSettingGeneral).Methods(http.MethodPost)
 	cockpit_router.HandleFunc("/api/service/start", c.DoServiceStart).Methods(http.MethodPost)
 	cockpit_router.HandleFunc("/api/service/stop", c.DoServiceStop).Methods(http.MethodPost)
+	cockpit_router.HandleFunc("/api/tenants", c.CAPIPostTenants).Methods(http.MethodPost)
 
 	cockpit_router.HandleFunc("/api/logout", c.Logout).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/service/state", c.GetServiceState).Methods(http.MethodGet)
@@ -766,7 +767,7 @@ func (c *Cockpit) GenAuthCode() string {
 // @data 响应数据：key值为data的json对象
 func (c *Cockpit) doAPIResponse(writer http.ResponseWriter, msg string, data interface{}) {
 	res := APIResponse{}
-	if data != nil {
+	if msg == "" {
 		res.Status = "success"
 		res.Data = data
 	} else {

@@ -324,19 +324,25 @@ onBeforeRouteLeave(() => {
                       v-else
                       class="text-sm text-gray-600 tooltip tooltip-top"
                       :data-tip="
-                        '最近在线于' +
-                        new Date(u.lastSeen)
-                          .toLocaleString()
-                          .replace('/', '年')
-                          .replace('/', '月')
-                          .replace(' ', '日 ')
+                        new Date(u.lastSeen).getTime() ==
+                        new Date('0001-01-01T00:00:00Z').getTime()
+                          ? '未曾连接'
+                          : '最近在线于' +
+                            new Date(u.lastSeen)
+                              .toLocaleString()
+                              .replace('/', '年')
+                              .replace('/', '月')
+                              .replace(' ', '日 ')
                       "
                       >{{
-                        new Date(u.lastSeen)
-                          .toLocaleString()
-                          .replace("/", "年")
-                          .replace("/", "月")
-                          .replace(" ", "日 ")
+                        new Date(u.lastSeen).getTime() ==
+                        new Date("0001-01-01T00:00:00Z").getTime()
+                          ? "未曾连接"
+                          : new Date(u.lastSeen)
+                              .toLocaleString()
+                              .replace("/", "年")
+                              .replace("/", "月")
+                              .replace(" ", "日 ")
                       }}
                     </span>
                   </div>
