@@ -159,7 +159,6 @@ onMounted(() => {
           <div role="banner" class="text-lg font-semibold ml-3 truncate">
             {{ OrgName }}
           </div>
-          <span class="badge badge-secondary">仅供测试</span>
         </a>
 
         <nav class="flex items-center">
