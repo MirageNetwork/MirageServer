@@ -13,11 +13,13 @@ import (
 )
 
 const (
-	ErrOrgExists       = Error("Organization already exists")
-	ErrOrgNotFound     = Error("Organization not found")
-	ErrCreateOrgParams = Error("Invalid create organization paramters")
-	ErrGetOrgParams    = Error("Invalid get organization paramters")
-	DefaultExpireTime  = 180
+	ErrOrgExists          = Error("Organization already exists")
+	ErrOrgNotFound        = Error("Organization not found")
+	ErrCreateOrgParams    = Error("Invalid create organization paramters")
+	ErrGetOrgParams       = Error("Invalid get organization paramters")
+	ErrDeleteOrgFailed    = Error("Delete Organization Failed")
+	ErrDeleteOrgCancelled = Error("Delete Organization Cancelled")
+	DefaultExpireTime     = 180
 )
 
 type Organization struct {
@@ -180,22 +182,45 @@ func GetOrgnaizationByNameInTx(tx *gorm.DB, name, provider string) (*Organizatio
 	return &org, nil
 }
 
-func (m *Mirage) DestroyOrgnaization(orgName, provider string) error {
-	tx := m.db.Session(&gorm.Session{})
-	err := DestroyOrgnaizationInTx(tx, orgName, provider)
-	return err
-}
+// 删除组织
+// 输入: 组织名 provider名 是否强行删除(删除用户下的machine)
+// 返回: 删除前用户数 删除后用户数 错误
+func (m *Mirage) DestroyOrgnaization(orgName, provider string, force bool) (int, int, error) {
+	var orgID int64
+	m.db.Model(&Organization{}).Select("ID").Where("name = ? and provider = ?", orgName, provider).Find(&orgID)
+	if orgID == 0 {
+		return 0, 0, ErrOrgNotFound
+	}
 
-func DestroyOrgnaizationInTx(tx *gorm.DB, orgName, provider string) error {
-	var count int64
-	tx.Model(&Organization{}).Where("name = ? and provider = ?", orgName, provider).Count(&count)
-	if count == 0 {
-		return ErrOrgNotFound
+	var deleteFn func(int64) error
+	if !force {
+		deleteFn = m.DestroyUserByID
+	} else {
+		deleteFn = m.ForceDestroyUserByID
 	}
-	if result := tx.Unscoped().Delete(&Organization{Name: orgName, Provider: provider}); result.Error != nil {
-		return result.Error
+	//逐个删除用户,遇到删除失败的继续删除下一个
+	var userIDs []int64
+	before := len(userIDs)
+	m.db.Model(&User{}).Select("ID").Where(&User{OrganizationID: orgID}).Find(&userIDs)
+	for _, uid := range userIDs {
+		deleteFn(uid)
 	}
-	return nil
+	//检查是否还有用户
+	if before > 0 {
+		userIDs = []int64{}
+		m.db.Model(&User{}).Select("ID").Where(&User{OrganizationID: orgID}).Find(&userIDs)
+	}
+	after := len(userIDs)
+	//没有用户则删除组织
+	if after == 0 {
+		err := m.db.Unscoped().Delete(&Organization{}, orgID).Error
+		if err != nil {
+			return before, after, errors.Join(ErrDeleteOrgFailed, err)
+		}
+	} else {
+		return before, after, ErrDeleteOrgCancelled
+	}
+	return before, after, nil
 }
 
 func (m *Mirage) UpdateOrgExpiry(user *User, newDuration uint) error {

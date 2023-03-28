@@ -825,6 +825,8 @@ func (h *Mirage) TouchMachine(machine *Machine) error {
 
 // HardDeleteMachine hard deletes a Machine from the database.
 func (h *Mirage) HardDeleteMachine(machine *Machine) error {
+	// delete routes of this machine
+	h.db.Where(&Route{MachineID: machine.ID}).Delete(&Route{})
 	if err := h.db.Unscoped().Delete(&machine).Error; err != nil {
 		return err
 	}
