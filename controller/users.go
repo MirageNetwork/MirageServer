@@ -165,19 +165,64 @@ func (h *Mirage) DestroyUser(name, orgName, provider string) error {
 	}
 
 	return h.db.Unscoped().Delete(&user).Error
-	/*
-		return h.db.Transaction(func(tx *gorm.DB) error {
-			err := tx.Unscoped().Delete(&user).Error
-			if err != nil {
-				return err
-			}
-			if !user.IsBelongToOrg {
-				err = DestroyOrgnaizationInTx(tx, orgName, provider)
-			}
-			//TODO Organization 删除失败是否回滚
+}
+
+// Destroy User By userID, not need to get user from organization infos
+func (h *Mirage) DestroyUserByID(userId int64) error {
+	if userId <= 0 {
+		return ErrUserNotFound
+	}
+
+	machines, err := h.ListMachinesByUser(userId)
+	if err != nil {
+		return err
+	}
+	if len(machines) > 0 {
+		return ErrUserStillHasNodes
+	}
+
+	keys, err := h.ListPreAuthKeys(userId)
+	if err != nil {
+		return err
+	}
+	for _, key := range keys {
+		err = h.DestroyPreAuthKey(key)
+		if err != nil {
+			return err
+		}
+	}
+
+	return h.db.Unscoped().Delete(&User{ID: userId}).Error
+}
+
+// Force Destroy User By userID, Delete the machines of the user
+func (h *Mirage) ForceDestroyUserByID(userId int64) error {
+	if userId <= 0 {
+		return ErrUserNotFound
+	}
+
+	machines, err := h.ListMachinesByUser(userId)
+	if err != nil {
+		return err
+	}
+	for _, machine := range machines {
+		if err := h.HardDeleteMachine(&machine); err != nil {
 			return nil
-		})
-	*/
+		}
+	}
+
+	keys, err := h.ListPreAuthKeys(userId)
+	if err != nil {
+		return err
+	}
+	for _, key := range keys {
+		err = h.DestroyPreAuthKey(key)
+		if err != nil {
+			return err
+		}
+	}
+
+	return h.db.Unscoped().Delete(&User{ID: userId}).Error
 }
 
 // Update User's node key expiry duration.
