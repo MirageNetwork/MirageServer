@@ -134,12 +134,7 @@ func (h *Mirage) CAPIPostUsers(
 			h.doAPIResponse(w, "目标用户ID解析失败:"+err.Error(), nil)
 			return
 		}
-		err = h.ChangUserRole(tailcfg.UserID(user.ID), RoleStr[RoleMember])
-		if err != nil {
-			h.doAPIResponse(w, "修改用户角色失败:"+err.Error(), nil)
-			return
-		}
-		err = h.ChangUserRole(tailcfg.UserID(targetUID), RoleStr[RoleOwner])
+		err = h.TransferOwner(tailcfg.UserID(user.ID), tailcfg.UserID(targetUID))
 		if err != nil {
 			h.doAPIResponse(w, "修改用户角色失败:"+err.Error(), nil)
 			return
