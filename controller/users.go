@@ -21,6 +21,7 @@ const (
 	ErrUserNotFound      = Error("User not found")
 	ErrUserStillHasNodes = Error("User not empty: node(s) found")
 	ErrInvalidUserName   = Error("Invalid user name")
+	ErrChangeUserRole    = Error("Change user role failed")
 )
 
 const ( // TODO: 重新规划映射关系
@@ -239,6 +240,21 @@ func (h *Mirage) ChangUserRole(id tailcfg.UserID, role string) error {
 		return err
 	}
 	return ErrUserNotFound
+}
+
+// Transfer Owner by userID
+func (h *Mirage) TransferOwner(srcId, destId tailcfg.UserID) error {
+	return h.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Select("Role").Updates(&User{ID: int64(srcId), Role: RoleMember})
+		if result.Error != nil || result.RowsAffected == 0 {
+			return ErrChangeUserRole
+		}
+		result = tx.Select("Role").Updates(&User{ID: int64(destId), Role: RoleOwner})
+		if result.Error != nil || result.RowsAffected == 0 {
+			return ErrChangeUserRole
+		}
+		return nil
+	})
 }
 
 // GetUserByID fetches a user by UserID.
