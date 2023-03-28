@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import UserMenu from "./components/UserMenu.vue";
 import Toast from "./components/Toast.vue";
 
 const router = useRouter();
@@ -22,29 +21,10 @@ router.afterEach((to, from) => {
 });
 
 //界面控制部分
-const userAvatar = ref(null);
-const avatarLeft = ref(0);
-const avatarTop = ref(0);
 
 const needRegister = ref(false);
 const needReauth = ref(false);
 const netErrMsg = ref("");
-
-function refreshUserMenuPos() {
-  avatarLeft.value = userAvatar.value?.getBoundingClientRect().left;
-  avatarTop.value = userAvatar.value?.getBoundingClientRect().top;
-}
-
-const userMenuOpen = ref(false);
-function switchUserMenu() {
-  refreshUserMenuPos();
-  userMenuOpen.value = !userMenuOpen.value;
-  if (userMenuOpen.value) {
-    document.body.style.pointerEvents = "none";
-  } else {
-    document.body.style.removeProperty("pointer-events");
-  }
-}
 
 const currentRoute = computed(() => {
   let curPath = route.path;
@@ -52,7 +32,7 @@ const currentRoute = computed(() => {
   if (curPath.substring(0, 9) == "/regAdmin") return "regAdmin";
   if (curPath.substring(0, 6) == "/login") return "login";
   if (curPath.substring(0, 6) == "/users") return "users";
-  if (curPath.substring(0, 8) == "/orgs") return "orgs";
+  if (curPath.substring(0, 8) == "/tenants") return "tenants";
   if (curPath.substring(0, 8) == "/setting") return "setting";
 });
 
@@ -126,8 +106,6 @@ function getServiceState() {
 }
 
 onMounted(() => {
-  window.addEventListener("resize", refreshUserMenuPos);
-  window.addEventListener("scroll", refreshUserMenuPos);
   axios.interceptors.response.use(
     (response) => {
       if (response.status == 200) {
@@ -280,7 +258,6 @@ function doLogout() {
             {{ serviceStateStr[serviceState] }}
           </span>
           <button
-            ref="userAvatar"
             @click="doLogout"
             class="relative rounded-full overflow-hidden ml-7 w-7 h-7"
           >
@@ -303,18 +280,6 @@ function doLogout() {
               </svg>
             </div>
           </button>
-          <!--用户菜单部分-->
-          <Teleport to="body">
-            <UserMenu
-              v-if="userMenuOpen"
-              :toleft="avatarLeft"
-              :totop="avatarTop"
-              user-account="SuperAdmin"
-              user-name="蜃境超级管理员"
-              @close="switchUserMenu"
-              @logout="logoutDone"
-            ></UserMenu>
-          </Teleport>
         </nav>
       </header>
     </div>
@@ -324,12 +289,12 @@ function doLogout() {
         id="nav"
         class="navigation flex items-center overflow-auto left-1 relative md:container md:mx-auto md:px-0 md:-left-3"
       >
-        <router-link class="whitespace-nowrap py-2 group relative" to="/orgs">
+        <router-link class="whitespace-nowrap py-2 group relative" to="/tenants">
           <div
             :class="{
-              'text-blue-600 after:visible': currentRoute == 'orgs',
+              'text-blue-600 after:visible': currentRoute == 'tenants',
               'text-gray-600 group-hover:text-gray-800 after:invisible':
-                currentRoute != 'orgs',
+                currentRoute != 'tenants',
             }"
             class="px-3 py-2 flex items-center rounded-md group-hover:bg-gray-200 after:absolute after:bottom-0 after:right-3 after:left-3 after:h-0.5 after:bg-blue-600"
           >
@@ -340,7 +305,7 @@ function doLogout() {
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              :stroke-width="currentRoute == 'orgs' ? '2.5' : '2'"
+              :stroke-width="currentRoute == 'tenants' ? '2.5' : '2'"
               stroke-linecap="round"
               stroke-linejoin="round"
               class="mr-2 inline-block"
@@ -348,7 +313,7 @@ function doLogout() {
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
               <polyline points="9 22 9 12 15 12 15 22"></polyline>
             </svg>
-            <div :class="{ 'font-medium': currentRoute == 'orgs' }">租户</div>
+            <div :class="{ 'font-medium': currentRoute == 'tenants' }">租户</div>
           </div>
         </router-link>
 

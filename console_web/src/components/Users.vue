@@ -147,7 +147,6 @@ function doRemoveUser() {
 
 //数据填充控制部分
 const UserList = ref({});
-const tagOwners = ref({});
 const usersNum = computed(() => {
   return UserList.value.length;
 });
@@ -193,21 +192,8 @@ onMounted(() => {
   getUserIntID = setInterval(() => {
     getUsers().then().catch();
   }, 15000);
-
-  axios
-    .get("/admin/api/acls/tags")
-    .then(function (response) {
-      // 处理成功情况
-      if (response.data["status"] == "success") {
-        tagOwners.value = response.data["data"]["tagOwners"];
-      }
-    })
-    .catch(function (error) {
-      // 处理错误情况
-      toastMsg.value = "获取标签所有者信息出错：" + error;
-      toastShow.value = true;
-    });
 });
+
 onUnmounted(() => {
   window.removeEventListener("resize", refreshUserMenuPos);
   window.removeEventListener("scroll", refreshUserMenuPos);
@@ -246,28 +232,6 @@ function getMachines() {
         reject();
       });
   });
-}
-
-function removeUser(id) {
-  axios
-    .post("/admin/api/machine/remove", {
-      mid: id,
-    })
-    .then(function (response) {
-      if (response.data["status"] == "OK") {
-        delConfirmShow.value = false;
-        toastMsg.value = MList.value[id]["name"] + "已从您的蜃境网络移除！";
-        toastShow.value = true;
-        delete MList.value[id];
-      } else {
-        toastMsg.value = "移除设备出错：" + response.data["status"];
-        toastShow.value = true;
-      }
-    })
-    .catch(function (error) {
-      toastMsg.value = "移除设备出错：" + error;
-      toastShow.value = true;
-    });
 }
 </script>
 

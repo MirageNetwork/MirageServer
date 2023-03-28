@@ -3,6 +3,7 @@ import { createMemoryHistory, createRouter, createWebHashHistory, createWebHisto
 import './style.css'
 import App from './App.vue'
 import Setting from './Settings.vue'
+import Tenants from './Tenants.vue'
 import RegAdmin from './RegAdmin.vue'
 import Login from './Login.vue'
 import VueClickAway from "vue3-click-away"
@@ -14,6 +15,7 @@ const routes = [
     { path: '/login', component: Login },
     { path: '/setting', redirect: '/setting/general' },
     { path: '/setting/:setpart', component: Setting },
+    {path:'/tenants',component:Tenants},
 ]
 const router = createRouter({
     history: createWebHashHistory(),

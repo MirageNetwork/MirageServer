@@ -81,7 +81,6 @@ onMounted(() => {
                 <svg
                   v-if="orgProvider == 'Github'"
                   t="1679387527759"
-                  class="icon ml-8 mr-3"
                   viewBox="0 0 1024 1024"
                   version="1.1"
                   xmlns="http://www.w3.org/2000/svg"
@@ -98,7 +97,6 @@ onMounted(() => {
                 <svg
                   v-if="orgProvider == 'Google'"
                   t="1679449475826"
-                  class="icon ml-8 mr-3"
                   viewBox="0 0 1024 1024"
                   version="1.1"
                   xmlns="http://www.w3.org/2000/svg"
@@ -130,7 +128,6 @@ onMounted(() => {
                 <svg
                   v-if="orgProvider == 'Apple'"
                   t="1679468518353"
-                  class="icon ml-8 mr-3"
                   viewBox="0 0 1024 1024"
                   version="1.1"
                   xmlns="http://www.w3.org/2000/svg"
@@ -147,7 +144,6 @@ onMounted(() => {
                 <svg
                   v-if="orgProvider == 'WXScan'"
                   xmlns="http://www.w3.org/2000/svg"
-                  class="ml-8 mr-3"
                   viewBox="0 0 24 24"
                   width="17"
                   height="17"

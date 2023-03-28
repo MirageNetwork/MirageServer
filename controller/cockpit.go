@@ -131,6 +131,7 @@ func (c *Cockpit) createRouter() *mux.Router {
 	cockpit_router.HandleFunc("/api/logout", c.Logout).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/service/state", c.GetServiceState).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/setting/general", c.GetSettingGeneral).Methods(http.MethodGet)
+	cockpit_router.HandleFunc("/api/tenants", c.CAPIGetTenant).Methods(http.MethodGet)
 
 	cockpit_router.PathPrefix("").Handler(http.StripPrefix("/cockpit", http.FileServer(http.FS(cockpitDir))))
 
