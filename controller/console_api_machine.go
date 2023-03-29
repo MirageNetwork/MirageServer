@@ -188,28 +188,6 @@ func (h *Mirage) ConsoleMachinesAPI(
 			Endpoints:         machine.Endpoints,
 			AutomaticNameMode: machine.AutoGenName,
 		}
-		// 处理标签部分
-		if machine.ForcedTags != nil && len(machine.ForcedTags) > 0 {
-			org, err := h.GetOrgnaizationByID(user.OrganizationID)
-			if err != nil {
-				errRes := adminTemplateConfig{ErrorMsg: "查询设备组织失败"}
-				err = json.NewEncoder(writer).Encode(&errRes)
-				if err != nil {
-					log.Error().
-						Caller().
-						Err(err).
-						Msg("Failed to write response")
-				}
-				return
-			}
-			for _, tag := range machine.ForcedTags {
-				if _, ok := org.AclPolicy.TagOwners[tag]; ok {
-					tmpMachine.AllowedTags = append(tmpMachine.AllowedTags, tag)
-				} else {
-					tmpMachine.InvalidTags = append(tmpMachine.InvalidTags, tag)
-				}
-			}
-		}
 		// 处理路由部分
 		machineRoutes, err := h.GetMachineRoutes(&machine)
 		if err != nil {
