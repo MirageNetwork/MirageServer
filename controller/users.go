@@ -557,12 +557,12 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 	dnsConfig.Routes = make(map[string][]*dnstype.Resolver)
 	domains := []string{}
 	restrictedDNS := me.Organization.SplitDns
-	for domain, restrictedNameservers := range restrictedDNS {
+	for _, oneRestrictedDNS := range restrictedDNS {
 		restrictedResolvers := make(
 			[]*dnstype.Resolver,
-			len(restrictedNameservers),
+			len(oneRestrictedDNS.NS),
 		)
-		for index, nameserverStr := range restrictedNameservers {
+		for index, nameserverStr := range oneRestrictedDNS.NS {
 			nameserver, err := netip.ParseAddr(nameserverStr)
 			if err != nil {
 				log.Error().
@@ -574,8 +574,8 @@ func (me *User) GetDNSConfig(ipPrefixesCfg []netip.Prefix) (*tailcfg.DNSConfig, 
 				Addr: nameserver.String(),
 			}
 		}
-		dnsConfig.Routes[domain] = restrictedResolvers
-		domains = append(domains, domain)
+		dnsConfig.Routes[oneRestrictedDNS.Domain] = restrictedResolvers
+		domains = append(domains, oneRestrictedDNS.Domain)
 	}
 	dnsConfig.Domains = domains
 

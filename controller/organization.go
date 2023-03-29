@@ -242,7 +242,17 @@ func (m *Mirage) UpdateOrgDNSConfig(org *Organization, newDNSCfg DNSData) error 
 		org.OverrideLocal = false
 		org.Nameservers = newDNSCfg.FallbackResolvers
 	}
-	org.SplitDns = newDNSCfg.Routes
+	newSplitDns := SplitDNS{}
+	for _, domain := range newDNSCfg.Domains {
+		if ns, ok := newDNSCfg.Routes[domain]; ok {
+			newSplitDns = append(newSplitDns, SplitDNSItem{
+				Domain: domain,
+				NS:     ns,
+			})
+		}
+	}
+
+	org.SplitDns = newSplitDns
 	err := m.db.Select("EnableMagic", "Nameservers", "OverrideLocal", "Nameservers", "OverrideLocal", "SplitDns").Updates(org).Error
 	return err
 }

@@ -212,7 +212,12 @@ func (i StringList) Value() (driver.Value, error) {
 }
 
 // cgao6: add splitdns type to store dns config into user's db
-type SplitDNS map[string][]string
+type SplitDNS []SplitDNSItem
+
+type SplitDNSItem struct {
+	Domain string   `json:"domain"`
+	NS     []string `json:"ns"`
+}
 
 func (i *SplitDNS) Scan(destination interface{}) error {
 	switch value := destination.(type) {

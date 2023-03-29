@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.2.45"
+    "vue": "^3.2.45",
+    "vue3-smooth-dnd": "^0.0.4"
   },
   "devDependencies": {
     "@tailwindcss/typography": "github:tailwindcss/typography",

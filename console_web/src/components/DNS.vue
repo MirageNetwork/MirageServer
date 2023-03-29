@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, watch, watchEffect } from "vue";
 import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
+import { Container, Draggable } from "vue3-smooth-dnd";
 import { useScrollOff } from "../utils.js";
 import Toast from "./Toast.vue";
 import AddNS from "./dns/AddNS.vue";
@@ -165,6 +166,34 @@ function copyMNetName() {
       copyBtnText.value = "复制";
     }, 3000);
   });
+}
+
+function onDrop(dragResult) {
+  const { removedIndex, addedIndex, payload } = dragResult;
+  if (removedIndex === null && addedIndex === null) return;
+
+  const result = [...DNSCfg.value["domains"]];
+  let itemToAdd = payload;
+  if (removedIndex !== null) {
+    itemToAdd = result.splice(removedIndex, 1)[0];
+  }
+  if (addedIndex !== null) {
+    result.splice(addedIndex, 0, itemToAdd);
+  }
+  DNSCfg.value["domains"] = result;
+  axios
+    .post("/admin/api/dns", DNSCfg.value)
+    .then(function (response) {
+      if (response.data["status"] == "success") {
+      } else {
+        toastMsg.value = response.data["status"].substring(6);
+        toastShow.value = true;
+      }
+    })
+    .catch(function (error) {
+      toastMsg.value = error;
+      toastShow.value = true;
+    });
 }
 
 onMounted(() => {
@@ -441,22 +470,13 @@ function removeNS() {
               </div>
             </div>
           </div>
-          <div data-rbd-droppable-id="search-domains" data-rbd-droppable-context-id="0">
-            <div
+          <Container orientation="vertical" @drop="onDrop">
+            <Draggable
               v-for="singleDomain in domains"
-              class="DNSDomainGroup py-3 -mx-3 px-3 rounded-md"
-              data-rbd-draggable-context-id="0"
-              data-rbd-draggable-id="abc.com"
+              :key="singleDomain"
+              class="py-3 -mx-3 px-3 rounded-md"
             >
-              <header
-                class="flex items-center mb-1"
-                tabindex="0"
-                role="button"
-                aria-describedby="rbd-hidden-text-0-hidden-text-0"
-                data-rbd-drag-handle-draggable-id="abc.com"
-                data-rbd-drag-handle-context-id="0"
-                draggable="false"
-              >
+              <header class="flex items-center mb-1" tabindex="0" role="button">
                 <div class="py-1 px-2 -ml-2">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -546,8 +566,8 @@ function removeNS() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </Draggable>
+          </Container>
           <div class="pt-3">
             <header class="flex items-center mb-2">
               <h4 class="font-medium text-gray-600 mr-2">全球域名服务器</h4>
