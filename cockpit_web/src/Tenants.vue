@@ -119,6 +119,9 @@ function doUpdateTenant(newV) {
 //数据填充控制部分
 const TenantList = ref({});
 const TenantNum = computed(() => {
+  if (TenantList.value == null) {
+    return 0;
+  }
   return TenantList.value.length;
 });
 let getTenantsIntID;
