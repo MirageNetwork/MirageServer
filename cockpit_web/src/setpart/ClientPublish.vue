@@ -36,20 +36,74 @@ const wantWinVersion = ref({});
 const winExtURL = ref(false);
 const winUploader = ref(null);
 const winFileName = ref("");
+const winProc = ref("");
+const winProcPercent = ref(0);
 
 function handleWinChange(uploadFile) {
-  winFileName.value = uploadFile.name;
+  switch (uploadFile.status) {
+    case "success":
+      winProc.value = "";
+      break;
+    case "ready":
+      winFileName.value = uploadFile.name;
+      winProc.value = "";
+      winProcPercent.value = 0;
+      break;
+    case "uploading":
+      winProc.value = "uploading";
+      break;
+    case "fail":
+      winProc.value = "fail";
+      break;
+  }
 }
 
 function handleWinExceed(files) {
   winUploader.value?.clearFiles();
   winFileName.value = files[0].name;
   let file = files[0];
-  console.log("we got new file1", file);
   file.uid = genFileId();
-  console.log("we got new file2", file);
   winUploader.value?.handleStart(file);
-  console.log("we got new file3", winUploader.value);
+}
+
+function handleWinProgress(event, file, fileList) {
+  switch (file.status) {
+    case "success":
+      winProc.value = "";
+      break;
+    case "ready":
+      winProc.value = "";
+      winProcPercent.value = 0;
+      break;
+    case "uploading":
+      winProc.value = "uploading";
+      winProcPercent.value = file.percentage;
+      break;
+    case "fail":
+      winProc.value = "fail";
+      break;
+  }
+}
+
+function handleWinSuccess(response) {
+  if (response.status == "success") {
+    ClientVersion.value = response.data.client_version;
+    wantWinVersion.value["version"] = response.data.client_version.win.version;
+    wantWinVersion.value["url"] = response.data.client_version.win.url;
+    winUploader.value?.clearFiles();
+    winFileName.value = "";
+
+    toastMsg.value = "Windows客户端发布成功";
+    toastShow.value = true;
+  } else {
+    toastMsg.value = response.status.substring(6);
+    toastShow.value = true;
+  }
+}
+
+function handleWinError(err) {
+  toastMsg.value = "上传文件失败：" + err;
+  toastShow.value = true;
 }
 
 onMounted(() => {
@@ -88,7 +142,7 @@ function publishWin() {
       .then(function (response) {
         // 处理成功情况
         if (response.data["status"] == "success") {
-          toastMsg.value = "发布成功";
+          toastMsg.value = "Windows客户端发布成功";
           toastShow.value = true;
           ClientVersion.value = response.data["data"]["client_version"];
         } else {
@@ -233,9 +287,11 @@ function publishWin() {
               :data="wantWinVersion"
               with-credentials="true"
               class="w-full"
-              :on-remove="handleWinRemove"
               :on-exceed="handleWinExceed"
               :on-change="handleWinChange"
+              :on-success="handleWinSuccess"
+              :on-error="handleWinError"
+              :on-progress="handleWinProgress"
             >
               <div class="el-upload__text">
                 {{
@@ -244,6 +300,16 @@ function publishWin() {
                     : "将文件拖到此处，或点击上传"
                 }}
               </div>
+              <progress
+                v-if="winProc != ''"
+                :class="{
+                  'progress-success': winProc == 'uploading',
+                  'progress-error': winProc == 'fail',
+                }"
+                class="progress w-full"
+                :value="winProcPercent"
+                max="100"
+              ></progress>
             </el-upload>
           </div>
         </label>

@@ -744,6 +744,18 @@ func (c *Cockpit) SetSettingGeneral(
 		c.doAPIResponse(w, "用户请求state不存在", nil)
 		return
 	}
+
+	if c.serviceState {
+		newCfg, err := c.GetSysCfg().toSrvConfig()
+		if err != nil {
+			c.doAPIResponse(w, "更新系统配置失败", nil)
+			return
+		}
+		c.CtrlChn <- CtrlMsg{
+			Msg:    "update-config",
+			SysCfg: newCfg,
+		}
+	}
 	c.GetSettingGeneral(w, r)
 }
 

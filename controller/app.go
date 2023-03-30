@@ -463,6 +463,9 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 				log.Info().Msg("Mirage stopped")
 				cancel()
 				return
+			case "update-config":
+				log.Info().Msg("Received update-config message, updating config")
+				h.cfg = msg.SysCfg
 			}
 		}
 	}
