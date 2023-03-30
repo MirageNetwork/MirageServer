@@ -128,6 +128,7 @@ func (c *Cockpit) createRouter() *mux.Router {
 	cockpit_router.HandleFunc("/api/service/start", c.DoServiceStart).Methods(http.MethodPost)
 	cockpit_router.HandleFunc("/api/service/stop", c.DoServiceStop).Methods(http.MethodPost)
 	cockpit_router.HandleFunc("/api/tenants", c.CAPIPostTenants).Methods(http.MethodPost)
+	cockpit_router.HandleFunc("/api/publish/{os}", c.CAPIPublishClient).Methods(http.MethodPost)
 
 	cockpit_router.HandleFunc("/api/logout", c.Logout).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/service/state", c.GetServiceState).Methods(http.MethodGet)

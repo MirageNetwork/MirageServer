@@ -290,6 +290,8 @@ func (h *Mirage) initRouter(router *mux.Router) {
 		log.Fatal().Msg(err.Error())
 	}
 
+	router.PathPrefix("/download").Handler(http.StripPrefix("/download", http.FileServer(http.Dir("download"))))
+
 	router.HandleFunc("/logout", h.ConsoleLogout).Methods(http.MethodGet)
 	//注册
 	router.PathPrefix("/api/register").HandlerFunc(h.RegisterUserAPI).Methods(http.MethodPost)

@@ -40,6 +40,8 @@ type SysConfig struct {
 	GoogleCfg    GoogleCfg
 	AppleCfg     AppleCfg
 
+	ClientVersion ClientVersionInfo
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -65,6 +67,8 @@ type GeneralCfg struct {
 	GithubCfg    GithubCfg    `json:"github"`
 	GoogleCfg    GoogleCfg    `json:"google"`
 	AppleCfg     AppleCfg     `json:"apple"`
+
+	ClientVersion ClientVersionInfo `json:"client_version"`
 }
 
 func (s *SysConfig) toGeneralCfg() GeneralCfg {
@@ -88,6 +92,8 @@ func (s *SysConfig) toGeneralCfg() GeneralCfg {
 		GithubCfg:    s.GithubCfg,
 		GoogleCfg:    s.GoogleCfg,
 		AppleCfg:     s.AppleCfg,
+
+		ClientVersion: s.ClientVersion,
 	}
 }
 func (s *SysConfig) toSrvConfig() (*Config, error) {
@@ -138,6 +144,8 @@ func (s *SysConfig) toSrvConfig() (*Config, error) {
 		OIDC:      OidcConfig,
 		DexConfig: dexCfg,
 		IdpList:   idps,
+
+		ClientVersion: s.ClientVersion,
 	}, nil
 }
 
@@ -244,4 +252,33 @@ func (ghCfg *AppleCfg) Scan(value interface{}) error {
 func (ghCfg AppleCfg) Value() (driver.Value, error) {
 	bytes, err := json.Marshal(ghCfg)
 	return string(bytes), err
+}
+
+type ClientVersionInfo struct {
+	Win     ClientVer `json:"win"`
+	Mac     ClientVer `json:"mac"`
+	Linux   ClientVer `json:"linux"`
+	Android ClientVer `json:"android"`
+	Ios     ClientVer `json:"ios"`
+}
+
+func (c *ClientVersionInfo) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, c)
+	case string:
+		return json.Unmarshal([]byte(v), c)
+	default:
+		return fmt.Errorf("cannot parse client version info: unexpected data type %T", value)
+	}
+}
+
+func (c ClientVersionInfo) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(c)
+	return string(bytes), err
+}
+
+type ClientVer struct {
+	Version string `json:"version"`
+	Url     string `json:"url"`
 }

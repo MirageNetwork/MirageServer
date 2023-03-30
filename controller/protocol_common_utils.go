@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/binary"
 	"encoding/json"
+	"strings"
 	"sync"
 	"time"
 
@@ -124,6 +125,14 @@ func (h *Mirage) generateMapResponse(
 			DisableLogTail:         true,
 			SetRandomizeClientPort: "true",
 		},
+	}
+
+	resp.ClientVersion = &tailcfg.ClientVersion{}
+
+	switch true {
+	case strings.Contains(mapRequest.Hostinfo.OS, "windows"):
+		resp.ClientVersion.LatestVersion = h.cfg.ClientVersion.Win.Version
+		resp.ClientVersion.NotifyURL = h.cfg.ClientVersion.Win.Url
 	}
 
 	log.Trace().

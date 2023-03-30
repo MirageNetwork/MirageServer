@@ -4,12 +4,14 @@ import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import General from "./setpart/General.vue";
 import Authority from "./setpart/Authority.vue";
 import RebindSA from "./setpart/RebindSA.vue";
+import Client from "./setpart/ClientPublish.vue";
 
 //路由及选择器页面控制
 const setPartContent = {
   general: General,
   authority: Authority,
   rebindSA: RebindSA,
+  client: Client,
 };
 const route = useRoute();
 const router = useRouter();
@@ -70,6 +72,15 @@ onMounted(() => {
                 to="/setting/authority"
                 >第三方服务</router-link
               >
+              <router-link
+                class="flex font-medium mt-4"
+                :class="{
+                  'text-blue-600': currentSetPart == 'client',
+                  'text-gray-700': currentSetPart != 'client',
+                }"
+                to="/setting/client"
+                >客户端发布</router-link
+              >
             </div>
           </div>
           <div class="flex flex-row mb-12">
@@ -111,6 +122,7 @@ onMounted(() => {
             <optgroup label="系统配置">
               <option value="general">基本配置</option>
               <option value="authority">第三方服务</option>
+              <option value="client">客户端发布</option>
             </optgroup>
             <optgroup label="其他配置">
               <option value="rebindSA">换绑超管</option>

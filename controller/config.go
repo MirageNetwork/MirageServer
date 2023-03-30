@@ -41,6 +41,8 @@ type Config struct {
 
 	DexConfig *server.Config
 	IdpList   []string
+
+	ClientVersion ClientVersionInfo
 }
 
 type SMSConfig struct {

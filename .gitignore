@@ -27,6 +27,8 @@ derp.yaml
 *.sqlite3
 
 
+/download
+
 # Exclude Jetbrains Editors
 .idea
 
