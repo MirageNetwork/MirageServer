@@ -255,11 +255,13 @@ func (ghCfg AppleCfg) Value() (driver.Value, error) {
 }
 
 type ClientVersionInfo struct {
-	Win     ClientVer `json:"win"`
-	Mac     ClientVer `json:"mac"`
-	Linux   ClientVer `json:"linux"`
-	Android ClientVer `json:"android"`
-	Ios     ClientVer `json:"ios"`
+	NaviAMD64   string    `json:"naviAmd64"`
+	NaviAARCH64 string    `json:"naviAarch64"`
+	Win         ClientVer `json:"win"`
+	Mac         ClientVer `json:"mac"`
+	Linux       ClientVer `json:"linux"`
+	Android     ClientVer `json:"android"`
+	Ios         ClientVer `json:"ios"`
 }
 
 func (c *ClientVersionInfo) Scan(value interface{}) error {

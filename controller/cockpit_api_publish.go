@@ -39,6 +39,10 @@ func (c *Cockpit) CAPIPublishClient(
 		mForm := r.MultipartForm
 
 		fileName := mForm.File["file"][0].Filename
+		if strings.HasPrefix(osType, "navi") {
+			fileName = "MirageNavi"
+		}
+
 		reqData.Version = mForm.Value["version"][0]
 		file, _, err := r.FormFile("file")
 		if err != nil {
@@ -54,8 +58,36 @@ func (c *Cockpit) CAPIPublishClient(
 
 		_, err = os.Stat("download")
 		if err != nil {
-			os.Mkdir("download", os.ModePerm)
+			err = os.Mkdir("download", os.ModePerm)
+			if err != nil {
+				c.doAPIResponse(w, "下载文件夹创建失败:"+err.Error(), nil)
+				return
+			}
 		}
+
+		switch osType {
+		case "navi_x86_64":
+			_, err = os.Stat("download/x86_64")
+			if err != nil {
+				err = os.Mkdir("download/x86_64", os.ModePerm)
+				if err != nil {
+					c.doAPIResponse(w, "下载文件夹创建失败:"+err.Error(), nil)
+					return
+				}
+			}
+			fileName = "x86_64/" + fileName
+		case "navi_aarch64":
+			_, err = os.Stat("download/aarch64")
+			if err != nil {
+				err = os.Mkdir("download/aarch64", os.ModePerm)
+				if err != nil {
+					c.doAPIResponse(w, "下载文件夹创建失败:"+err.Error(), nil)
+					return
+				}
+			}
+			fileName = "aarch64/" + fileName
+		}
+
 		newFile, err := os.Create("download/" + fileName)
 		if err != nil {
 			c.doAPIResponse(w, "文件创建失败:"+err.Error(), nil)
@@ -78,6 +110,10 @@ func (c *Cockpit) CAPIPublishClient(
 	switch osType {
 	case "win":
 		sysCfg.ClientVersion.Win = reqData
+	case "navi_x86_64":
+		sysCfg.ClientVersion.NaviAMD64 = reqData.Version
+	case "navi_aarch64":
+		sysCfg.ClientVersion.NaviAARCH64 = reqData.Version
 	default:
 		c.doAPIResponse(w, "未支持的客户端类型", nil)
 		return
