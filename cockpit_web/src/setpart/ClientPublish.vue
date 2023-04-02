@@ -226,6 +226,7 @@ function publishWin() {
           <div class="w-full flex justify-end">
             <button
               :disabled="
+                (!winProc && winProc != '') ||
                 wantWinVersion.version == '' ||
                 (winExtURL &&
                   (!isValidURL(wantWinVersion.url) ||
