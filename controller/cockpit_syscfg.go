@@ -40,6 +40,8 @@ type SysConfig struct {
 	GoogleCfg    GoogleCfg
 	AppleCfg     AppleCfg
 
+	NaviDeployPub string
+	NaviDeployKey string
 	ClientVersion ClientVersionInfo
 
 	CreatedAt time.Time
@@ -68,6 +70,7 @@ type GeneralCfg struct {
 	GoogleCfg    GoogleCfg    `json:"google"`
 	AppleCfg     AppleCfg     `json:"apple"`
 
+	NaviDeployPub string            `json:"navi_deploy_pub"`
 	ClientVersion ClientVersionInfo `json:"client_version"`
 }
 
@@ -93,6 +96,7 @@ func (s *SysConfig) toGeneralCfg() GeneralCfg {
 		GoogleCfg:    s.GoogleCfg,
 		AppleCfg:     s.AppleCfg,
 
+		NaviDeployPub: s.NaviDeployPub,
 		ClientVersion: s.ClientVersion,
 	}
 }

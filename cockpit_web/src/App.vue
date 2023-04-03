@@ -34,6 +34,7 @@ const currentRoute = computed(() => {
   if (curPath.substring(0, 6) == "/users") return "users";
   if (curPath.substring(0, 8) == "/tenants") return "tenants";
   if (curPath.substring(0, 8) == "/setting") return "setting";
+  if (curPath.substring(0, 5) == "/navi") return "navi";
 });
 
 const serviceSwitch = ref(null);
@@ -344,7 +345,40 @@ function doLogout() {
             <div :class="{ 'font-medium': currentRoute == 'users' }">用户</div>
           </div>
         </router-link>
-
+        <router-link class="whitespace-nowrap py-2 group relative" to="/navi">
+          <div
+            :class="{
+              'text-blue-600 after:visible': currentRoute == 'navi',
+              'text-gray-600 group-hover:text-gray-800 after:invisible':
+                currentRoute != 'navi',
+            }"
+            class="px-3 py-2 flex items-center rounded-md group-hover:bg-gray-200 after:absolute after:bottom-0 after:right-3 after:left-3 after:h-0.5 after:bg-blue-600"
+          >
+            <svg
+              viewBox="0 0 1024 1024"
+              xmlns="http://www.w3.org/2000/svg"
+              width="1.125em"
+              height="1.125em"
+              fill="currentColor"
+              stroke="currentColor"
+              :stroke-width="currentRoute == 'navi' ? '2.5' : '2'"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="mr-2 inline-block"
+            >
+              <path
+                d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"
+              ></path>
+              <path
+                d="M710.4 295.9c-8-3.1-16.7-2.9-24.5 0.5L414.9 415 296.4 686c-3.6 8.2-3.6 17.5 0 25.7 3.4 7.8 9.7 13.9 17.7 17 3.8 1.5 7.7 2.2 11.7 2.2 4.4 0 8.7-0.9 12.8-2.7l271-118.6 118.5-271c3.6-8.2 3.6-17.5 0-25.7-3.5-7.9-9.8-13.9-17.7-17zM576.8 534.4l26.2 26.2-42.4 42.4-26.2-26.2L380 644.4 447.5 490 422 464.4l42.4-42.4 25.5 25.5L644.4 380l-67.6 154.4z"
+              ></path>
+              <path
+                d="M464.4 422L422 464.4l25.5 25.6 86.9 86.8 26.2 26.2 42.4-42.4-26.2-26.2-86.8-86.9z"
+              ></path>
+            </svg>
+            <div :class="{ 'font-medium': currentRoute == 'navi' }">司南</div>
+          </div>
+        </router-link>
         <router-link class="whitespace-nowrap py-2 group relative" to="/setting">
           <div
             :class="{

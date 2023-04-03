@@ -6,6 +6,7 @@ import Setting from './Settings.vue'
 import Tenants from './Tenants.vue'
 import RegAdmin from './RegAdmin.vue'
 import Login from './Login.vue'
+import DERPs from './DERPs.vue'
 import VueClickAway from "vue3-click-away"
 
 
@@ -15,7 +16,8 @@ const routes = [
     { path: '/login', component: Login },
     { path: '/setting', redirect: '/setting/general' },
     { path: '/setting/:setpart', component: Setting },
-    {path:'/tenants',component:Tenants},
+    { path:'/tenants',component:Tenants },
+    { path:'/navi',component:DERPs },
 ]
 const router = createRouter({
     history: createWebHashHistory(),

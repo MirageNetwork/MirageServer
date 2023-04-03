@@ -368,7 +368,7 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 	var err error
 
 	// Fetch an initial DERP Map before we start serving
-	h.DERPMap, err = LoadDERPMapFromURL(h.cfg.DERPURL)
+	h.DERPMap, err = h.LoadDERPMapFromURL(h.cfg.DERPURL)
 	if err != nil {
 		return err
 	}

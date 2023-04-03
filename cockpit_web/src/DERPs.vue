@@ -1,0 +1,450 @@
+<script setup>
+import { ref, computed, nextTick, onMounted, onUnmounted, watch, watchEffect } from "vue";
+import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
+import NaviNodeMenu from "./components/NaviNodeMenu.vue";
+import RemoveTenant from "./umenu/RemoveTenant.vue";
+import EditTenant from "./umenu/EditTenant.vue";
+
+import Deploy from "./derp/Deploy.vue";
+import Toast from "./components/Toast.vue";
+
+//与框架交互部分
+
+//界面控制部分
+const activeBtn = ref(null);
+const btnLeft = ref(0);
+const btnTop = ref(0);
+function refreshNaviNodeMenuPos() {
+  if (activeBtn.value != null) {
+    btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 14;
+    btnTop.value = activeBtn.value?.getBoundingClientRect().top;
+  }
+}
+function openNaviNodeMenu(nr, nn, event) {
+  activeBtn.value = event.target;
+  while (activeBtn.value?.tagName != "DIV" && activeBtn.value?.tagName != "div") {
+    activeBtn.value = activeBtn.value.parentNode;
+  }
+  selectNaviNode.value = nn;
+  btnLeft.value = activeBtn.value?.getBoundingClientRect().left + 14;
+  btnTop.value = activeBtn.value?.getBoundingClientRect().top;
+  NaviNodeMenuShow.value = true;
+}
+function closeNaviNodeMenu() {
+  activeBtn.value = null;
+  NaviNodeMenuShow.value = false;
+}
+
+const toastShow = ref(false);
+const toastMsg = ref("");
+watch(toastShow, () => {
+  if (toastShow.value) {
+    setTimeout(function () {
+      toastShow.value = false;
+    }, 5000);
+  }
+});
+
+const selectNaviNode = ref({});
+function mouseOnNaviNode(u) {
+  selectNaviNode.value = u;
+  NaviNodeBtnShow.value = true;
+}
+function mouseLeaveNaviNode() {
+  NaviNodeBtnShow.value = false;
+}
+
+const NaviNodeMenuShow = ref(false);
+const NaviNodeBtnShow = ref(false);
+
+const removeNaviNodeShow = ref(false);
+function showRemoveNaviNode() {
+  NaviNodeBtnShow.value = false;
+  closeNaviNodeMenu();
+  removeNaviNodeShow.value = true;
+}
+
+const editNaviNodeShow = ref(false);
+function showEditNaviNode() {
+  NaviNodeBtnShow.value = false;
+  closeNaviNodeMenu();
+  editNaviNodeShow.value = true;
+}
+
+const deployDERPShow = ref(false);
+function showDeployDERP() {
+  deployDERPShow.value = true;
+}
+
+function addNaviDone(newlist) {
+  toastShow.value = true;
+  toastMsg.value = "添加成功";
+  NaviRegionList.value = newlist;
+  deployDERPShow.value = false;
+}
+
+function doRemoveTenant() {
+  axios
+    .post("/cockpit/api/tenants", {
+      tenantID: selectTenant.value["id"],
+      action: "delete_tenant",
+    })
+    .then(function (response) {
+      if (response.data["status"] != "success") {
+        toastMsg.value = response.data["status"].substring(6);
+        toastShow.value = true;
+      } else {
+        removeTenantShow.value = false;
+        toastMsg.value = "已删除 " + selectTenant.value["name"];
+        toastShow.value = true;
+        getTenants().then().catch();
+      }
+    })
+    .catch(function (error) {
+      toastMsg.value = error;
+      toastShow.value = true;
+    });
+}
+
+function doUpdateTenant(newV) {
+  axios
+    .post("/cockpit/api/tenants", {
+      tenantID: selectTenant.value["id"],
+      action: "update_tenant",
+      newValue: newV,
+    })
+    .then(function (response) {
+      if (response.data["status"] != "success") {
+        toastMsg.value = response.data["status"].substring(6);
+        toastShow.value = true;
+      } else {
+        editTenantShow.value = false;
+        toastMsg.value = "已更新 " + selectTenant.value["name"] + " 租户配置";
+        toastShow.value = true;
+        getTenants().then().catch();
+      }
+    })
+    .catch(function (error) {
+      toastMsg.value = error;
+      toastShow.value = true;
+    });
+}
+
+//数据填充控制部分
+const NaviRegionList = ref([]);
+const NaviRegionNum = computed(() => {
+  if (NaviRegionList.value == null) {
+    return 0;
+  }
+  return NaviRegionList.value.length;
+});
+let getNaviRegionsIntID;
+function getNaviRegions() {
+  return new Promise((resolve, reject) => {
+    axios
+      .get("/cockpit/api/derp/query")
+      .then(function (response) {
+        if (response.data["status"] != "success") {
+          toastMsg.value = "获租户信息出错：" + response.data["status"].substring(6);
+          toastShow.value = true;
+          reject();
+        }
+
+        // 处理成功情况
+        NaviRegionList.value = response.data["data"];
+        resolve();
+      })
+      .catch(function (error) {
+        // 处理错误情况
+        toastMsg.value = "获取用户信息出错：" + error;
+        toastShow.value = true;
+        reject();
+      });
+  });
+}
+onMounted(() => {
+  refreshNaviNodeMenuPos();
+  window.addEventListener("resize", refreshNaviNodeMenuPos);
+  window.addEventListener("scroll", refreshNaviNodeMenuPos);
+
+  getNaviRegions().then().catch();
+  getNaviRegionsIntID = setInterval(() => {
+    getNaviRegions().then().catch();
+  }, 20000);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", refreshNaviNodeMenuPos);
+  window.removeEventListener("scroll", refreshNaviNodeMenuPos);
+});
+
+onBeforeRouteLeave(() => {
+  clearInterval(getNaviRegionsIntID);
+});
+</script>
+
+<template>
+  <main class="container mx-auto pb-20 md:pb-24">
+    <section class="mb-24">
+      <header class="mb-4 flex items-center">
+        <div class="flex justify-between items-center min-w-fit">
+          <div class="flex items-center">
+            <h1 class="text-3xl font-semibold tracking-tight leading-tight mb-2">司南</h1>
+          </div>
+        </div>
+        <div
+          class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-full px-2 py-1 leading-none text-sm ml-4 min-w-fit h-7"
+        >
+          {{ NaviRegionNum }} 个区域
+        </div>
+        <div class="flex w-full justify-end">
+          <input
+            type="button"
+            class="btn border-0 bg-blue-500 hover:bg-blue-900 disabled:bg-blue-500/60 text-white disabled:text-white/60 h-9 min-h-fit"
+            value="添加新司南"
+            @click="showDeployDERP"
+          />
+        </div>
+      </header>
+
+      <template v-for="nr in NaviRegionList">
+        <div
+          class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-full px-2 py-1 leading-none text-sm ml-4 min-w-fit h-7"
+        >
+          {{ nr.Region.RegionID }} 号区-{{ nr.Region.RegionCode }}-{{
+            nr.Region.RegionName
+          }}
+          共 {{ nr.Nodes ? nr.Nodes.length : 0 }} 只司南
+        </div>
+        <table class="table w-full">
+          <thead>
+            <tr>
+              <th class="flex-auto table-cell items-center">名称</th>
+              <th class="table-cell items-center md:w-1/4 lg:w-1/5">指定IP</th>
+              <th class="hidden lg:table-cell items-center lg:w-1/5">端口</th>
+              <th class="hidden lg:table-cell items-center lg:w-1/5">架构</th>
+              <th
+                class="table-cell justify-end ml-auto md:ml-0 relative items-center w-8"
+              >
+                <span class="sr-only">租户操作菜单</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="nn in nr.Nodes">
+              <tr
+                :v-if="nn != nil"
+                @mouseenter="mouseOnNaviNode(nn)"
+                @mouseleave="mouseLeaveNaviNode()"
+                class="w-full px-0.5 hover"
+              >
+                <td class="flex-auto flex items-center">
+                  <div class="relative">
+                    <div class="items-center text-gray-900">
+                      <p class="font-semibold hover:text-blue-500">
+                        <a class="stretched-link">{{ nn.HostName }} </a>
+                      </p>
+                      <span v-if="nn.status == 'suspend'">
+                        <div
+                          class="inline-flex items-center align-middle justify-center font-medium border border-red-50 bg-red-50 text-red-600 rounded-sm px-1 text-xs mr-1"
+                        >
+                          外部司南
+                        </div>
+                      </span>
+                    </div>
+                    <div class="flex items-center text-gray-600 text-xs">
+                      <span>{{ nn.Name }} </span>
+                    </div>
+                  </div>
+                </td>
+                <td class="table-cell items-center md:w-1/4 lg:w-1/5">
+                  <div class="flex relative min-w-0">
+                    <div class="flex flex-col items-start text-gray-600 text-sm">
+                      <span>{{ nn.IPv4 }} </span>
+                      <span>{{ nn.IPv6 }} </span>
+                    </div>
+                  </div>
+                </td>
+                <td class="hidden lg:table-cell items-center lg:w-1/5">
+                  <div class="flex relative min-w-0">
+                    <div class="flex flex-col items-start text-sm">
+                      <span>{{ "中继端口:" + nn.DERPPort }}</span>
+                      <span>{{ "导航端口:" + nn.STUNPort }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="hidden lg:table-cell items-center lg:w-1/5">
+                  <span>
+                    <div class="inline-flex items-center cursor-default">
+                      <span
+                        class="inline-block w-2 h-2 rounded-full mr-2"
+                        :class="{
+                          'bg-green-500': !nn.STUNOnly,
+                          'bg-gray-300': nn.STUNOnly,
+                        }"
+                      ></span>
+                      <span
+                        v-if="nn.STUNOnly"
+                        class="text-sm text-gray-600 tooltip tooltip-top"
+                        data-tip=" "
+                        >{{ nn.Arch }}</span
+                      >
+                      <span
+                        v-else
+                        class="text-sm text-gray-600 tooltip tooltip-top"
+                        data-tip=" "
+                        >{{ nn.Arch }}
+                      </span>
+                    </div>
+                  </span>
+                </td>
+                <td
+                  class="table-cell justify-end ml-auto md:ml-0 relative items-center w-8"
+                >
+                  <div
+                    v-if="
+                      (!NaviNodeBtnShow && !NaviNodeMenuShow) ||
+                      selectNaviNode.Name != nn.Name
+                    "
+                    @click="openNaviNodeMenu(nr, nn, $event)"
+                    class="flex-none w-12 -mt-0.5 relative"
+                  >
+                    <button
+                      class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 active:shadow focus:outline-none focus:ring transition-shadow duration-100 ease-in-out z-20"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="text-gray-500"
+                      >
+                        <circle cx="12" cy="12" r="1"></circle>
+                        <circle cx="19" cy="12" r="1"></circle>
+                        <circle cx="5" cy="12" r="1"></circle>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div
+                    v-if="
+                      (NaviNodeBtnShow || NaviNodeMenuShow) &&
+                      selectNaviNode.Name == nn.Name
+                    "
+                    @click="openNaviNodeMenu(nr, nn, $event)"
+                    class="flex-none w-12 border button-outline bg-white shadow-md cursor-pointer focus:outline-none focus:ring -mt-0.5 relative py-0.5 px-2 rounded-md border-gray-300/100 hover:border-gray-300/100 hover:bg-gray-100 hover:shadow-md hover:cursor-pointer active:border-gray-300/100 transition-shadow duration-100 ease-in-out z-20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="text-gray-500"
+                    >
+                      <circle cx="12" cy="12" r="1"></circle>
+                      <circle cx="19" cy="12" r="1"></circle>
+                      <circle cx="5" cy="12" r="1"></circle>
+                    </svg>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </template>
+    </section>
+  </main>
+
+  <!-- 提示框显示 -->
+  <Teleport to=".toast-container">
+    <Toast :show="toastShow" :msg="toastMsg" @close="toastShow = false"></Toast>
+  </Teleport>
+
+  <!--设备配置菜单显示-->
+  <Teleport to="body">
+    <NaviNodeMenu
+      v-if="NaviNodeMenuShow"
+      :toleft="btnLeft"
+      :totop="btnTop"
+      :select-tenant="selectNaviNode"
+      @close="closeNaviNodeMenu"
+      @showdialog-removetenant="showRemoveNaviNode"
+      @showdialog-edittenant="showEditNaviNode"
+    ></NaviNodeMenu>
+  </Teleport>
+
+  <!-- 菜单弹出提示框显示 -->
+  <Teleport to="body">
+    <!--部署新司南提示框显示-->
+    <Deploy
+      v-if="deployDERPShow"
+      :navi-region-list="NaviRegionList"
+      @close="deployDERPShow = false"
+      @add-done="addNaviDone"
+    ></Deploy>
+
+    <!-- 移除租户提示框显示 -->
+    <RemoveTenant
+      v-if="removeTenantShow"
+      :select-tenant="selectTenant"
+      @close="removeTenantShow = false"
+      @confirm-remove="doRemoveTenant"
+    >
+    </RemoveTenant>
+
+    <!-- 编辑租户提示框显示 -->
+    <EditTenant
+      v-if="editTenantShow"
+      :select-tenant="selectTenant"
+      @close="editTenantShow = false"
+      @update-tenant="doUpdateTenant"
+    >
+    </EditTenant>
+  </Teleport>
+</template>
+
+<style scoped>
+.table tr.hover:hover th,
+.table tr.hover:hover td,
+.table tr.hover:nth-child(even):hover th,
+.table tr.hover:nth-child(even):hover td {
+  background-color: #faf9f8;
+}
+
+.table :where(thead, tfoot) :where(th, td) {
+  background-color: #ffffff;
+  color: #71706f;
+  border-bottom-width: 1px;
+}
+
+.tooltip {
+  --tooltip-color: #faf9f8;
+  --tooltip-text-color: #3a3939;
+  text-align: start;
+  white-space: normal;
+}
+
+.tooltip:before {
+  max-width: 16rem;
+  font-size: small;
+  font-weight: 300;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-width: 1px;
+  border-color: #e1dfde;
+}
+</style>

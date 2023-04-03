@@ -34,6 +34,16 @@ func (dp *DataPool) InitCockpitDB() error {
 	if err != nil {
 		return err
 	}
+
+	err = dp.db.AutoMigrate(&NaviRegion{})
+	if err != nil {
+		return err
+	}
+	err = dp.db.AutoMigrate(&NaviNode{})
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 

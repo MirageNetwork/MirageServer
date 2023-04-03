@@ -25,9 +25,8 @@ import (
 )
 
 type Cockpit struct {
-	db        *gorm.DB
-	Addr      string
-	ServerURL string
+	db   *gorm.DB
+	Addr string
 
 	serviceState bool
 	CtrlChn      chan CtrlMsg
@@ -103,6 +102,18 @@ func (c *Cockpit) GetSysCfg() *SysConfig {
 	if err != nil || cfg == nil || len(cfg) == 0 {
 		return nil
 	}
+	if cfg[0].NaviDeployKey == "" {
+		pri, pub, err := genSSHKeypair()
+		if err != nil {
+			log.Fatal().Msg(err.Error())
+		}
+		cfg[0].NaviDeployPub = pub
+		cfg[0].NaviDeployKey = pri
+		err = c.db.Save(&cfg[0]).Error
+		if err != nil {
+			log.Fatal().Msg(err.Error())
+		}
+	}
 	return &cfg[0]
 }
 
@@ -129,11 +140,13 @@ func (c *Cockpit) createRouter() *mux.Router {
 	cockpit_router.HandleFunc("/api/service/stop", c.DoServiceStop).Methods(http.MethodPost)
 	cockpit_router.HandleFunc("/api/tenants", c.CAPIPostTenants).Methods(http.MethodPost)
 	cockpit_router.HandleFunc("/api/publish/{os}", c.CAPIPublishClient).Methods(http.MethodPost)
+	cockpit_router.HandleFunc("/api/derp/add", c.CAPIAddDERP).Methods(http.MethodPost)
 
 	cockpit_router.HandleFunc("/api/logout", c.Logout).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/service/state", c.GetServiceState).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/setting/general", c.GetSettingGeneral).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/tenants", c.CAPIGetTenant).Methods(http.MethodGet)
+	cockpit_router.HandleFunc("/api/derp/query", c.CAPIQueryDERP).Methods(http.MethodGet)
 
 	cockpit_router.PathPrefix("").Handler(http.StripPrefix("/cockpit", http.FileServer(http.FS(cockpitDir))))
 

@@ -364,6 +364,16 @@ function publishWin() {
                   : "未设置"
               }}
             </div>
+            <progress
+              v-if="naviProc != ''"
+              :class="{
+                'progress-success': naviProc == 'uploading',
+                'progress-error': naviProc == 'fail',
+              }"
+              class="progress w-full"
+              :value="naviProcPercent"
+              max="100"
+            ></progress>
           </div>
         </div>
         <div class="flex w-full max-w-sm space-x-2 justify-around items-center mb-3">
