@@ -28,18 +28,20 @@ type PreAuthKey struct {
 	Reusable  bool
 	Ephemeral bool `gorm:"default:false"`
 	Used      bool `gorm:"default:false"`
-	ACLTags   []PreAuthKeyACLTag
+	ACLTags   StringList
 
 	CreatedAt  *time.Time
 	Expiration *time.Time
 }
 
+/*
 // PreAuthKeyACLTag describes an autmatic tag applied to a node when registered with the associated PreAuthKey.
 type PreAuthKeyACLTag struct {
 	ID           uint64 `gorm:"primary_key"`
 	PreAuthKeyID uint64
 	Tag          string
 }
+*/
 
 // CreatePreAuthKey creates a new PreAuthKey in a user, and returns it.
 func (h *Mirage) CreatePreAuthKey(
@@ -73,24 +75,20 @@ func (h *Mirage) CreatePreAuthKey(
 	}
 
 	err = h.db.Transaction(func(db *gorm.DB) error {
-		if err := db.Save(&key).Error; err != nil {
-			return fmt.Errorf("failed to create key in the database: %w", err)
-		}
-
 		if len(aclTags) > 0 {
-			seenTags := map[string]bool{}
+			tagSet := map[string]struct{}{}
+			tagSlice := []string{}
 
 			for _, tag := range aclTags {
-				if !seenTags[tag] {
-					if err := db.Save(&PreAuthKeyACLTag{PreAuthKeyID: key.ID, Tag: tag}).Error; err != nil {
-						return fmt.Errorf(
-							"failed to ceate key tag in the database: %w",
-							err,
-						)
-					}
-					seenTags[tag] = true
+				if _, ok := tagSet[tag]; !ok {
+					tagSlice = append(tagSlice, tag)
+					tagSet[tag] = struct{}{}
 				}
 			}
+			key.ACLTags = StringList(tagSlice)
+		}
+		if err := db.Save(&key).Error; err != nil {
+			return fmt.Errorf("failed to create key in the database: %w", err)
 		}
 
 		return nil
@@ -106,7 +104,7 @@ func (h *Mirage) CreatePreAuthKey(
 // ListPreAuthKeys returns the list of PreAuthKeys for a user.
 func (h *Mirage) ListPreAuthKeys(userID int64) ([]PreAuthKey, error) {
 	keys := []PreAuthKey{}
-	if err := h.db.Preload("User").Preload("ACLTags").Where(&PreAuthKey{UserID: userID}).Find(&keys).Error; err != nil {
+	if err := h.db.Preload("User").Where(&PreAuthKey{UserID: userID}).Find(&keys).Error; err != nil {
 		return nil, err
 	}
 
@@ -131,10 +129,6 @@ func (h *Mirage) GetPreAuthKey(user string, key string) (*PreAuthKey, error) {
 // does not exist.
 func (h *Mirage) DestroyPreAuthKey(pak PreAuthKey) error {
 	return h.db.Transaction(func(db *gorm.DB) error {
-		if result := db.Unscoped().Where(PreAuthKeyACLTag{PreAuthKeyID: pak.ID}).Delete(&PreAuthKeyACLTag{}); result.Error != nil {
-			return result.Error
-		}
-
 		if result := db.Unscoped().Delete(pak); result.Error != nil {
 			return result.Error
 		}
@@ -166,7 +160,7 @@ func (h *Mirage) UsePreAuthKey(k *PreAuthKey) error {
 // If returns no error and a PreAuthKey, it can be used.
 func (h *Mirage) checkKeyValidity(k string) (*PreAuthKey, error) {
 	pak := PreAuthKey{}
-	if result := h.db.Preload("User").Preload("ACLTags").First(&pak, "key = ?", k); errors.Is(
+	if result := h.db.Preload("User").First(&pak, "key = ?", k); errors.Is(
 		result.Error,
 		gorm.ErrRecordNotFound,
 	) {
@@ -206,7 +200,7 @@ func (h *Mirage) generateKey() (string, error) {
 func (key *PreAuthKey) GetAclTags() []string {
 	aclTags := make([]string, len(key.ACLTags))
 	for idx := range key.ACLTags {
-		aclTags[idx] = key.ACLTags[idx].Tag
+		aclTags[idx] = key.ACLTags[idx]
 	}
 	return aclTags
 }

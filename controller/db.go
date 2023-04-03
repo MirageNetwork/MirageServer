@@ -58,11 +58,12 @@ func (dp *DataPool) InitMirageDB() error {
 		return err
 	}
 
-	err = dp.db.AutoMigrate(&PreAuthKeyACLTag{})
-	if err != nil {
-		return err
-	}
-
+	/*
+		err = dp.db.AutoMigrate(&PreAuthKeyACLTag{})
+		if err != nil {
+			return err
+		}
+	*/
 	err = dp.db.AutoMigrate(&Organization{})
 	if err != nil {
 		return err
