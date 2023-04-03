@@ -27,7 +27,7 @@ const canAdd = computed(() => {
   return (
     (willCreateRegion.value
       ? newRegionCode.value != "" && newRegionName.value != ""
-      : !selectRegion.value) &&
+      : selectRegion.value["RegionCode"] && selectRegion.value["RegionCode"] != "") &&
     NewNaviNode.value["HostName"] &&
     NewNaviNode.value["HostName"] != "" &&
     (NewNaviNode.value["NoSTUN"] || NewNaviNode.value["STUNPort"] != "") &&
