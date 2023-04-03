@@ -73,7 +73,7 @@ func (h *Mirage) CAPIGetKeys(
 	for _, key := range authKeys {
 		aclTags := []string{}
 		for _, tag := range key.ACLTags {
-			aclTags = append(aclTags, tag.Tag)
+			aclTags = append(aclTags, tag)
 		}
 		tmpAuthKey := Key{
 			Id:      key.Key[:12], //key.ID,

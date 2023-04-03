@@ -211,9 +211,6 @@ func (c *Cockpit) ListPreAuthKeys(userID int64) ([]PreAuthKey, error) {
 }
 func (c *Cockpit) DestroyPreAuthKey(pak PreAuthKey) error {
 	return c.db.Transaction(func(db *gorm.DB) error {
-		if result := db.Unscoped().Where(PreAuthKeyACLTag{PreAuthKeyID: pak.ID}).Delete(&PreAuthKeyACLTag{}); result.Error != nil {
-			return result.Error
-		}
 
 		if result := db.Unscoped().Delete(pak); result.Error != nil {
 			return result.Error
