@@ -8,6 +8,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"tailscale.com/tailcfg"
+	"tailscale.com/types/key"
 )
 
 // // NoiseRegistrationHandler handles the actual registration process of a machine.
@@ -33,12 +34,12 @@ func (t *ts2021App) NoiseRegistrationHandler(
 		return
 	}
 
-	t.mirage.handleRegisterCommon(writer, req, registerRequest, t.conn.Peer())
-}
+	if registerRequest.Auth.Provider == "Mirage" {
+		t.mirage.handleRegisterNavi(writer, req, registerRequest, t.conn.Peer())
+		return
+	}
 
-type NaviRegisterRequest struct {
-	ID        string
-	Timestamp *time.Time
+	t.mirage.handleRegisterCommon(writer, req, registerRequest, t.conn.Peer())
 }
 
 type NaviRegisterResponse struct {
@@ -47,39 +48,25 @@ type NaviRegisterResponse struct {
 }
 
 // 司南注册noise协议接口
-func (t *ts2021App) NoiseNaviRegisterHandler(
+func (m *Mirage) handleRegisterNavi(
 	writer http.ResponseWriter,
 	req *http.Request,
+	registerRequest tailcfg.RegisterRequest,
+	naviKey key.MachinePublic,
 ) {
 	log.Trace().Caller().Msgf("Noise registration handler for Navi %s", req.RemoteAddr)
-	if req.Method != http.MethodPost {
-		http.Error(writer, "Wrong method", http.StatusMethodNotAllowed)
 
-		return
-	}
-	body, _ := io.ReadAll(req.Body)
-	registerRequest := NaviRegisterRequest{}
-	if err := json.Unmarshal(body, &registerRequest); err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Cannot parse RegisterRequest")
-		http.Error(writer, "Internal error", http.StatusInternalServerError)
-
-		return
-	}
-
-	node := t.mirage.GetNaviNode(registerRequest.ID)
+	node := m.GetNaviNode(registerRequest.Auth.LoginName)
 	if node == nil {
-		log.Warn().Caller().Msgf("Navi node %s not found", registerRequest.ID)
+		log.Warn().Caller().Msgf("Navi node %s not found", registerRequest.Auth.LoginName)
 		http.Error(writer, "Navi node not found", http.StatusNotFound)
 		return
 	}
-	if node.NaviKey == "" || node.NaviKey == MachinePublicKeyStripPrefix(t.conn.Peer()) {
-		node.NaviKey = MachinePublicKeyStripPrefix(t.conn.Peer())
-		node := t.mirage.UpdateNaviNode(node)
+	if node.NaviKey == "" || node.NaviKey == MachinePublicKeyStripPrefix(naviKey) {
+		node.NaviKey = MachinePublicKeyStripPrefix(naviKey)
+		node := m.UpdateNaviNode(node)
 		if node == nil {
-			log.Warn().Caller().Msgf("Navi node %s update failed", registerRequest.ID)
+			log.Warn().Caller().Msgf("Navi node %s update failed", registerRequest.Auth.LoginName)
 			http.Error(writer, "Internal error", http.StatusInternalServerError)
 			return
 		}
@@ -89,7 +76,7 @@ func (t *ts2021App) NoiseNaviRegisterHandler(
 			NodeInfo:  *node,
 			Timestamp: &now,
 		}
-		respBody, err := t.mirage.marshalResponse(resp, t.conn.Peer())
+		respBody, err := m.marshalResponse(resp, naviKey)
 		if err != nil {
 			log.Error().
 				Caller().
@@ -111,7 +98,7 @@ func (t *ts2021App) NoiseNaviRegisterHandler(
 
 		log.Info().
 			Str("func", "handleNaviRegister").
-			Str("derpID", registerRequest.ID).
+			Str("derpID", registerRequest.Auth.LoginName).
 			Msg("Successfully register Navi node")
 
 		return
@@ -140,7 +127,7 @@ func (t *ts2021App) NoiseNaviPollNodesListHandler(
 		return
 	}
 	body, _ := io.ReadAll(req.Body)
-	pollReq := NaviRegisterRequest{}
+	pollReq := tailcfg.MapRequest{}
 	if err := json.Unmarshal(body, &pollReq); err != nil {
 		log.Error().
 			Caller().
@@ -151,9 +138,9 @@ func (t *ts2021App) NoiseNaviPollNodesListHandler(
 		return
 	}
 
-	node := t.mirage.GetNaviNode(pollReq.ID)
+	node := t.mirage.GetNaviNode(pollReq.Hostinfo.BackendLogID)
 	if node == nil {
-		log.Warn().Caller().Msgf("Navi node %s not found", pollReq.ID)
+		log.Warn().Caller().Msgf("Navi node %s not found", pollReq.Hostinfo.BackendLogID)
 		http.Error(writer, "Navi node not found", http.StatusNotFound)
 		return
 	}
@@ -207,7 +194,7 @@ func (t *ts2021App) NoiseNaviPollNodesListHandler(
 
 		log.Info().
 			Str("func", "NoiseNaviPollNodesListHandler").
-			Str("derpID", pollReq.ID).
+			Str("derpID", pollReq.Hostinfo.BackendLogID).
 			Msg("Successfully return Navi trust nodes list")
 		return
 	}

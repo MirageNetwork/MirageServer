@@ -67,9 +67,6 @@ func (h *Mirage) NoiseUpgradeHandler(
 		Methods(http.MethodPost)
 	router.HandleFunc("/machine/map", ts2021App.NoisePollNetMapHandler)
 
-	router.HandleFunc("/navi/register", ts2021App.NoiseNaviRegisterHandler).
-		Methods(http.MethodPost)
-
 	router.HandleFunc("/navi/map", ts2021App.NoiseNaviPollNodesListHandler).Methods(http.MethodPost)
 
 	server := http.Server{

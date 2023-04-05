@@ -443,7 +443,9 @@ function doAddDerp() {
                 v-model="NewNaviNode.SSHPwd"
               />
             </div>
-            <div class="swap-off flex relative w-full -mt-7 justify-end">
+            <div
+              class="swap-off flex relative w-full -mt-7 justify-end pointer-events-none"
+            >
               <div
                 class="rounded-md border w-2/3 border-stone-200 gap-2 max-w-sm bg-stone-50 p-2"
               >
@@ -561,5 +563,9 @@ input[type="number"] {
 .onetwoSwitch {
   --el-switch-on-color: #0082f6;
   --el-switch-off-color: #0082f6;
+}
+
+.swap {
+  cursor: default;
 }
 </style>
