@@ -245,6 +245,7 @@ func (c *Cockpit) DestroyTenant(tenant *Organization) error {
 		if err != nil {
 			return err
 		}
+		c.App.NotifyNaviOrgNodesChange(machine.User.OrganizationID, "", machine.NodeKey)
 	}
 
 	users, err := c.ListTenantUsers(tenant.ID)

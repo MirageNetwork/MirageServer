@@ -209,6 +209,7 @@ func (h *Mirage) ForceDestroyUserByID(userId int64) error {
 		if err := h.HardDeleteMachine(&machine); err != nil {
 			return nil
 		}
+		h.NotifyNaviOrgNodesChange(machine.User.OrganizationID, "", machine.NodeKey)
 	}
 
 	keys, err := h.ListPreAuthKeys(userId)

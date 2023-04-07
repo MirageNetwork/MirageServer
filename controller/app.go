@@ -24,6 +24,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
+	"tailscale.com/control/controlclient"
 	"tailscale.com/tailcfg"
 	"tailscale.com/types/key"
 )
@@ -63,6 +64,8 @@ type Mirage struct {
 
 	noisePrivateKey *key.MachinePrivate
 	DERPMap         *tailcfg.DERPMap
+	DERPNCs         map[string]*controlclient.NoiseClient
+	DERPseqnum      map[string]int
 
 	aclPolicy *ACLPolicy
 	aclRules  []tailcfg.FilterRule
@@ -120,6 +123,8 @@ func NewMirage(cfg *Config, db *gorm.DB) (*Mirage, error) {
 		cancel: cancel,
 
 		noisePrivateKey: noisePrivateKey,
+		DERPNCs:         make(map[string]*controlclient.NoiseClient),
+		DERPseqnum:      make(map[string]int),
 		aclRules:        tailcfg.FilterAllowAll, // default allowall
 
 		aCodeCache:              aCodeCache,
@@ -132,6 +137,21 @@ func NewMirage(cfg *Config, db *gorm.DB) (*Mirage, error) {
 		shutdownChan:            make(chan struct{}),
 		pollNetMapStreamWG:      sync.WaitGroup{},
 		lastStateChange:         xsync.NewMapOf[time.Time](),
+	}
+
+	nrs := app.ListNaviRegions()
+	for _, nr := range nrs {
+		nns := app.ListNaviNodes(nr.ID)
+		for _, nn := range nns {
+			nckey := key.MachinePublic{}
+			nckey.UnmarshalText([]byte(MachinePublicKeyEnsurePrefix(nn.NaviKey)))
+			nc, err := app.GetNaviNoiseClient(nckey, nn.HostName, nn.DERPPort)
+			if err != nil {
+				log.Error().Err(err).Msg("GetNaviNoiseClient Error: " + err.Error())
+			}
+			app.DERPNCs[nn.ID] = nc
+			app.DERPseqnum[nn.ID] = 0
+		}
 	}
 
 	/* 由于可能我们会使用内建的dex，所以这里可能并不能正确初始化OIDC
@@ -210,6 +230,9 @@ func (h *Mirage) expireEphemeralNodesWorker() {
 						Str("machine", machine.Hostname).
 						Msg("🤮 Cannot delete ephemeral machine from the database")
 				}
+
+				// TODO: 并不好的处理
+				h.NotifyNaviOrgNodesChange(machine.User.OrganizationID, "", machine.NodeKey)
 			}
 		}
 
@@ -257,6 +280,8 @@ func (h *Mirage) expireExpiredMachinesWorker() {
 						Str("name", machine.GivenName).
 						Msg("Machine successfully expired")
 				}
+
+				h.NotifyNaviOrgNodesChange(machine.User.OrganizationID, "", machine.NodeKey)
 			}
 		}
 

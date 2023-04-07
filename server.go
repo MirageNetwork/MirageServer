@@ -98,7 +98,7 @@ func main() {
 					break
 				}
 
-				app, err := controller.NewMirage(cockpitMsg.SysCfg, datapool.DB())
+				cockpit.App, err = controller.NewMirage(cockpitMsg.SysCfg, datapool.DB())
 				if err != nil {
 					log.Error().Caller().Err(err).Msg("Error initializing Mirage")
 					msgChn <- controller.CtrlMsg{
@@ -108,7 +108,7 @@ func main() {
 					break
 				}
 
-				err = app.Serve(ctrlChn)
+				err = cockpit.App.Serve(ctrlChn)
 				if err != nil {
 					log.Error().Caller().Err(err).Msg("Error starting server")
 					msgChn <- controller.CtrlMsg{

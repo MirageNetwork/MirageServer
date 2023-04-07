@@ -360,6 +360,8 @@ func (h *Mirage) handleAuthKeyCommon(
 			Str("machine", machine.Hostname).
 			Msg("machine was already registered before, refreshing with new auth key")
 
+		h.NotifyNaviOrgNodesChange(machine.User.OrganizationID, nodeKey, machine.NodeKey)
+
 		machine.NodeKey = nodeKey
 		machine.AuthKeyID = uint(pak.ID)
 		machine.AuthKey = pak
@@ -429,6 +431,7 @@ func (h *Mirage) handleAuthKeyCommon(
 
 			return
 		}
+		h.NotifyNaviOrgNodesChange(machine.User.OrganizationID, nodeKey, "")
 	}
 
 	err = h.UsePreAuthKey(pak)
@@ -538,6 +541,8 @@ func (h *Mirage) handleMachineLogOutCommon(
 
 		return
 	}
+
+	h.NotifyNaviOrgNodesChange(machine.User.OrganizationID, "", machine.NodeKey)
 
 	log.Info().
 		Caller().

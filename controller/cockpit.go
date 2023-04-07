@@ -25,6 +25,7 @@ import (
 )
 
 type Cockpit struct {
+	App  *Mirage
 	db   *gorm.DB
 	Addr string
 

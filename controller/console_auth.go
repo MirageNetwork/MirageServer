@@ -865,10 +865,16 @@ func (h *Mirage) registerMachineFromConsole(
 				Msg("Failed to restruct machine")
 			return nil, ErrCouldNotConvertMachineInterface
 		}
+
+		h.NotifyNaviOrgNodesChange(user.OrganizationID, newmachine.NodeKey, oldmachine.NodeKey)
+
 		machine, err := h.GetMachineByID(newmachine.ID)
 		return machine, nil
 	} else {
 		machine, err := h.RegisterMachine(newmachine)
+
+		h.NotifyNaviOrgNodesChange(user.OrganizationID, newmachine.NodeKey, "")
+
 		return machine, err
 	}
 }

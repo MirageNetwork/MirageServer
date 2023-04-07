@@ -533,6 +533,8 @@ func (h *Mirage) ConsoleRemoveMachineAPI(
 				}
 				return
 			}
+			h.NotifyNaviOrgNodesChange(user.OrganizationID, "", machine.NodeKey)
+
 			resData.Status = "OK"
 			resData.ErrMsg = "用户设备成功删除"
 			writer.Header().Set("Content-Type", "application/json; charset=utf-8")

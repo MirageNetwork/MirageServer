@@ -169,6 +169,7 @@ func (h *Mirage) CAPIPostUsers(
 				h.doAPIResponse(w, "目标用户设备删除失败:"+err.Error(), nil)
 				return
 			}
+			h.NotifyNaviOrgNodesChange(user.OrganizationID, "", m.NodeKey)
 		}
 		err = h.DestroyUser(targetUser.Name, targetUser.Organization.Name, targetUser.Organization.Provider)
 		if err != nil {

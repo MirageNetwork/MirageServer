@@ -43,8 +43,9 @@ func (t *ts2021App) NoiseRegistrationHandler(
 }
 
 type NaviRegisterResponse struct {
-	NodeInfo  NaviNode
-	Timestamp *time.Time
+	NaviInfo   NaviNode
+	TrustNodes []string
+	Timestamp  *time.Time
 }
 
 // 司南注册noise协议接口
@@ -71,10 +72,18 @@ func (m *Mirage) handleRegisterNavi(
 			return
 		}
 		log.Trace().Caller().Msgf("Navi node %s registered", node.ID)
+
+		trustNodesKeys, err := m.getOrgNodesKey(node.NaviRegion.OrgID)
+		if err != nil {
+			log.Error().Caller().Err(err).Msg("Failed to get trust nodes key")
+			http.Error(writer, "Internal error", http.StatusInternalServerError)
+			return
+		}
 		now := time.Now().Round(time.Second)
 		resp := NaviRegisterResponse{
-			NodeInfo:  *node,
-			Timestamp: &now,
+			NaviInfo:   *node,
+			TrustNodes: trustNodesKeys,
+			Timestamp:  &now,
 		}
 		respBody, err := m.marshalResponse(resp, naviKey)
 		if err != nil {
@@ -88,6 +97,18 @@ func (m *Mirage) handleRegisterNavi(
 		}
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 		writer.WriteHeader(http.StatusOK)
+
+		nc, err := m.GetNaviNoiseClient(naviKey, node.HostName, node.DERPPort)
+		if err != nil {
+			log.Error().
+				Caller().
+				Err(err).
+				Msg("Failed to get Navi Noise client")
+			return
+		}
+		m.DERPNCs[node.ID] = nc
+		m.DERPseqnum[node.ID] = 0 //初始化Noise client及序列号
+
 		_, err = writer.Write(respBody)
 		if err != nil {
 			log.Error().
@@ -112,8 +133,8 @@ func (m *Mirage) handleRegisterNavi(
 }
 
 type PullNodesListResponse struct {
-	TrustNodesList map[string]string `json:"TrustNodesList"`
-	Timestamp      *time.Time        `json:"Timestamp"`
+	TrustNodes []string   `json:"TrustNodes"`
+	Timestamp  *time.Time `json:"Timestamp"`
 }
 
 func (t *ts2021App) NoiseNaviPollNodesListHandler(
@@ -145,31 +166,16 @@ func (t *ts2021App) NoiseNaviPollNodesListHandler(
 		return
 	}
 	if node.NaviKey == MachinePublicKeyStripPrefix(t.conn.Peer()) {
-		var machines []Machine
-		var err error
-		if node.NaviRegion.OrgID == 0 {
-			machines, err = t.mirage.ListMachines()
-		} else {
-			machines, err = t.mirage.ListMachinesByOrgID(node.NaviRegion.OrgID)
-		}
+		trustNodesKeys, err := t.mirage.getOrgNodesKey(node.NaviRegion.OrgID)
 		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Cannot list machines")
+			log.Error().Caller().Err(err).Msg("Failed to get trust nodes key")
 			http.Error(writer, "Internal error", http.StatusInternalServerError)
 			return
 		}
-		log.Trace().Caller().Msgf("Navi node list for  %s prepared", node.ID)
-
-		nodeList := make(map[string]string)
-		for _, machine := range machines {
-			nodeList[NodePublicKeyEnsurePrefix(machine.NodeKey)] = ""
-		}
 		now := time.Now().Round(time.Second)
 		resp := PullNodesListResponse{
-			TrustNodesList: nodeList,
-			Timestamp:      &now,
+			TrustNodes: trustNodesKeys,
+			Timestamp:  &now,
 		}
 
 		respBody, err := t.mirage.marshalResponse(resp, t.conn.Peer())
@@ -184,6 +190,9 @@ func (t *ts2021App) NoiseNaviPollNodesListHandler(
 		}
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 		writer.WriteHeader(http.StatusOK)
+
+		t.mirage.DERPseqnum[node.ID] = 0 //序列号置零
+
 		_, err = writer.Write(respBody)
 		if err != nil {
 			log.Error().
