@@ -124,7 +124,7 @@ func (m *Mirage) getOrgNodesKey(orgID int64) ([]string, error) {
 
 	nodeList := make([]string, 0)
 	for _, machine := range machines {
-		nodeList = append(nodeList, NodePublicKeyEnsurePrefix(machine.NodeKey))
+		nodeList = append(nodeList, machine.NodeKey)
 	}
 	return nodeList, nil
 }
