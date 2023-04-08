@@ -230,14 +230,16 @@ function secondsFormat(s) {
         <table class="table w-full">
           <thead>
             <tr>
-              <th class="flex-auto table-cell items-center">名称</th>
-              <th class="table-cell items-center md:w-1/4 lg:w-1/5">指定IP</th>
-              <th class="hidden lg:table-cell items-center lg:w-1/5">端口</th>
-              <th class="hidden lg:table-cell items-center lg:w-1/5">架构</th>
               <th
-                class="table-cell justify-end ml-auto md:ml-0 relative items-center w-8"
+                class="md:w-1/4 flex-auto md:flex-initial md:shrink-0 w-0 text-ellipsis"
               >
-                <span class="sr-only">租户操作菜单</span>
+                司南
+              </th>
+              <th class="hidden md:table-cell md:w-1/4">IP</th>
+              <th class="hidden md:table-cell w-1/4 lg:w-1/5">端口</th>
+              <th class="hidden lg:table-cell md:flex-auto">状态</th>
+              <th class="table-cell justify-end ml-auto md:ml-0 relative w-1/6 lg:w-12">
+                <span class="sr-only">司南操作菜单</span>
               </th>
             </tr>
           </thead>
@@ -249,26 +251,48 @@ function secondsFormat(s) {
                 @mouseleave="mouseLeaveNaviNode()"
                 class="w-full px-0.5 hover"
               >
-                <td class="flex-auto flex items-center">
+                <td
+                  class="md:w-1/4 flex-auto md:flex-initial md:shrink-0 w-0 text-ellipsis"
+                >
                   <div class="relative">
                     <div class="items-center text-gray-900">
                       <p class="font-semibold hover:text-blue-500">
+                        <span
+                          :class="{
+                            'bg-green-500': nn.Statics.latency != -1,
+                            'bg-gray-300': nn.Statics.latency == -1,
+                          }"
+                          class="inline-block w-2 h-2 rounded-full relative -top-px lg:hidden mr-2"
+                        ></span>
                         <a class="stretched-link">{{ nn.HostName }} </a>
+                        <span v-if="nn.Arch == 'external'" class="ml-1">
+                          <div
+                            class="inline-flex items-center align-middle justify-center font-medium border border-red-50 bg-red-50 text-red-600 rounded-sm px-1 text-xs mr-1"
+                          >
+                            非受管
+                          </div>
+                        </span>
                       </p>
-                      <span v-if="nn.status == 'suspend'">
-                        <div
-                          class="inline-flex items-center align-middle justify-center font-medium border border-red-50 bg-red-50 text-red-600 rounded-sm px-1 text-xs mr-1"
-                        >
-                          外部司南
-                        </div>
-                      </span>
+                    </div>
+                    <div class="md:hidden flex space-x-1 truncate">
+                      <span class="text-sm">{{
+                        nn.Statics.latency != -1 ? nn.Statics.latency + "ms" : "断开"
+                      }}</span
+                      ><span>·</span
+                      ><span class="md:hidden text-gray-600 text-sm">{{
+                        nn.NoDERP ? "无中继" : "中继" + nn.DERPPort
+                      }}</span
+                      ><span>·</span
+                      ><span class="md:hidden text-gray-600 text-sm">{{
+                        nn.NoSTUN ? "无导航" : "导航" + nn.STUNPort
+                      }}</span>
                     </div>
                     <div class="flex items-center text-gray-600 text-xs">
                       <span>{{ nn.Name }} </span>
                     </div>
                   </div>
                 </td>
-                <td class="table-cell items-center md:w-1/4 lg:w-1/5">
+                <td class="hidden md:table-cell md:w-1/4">
                   <div class="flex relative min-w-0">
                     <div class="flex flex-col items-start text-gray-600 text-sm">
                       <span>IPv4: {{ nn.IPv4 == "" ? "未指定" : nn.IPv4 }} </span>
@@ -276,7 +300,7 @@ function secondsFormat(s) {
                     </div>
                   </div>
                 </td>
-                <td class="hidden lg:table-cell items-center lg:w-1/5">
+                <td class="hidden md:table-cell w-1/4 lg:w-1/5">
                   <div class="flex relative min-w-0">
                     <div class="flex flex-col items-start text-sm">
                       <span>中继: {{ nn.NoDERP ? "已禁用" : nn.DERPPort }}</span>
@@ -284,7 +308,7 @@ function secondsFormat(s) {
                     </div>
                   </div>
                 </td>
-                <td class="hidden lg:table-cell items-center lg:w-1/5">
+                <td class="hidden lg:table-cell md:flex-auto">
                   <span>
                     <div class="inline-flex items-center cursor-default">
                       <span
@@ -316,9 +340,7 @@ function secondsFormat(s) {
                     </div>
                   </span>
                 </td>
-                <td
-                  class="table-cell justify-end ml-auto md:ml-0 relative items-center w-8"
-                >
+                <td class="table-cell justify-end ml-auto md:ml-0 relative w-1/6 lg:w-12">
                   <div
                     v-if="
                       (!NaviNodeBtnShow && !NaviNodeMenuShow) ||
