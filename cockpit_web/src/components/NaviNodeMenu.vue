@@ -8,7 +8,7 @@ const tenantMenu = ref(null);
 const props = defineProps({
   toleft: Number,
   totop: Number,
-  selectTenant: Object,
+  selectNavi: Object,
 });
 const menuLeft = computed(() => {
   return String(String(props.toleft + 32 - tenantMenu.value?.clientWidth));
@@ -45,17 +45,17 @@ const closeMe = (event) => {
       style="outline: none; pointer-events: auto"
     >
       <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100">
-        共 {{ selectTenant.userCount }} 用户
+        共接收 {{ selectNavi.Statics.derp.bytes_received }} 字节
       </div>
       <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100">
-        共 {{ selectTenant.adminCount }} 管理员
+        共发送 {{ selectNavi.Statics.derp.bytes_sent }} 字节
       </div>
       <div class="my-1 border-b border-base-300"></div>
       <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100">
-        共 {{ selectTenant.deviceCount }} 设备
+        共 {{ selectNavi.Statics.derp.gauge_clients_total }} 接入
       </div>
       <div class="block px-4 py-2 cursor-pointer hover:bg-gray-100">
-        共 {{ selectTenant.subnetCount }} 子网路由
+        共 {{ selectNavi.Statics.derp.packets_dropped }} 丢包
       </div>
       <div class="my-1 border-b border-base-300"></div>
       <div
@@ -66,10 +66,10 @@ const closeMe = (event) => {
       </div>
       <div class="my-1 border-b border-base-300"></div>
       <div
-        @click="$emit('showdialog-removetenant')"
+        @click="$emit('showdialog-removenavi')"
         class="block px-4 py-2 cursor-pointer hover:bg-gray-100 text-red-400"
       >
-        移除租户…
+        移除司南…
       </div>
     </div>
   </div>

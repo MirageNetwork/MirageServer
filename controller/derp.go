@@ -42,7 +42,8 @@ type NaviNode struct {
 	DNSID       string `json:"DNSID"`       //DNS服务商的ID
 	DNSKey      string `json:"DNSKey"`      //DNS服务商的Key
 
-	Arch string `json:"Arch"` //所在环境架构，x86_64或aarch64
+	Arch    string     `json:"Arch"` //所在环境架构，x86_64或aarch64
+	Statics NaviStatus `json:"Statics"`
 }
 
 func (c *Cockpit) toDERPRegion(nr NaviRegion) (tailcfg.DERPRegion, error) {
@@ -181,6 +182,11 @@ func (m *Mirage) LoadDERPMapFromURL(addr string) (*tailcfg.DERPMap, error) {
 		log.Warn().
 			Msg("DERP map is empty, not a single DERP map datasource was loaded correctly or contained a region")
 	}
+
+	//cgao6: TEMP
+	derpMap = tailcfg.DERPMap{
+		Regions: make(map[int]*tailcfg.DERPRegion),
+	} //TODO: 临时
 
 	// 从数据库读取DERP信息
 	naviRegions := m.ListNaviRegions()

@@ -2,10 +2,10 @@
 import { ref, computed, nextTick, onMounted, onUnmounted, watch, watchEffect } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
 import NaviNodeMenu from "./components/NaviNodeMenu.vue";
-import RemoveTenant from "./umenu/RemoveTenant.vue";
 import EditTenant from "./umenu/EditTenant.vue";
 
 import Deploy from "./derp/Deploy.vue";
+import RemoveNavi from "./derp/RemoveNavi.vue";
 import Toast from "./components/Toast.vue";
 
 //与框架交互部分
@@ -57,11 +57,11 @@ function mouseLeaveNaviNode() {
 const NaviNodeMenuShow = ref(false);
 const NaviNodeBtnShow = ref(false);
 
-const removeNaviNodeShow = ref(false);
-function showRemoveNaviNode() {
+const removeNaviShow = ref(false);
+function showRemoveNavi() {
   NaviNodeBtnShow.value = false;
   closeNaviNodeMenu();
-  removeNaviNodeShow.value = true;
+  removeNaviShow.value = true;
 }
 
 const editNaviNodeShow = ref(false);
@@ -83,21 +83,18 @@ function addNaviDone(newlist) {
   deployDERPShow.value = false;
 }
 
-function doRemoveTenant() {
+function doRemoveNavi() {
   axios
-    .post("/cockpit/api/tenants", {
-      tenantID: selectTenant.value["id"],
-      action: "delete_tenant",
-    })
+    .delete("/cockpit/api/derp/" + selectNaviNode.value["Name"], {})
     .then(function (response) {
-      if (response.data["status"] != "success") {
+      if (response.data["status"] == "success") {
+        removeNaviShow.value = false;
+        toastMsg.value = "已删除 " + selectNaviNode.value["HostName"];
+        toastShow.value = true;
+        NaviRegionList.value = response.data["data"];
+      } else {
         toastMsg.value = response.data["status"].substring(6);
         toastShow.value = true;
-      } else {
-        removeTenantShow.value = false;
-        toastMsg.value = "已删除 " + selectTenant.value["name"];
-        toastShow.value = true;
-        getTenants().then().catch();
       }
     })
     .catch(function (error) {
@@ -109,7 +106,7 @@ function doRemoveTenant() {
 function doUpdateTenant(newV) {
   axios
     .post("/cockpit/api/tenants", {
-      tenantID: selectTenant.value["id"],
+      tenantID: selectNaviNode.value["Name"],
       action: "update_tenant",
       newValue: newV,
     })
@@ -119,9 +116,9 @@ function doUpdateTenant(newV) {
         toastShow.value = true;
       } else {
         editTenantShow.value = false;
-        toastMsg.value = "已更新 " + selectTenant.value["name"] + " 租户配置";
+        toastMsg.value = "已更新 " + selectNaviNode.value["HostName"] + " 租户配置";
         toastShow.value = true;
-        getTenants().then().catch();
+        getNaviRegions().then().catch();
       }
     })
     .catch(function (error) {
@@ -181,6 +178,20 @@ onUnmounted(() => {
 onBeforeRouteLeave(() => {
   clearInterval(getNaviRegionsIntID);
 });
+
+function secondsFormat(s) {
+  var day = Math.floor(s / (24 * 3600)); // Math.floor()向下取整
+  var hour = Math.floor((s - day * 24 * 3600) / 3600);
+  var minute = Math.floor((s - day * 24 * 3600 - hour * 3600) / 60);
+  var second = s - day * 24 * 3600 - hour * 3600 - minute * 60;
+  return (
+    (day > 0 ? day + "天" : "") +
+    (hour > 0 ? hour + "小时" : "") +
+    (minute > 0 ? minute + "分" : "") +
+    second +
+    "秒"
+  );
+}
 </script>
 
 <template>
@@ -260,16 +271,16 @@ onBeforeRouteLeave(() => {
                 <td class="table-cell items-center md:w-1/4 lg:w-1/5">
                   <div class="flex relative min-w-0">
                     <div class="flex flex-col items-start text-gray-600 text-sm">
-                      <span>{{ nn.IPv4 }} </span>
-                      <span>{{ nn.IPv6 }} </span>
+                      <span>IPv4: {{ nn.IPv4 == "" ? "未指定" : nn.IPv4 }} </span>
+                      <span>IPv6: {{ nn.IPv6 == "" ? "未指定" : nn.IPv6 }} </span>
                     </div>
                   </div>
                 </td>
                 <td class="hidden lg:table-cell items-center lg:w-1/5">
                   <div class="flex relative min-w-0">
                     <div class="flex flex-col items-start text-sm">
-                      <span>{{ "中继端口:" + nn.DERPPort }}</span>
-                      <span>{{ "导航端口:" + nn.STUNPort }}</span>
+                      <span>中继: {{ nn.NoDERP ? "已禁用" : nn.DERPPort }}</span>
+                      <span>导航: {{ nn.NoSTUN ? "已禁用" : nn.STUNPort }}</span>
                     </div>
                   </div>
                 </td>
@@ -279,21 +290,28 @@ onBeforeRouteLeave(() => {
                       <span
                         class="inline-block w-2 h-2 rounded-full mr-2"
                         :class="{
-                          'bg-green-500': !nn.STUNOnly,
-                          'bg-gray-300': nn.STUNOnly,
+                          'bg-green-500': nn.Statics.latency != -1,
+                          'bg-gray-300': nn.Statics.latency == -1,
                         }"
                       ></span>
                       <span
-                        v-if="nn.STUNOnly"
+                        v-if="nn.Arch != 'external'"
                         class="text-sm text-gray-600 tooltip tooltip-top"
-                        data-tip=" "
-                        >{{ nn.Arch }}</span
+                        :data-tip="
+                          '已启动' + secondsFormat(nn.Statics.counter_uptime_sec)
+                        "
+                        >{{
+                          nn.Statics.latency != -1 ? nn.Statics.latency + "ms" : "断开"
+                        }}</span
                       >
                       <span
                         v-else
                         class="text-sm text-gray-600 tooltip tooltip-top"
-                        data-tip=" "
-                        >{{ nn.Arch }}
+                        data-tip="非受管司南"
+                      >
+                        {{
+                          nn.Statics.latency != -1 ? nn.Statics.latency + "ms" : "断开"
+                        }}
                       </span>
                     </div>
                   </span>
@@ -376,9 +394,9 @@ onBeforeRouteLeave(() => {
       v-if="NaviNodeMenuShow"
       :toleft="btnLeft"
       :totop="btnTop"
-      :select-tenant="selectNaviNode"
+      :select-navi="selectNaviNode"
       @close="closeNaviNodeMenu"
-      @showdialog-removetenant="showRemoveNaviNode"
+      @showdialog-removenavi="showRemoveNavi"
       @showdialog-edittenant="showEditNaviNode"
     ></NaviNodeMenu>
   </Teleport>
@@ -394,13 +412,13 @@ onBeforeRouteLeave(() => {
     ></Deploy>
 
     <!-- 移除租户提示框显示 -->
-    <RemoveTenant
-      v-if="removeTenantShow"
-      :select-tenant="selectTenant"
-      @close="removeTenantShow = false"
-      @confirm-remove="doRemoveTenant"
+    <RemoveNavi
+      v-if="removeNaviShow"
+      :select-navi="selectNaviNode"
+      @close="removeNaviShow = false"
+      @confirm-remove="doRemoveNavi"
     >
-    </RemoveTenant>
+    </RemoveNavi>
 
     <!-- 编辑租户提示框显示 -->
     <EditTenant

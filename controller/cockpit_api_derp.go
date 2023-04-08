@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh"
@@ -63,6 +64,40 @@ func (c *Cockpit) CAPIAddDERP(
 ) {
 	reqData := NaviDeployREQ{}
 	json.NewDecoder(r.Body).Decode(&reqData)
+
+	if reqData.NaviNode.SSHAddr == "" {
+		// 非受管模式
+		// 开始处理服务端数据信息
+		if reqData.NaviNode.NaviRegionID == -1 {
+			naviRegion := &NaviRegion{
+				RegionCode: reqData.RegionCode,
+				RegionName: reqData.RegionName,
+			}
+			naviRegion = c.CreateNaviRegion(naviRegion)
+			if naviRegion == nil {
+				c.doAPIResponse(w, "创建区域失败", nil)
+				return
+			}
+			reqData.NaviNode.NaviRegionID = naviRegion.ID
+		} else {
+			naviRegion := c.GetNaviRegion(reqData.NaviNode.NaviRegionID)
+			if naviRegion == nil {
+				c.doAPIResponse(w, "区域不存在", nil)
+				return
+			}
+		}
+
+		derpid := uuid.New().String()
+		reqData.NaviNode.ID = derpid
+		reqData.NaviNode.Arch = "external"
+		naviNode := c.CreateNaviNode(&reqData.NaviNode)
+		if naviNode == nil {
+			c.doAPIResponse(w, "新建司南档案失败", nil)
+			return
+		}
+		c.CAPIQueryDERP(w, r)
+		return
+	}
 
 	remoteAuth := []ssh.AuthMethod{}
 	if reqData.NaviNode.SSHPwd != "" {
@@ -310,4 +345,33 @@ func sshSendFile(sshClient *ssh.Client, localFilePath string, remoteFilePath str
 		return errors.New("文件大小不一致，传输失败")
 	}
 	return nil
+}
+
+func (c *Cockpit) CAPIDelNaviNode(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	vars := mux.Vars(r)
+	naviID, ok := vars["id"]
+	if !ok {
+		c.doAPIResponse(w, "未指定司南ID", nil)
+		return
+	}
+
+	naviNode := c.GetNaviNode(naviID)
+	if naviNode == nil {
+		c.doAPIResponse(w, "未找到该司南档案", nil)
+		return
+	}
+	// TODO: 是否有必要做远程关闭？
+
+	if err := c.db.Delete(naviNode).Error; err != nil {
+		c.doAPIResponse(w, "数据库删除司南节点失败:"+err.Error(), nil)
+		return
+	}
+	delete(c.App.DERPNCs, naviID)
+	delete(c.App.DERPseqnum, naviID)
+	c.App.LoadDERPMapFromURL(c.App.cfg.DERPURL)
+
+	c.CAPIQueryDERP(w, r)
 }

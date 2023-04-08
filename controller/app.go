@@ -404,6 +404,7 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 	go h.expireEphemeralNodes(ticker)  //updateInterval)
 	go h.expireExpiredMachines(ticker) //updateInterval)
 	go h.failoverSubnetRoutes(ticker)  //updateInterval)
+	go h.refreshNaviStatusPoller(ticker)
 
 	// Prepare group for running listeners
 	errorGroup := new(errgroup.Group)

@@ -149,6 +149,8 @@ func (c *Cockpit) createRouter() *mux.Router {
 	cockpit_router.HandleFunc("/api/tenants", c.CAPIGetTenant).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/derp/query", c.CAPIQueryDERP).Methods(http.MethodGet)
 
+	cockpit_router.PathPrefix("/api/derp/{id}").HandlerFunc(c.CAPIDelNaviNode).Methods(http.MethodDelete)
+
 	cockpit_router.PathPrefix("").Handler(http.StripPrefix("/cockpit", http.FileServer(http.FS(cockpitDir))))
 
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
