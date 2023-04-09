@@ -685,8 +685,8 @@ function isInvalidTag(tag) {
                 </ul>
                 <ul v-else>
                   <li v-for="(latency, derpname) in currentMachine.derps">
-                    <strong class="font-medium">{{ derpname }} 号中继</strong>:
-                    {{ latency }}&nbsp;ms
+                    <strong class="font-medium">{{ derpname }}</strong
+                    >: {{ latency }}&nbsp;ms
                     <svg
                       v-if="currentMachine.usederp == derpname"
                       xmlns="http://www.w3.org/2000/svg"

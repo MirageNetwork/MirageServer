@@ -238,7 +238,15 @@ func (h *Mirage) ConsoleMachinesAPI(
 			tmpMachine.DERPs = make(map[string]int)
 			for derpname, latency := range machine.HostInfo.NetInfo.DERPLatency {
 				ipver := strings.Split(derpname, "-")[1]
+				derpRehionID, err := strconv.ParseInt(strings.Split(derpname, "-")[0], 10, 64)
 				derpname = strings.Split(derpname, "-")[0]
+				if err == nil {
+					region := h.GetNaviRegion(derpRehionID)
+					if region != nil {
+						derpname = region.RegionName
+					}
+				}
+
 				if ipver == "v4" {
 					if peerlatency, ok := machine.HostInfo.NetInfo.DERPLatency[derpname+"-v6"]; ok {
 						if latency < peerlatency {
