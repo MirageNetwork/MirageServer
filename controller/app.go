@@ -63,9 +63,9 @@ type Mirage struct {
 	cancel context.CancelFunc
 
 	noisePrivateKey *key.MachinePrivate
-	DERPMap         *tailcfg.DERPMap
-	DERPNCs         map[string]*controlclient.NoiseClient
-	DERPseqnum      map[string]int
+	//	DERPMap         *tailcfg.DERPMap
+	DERPNCs    map[string]*controlclient.NoiseClient
+	DERPseqnum map[string]int
 
 	aclPolicy *ACLPolicy
 	aclRules  []tailcfg.FilterRule
@@ -393,10 +393,10 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 	var err error
 
 	// Fetch an initial DERP Map before we start serving
-	h.DERPMap, err = h.LoadDERPMapFromURL(h.cfg.DERPURL)
-	if err != nil {
-		return err
-	}
+	//	h.DERPMap, err = h.LoadDERPMapFromURL(h.cfg.DERPURL)
+	//	if err != nil {
+	//		return err
+	//	}
 
 	ticker := time.NewTicker(time.Millisecond * updateInterval)
 	defer ticker.Stop()

@@ -167,6 +167,7 @@ function setBaseDomain() {
       toastShow.value = true;
     });
 }
+/*
 function setDERPURL() {
   axios
     .post("/cockpit/api/setting/general", {
@@ -193,6 +194,7 @@ function setDERPURL() {
       toastShow.value = true;
     });
 }
+*/
 function setSubnetAccessDueMachine() {
   axios
     .post("/cockpit/api/setting/general", {
@@ -375,7 +377,7 @@ onMounted(() => {
           </button>
         </div>
       </div>
-      <div>
+      <div v-if="false">
         <header class="max-w-2xl">
           <h3 class="text-xl font-semibold tracking-tight">向导节点列表发布地址</h3>
         </header>

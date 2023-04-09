@@ -204,6 +204,29 @@ func (m *Mirage) LoadDERPMapFromURL(addr string) (*tailcfg.DERPMap, error) {
 	return &derpMap, err
 }
 
+func (m *Mirage) LoadOrgDERPs(orgID int64) (*tailcfg.DERPMap, error) {
+	derpMap := &tailcfg.DERPMap{
+		Regions: make(map[int]*tailcfg.DERPRegion),
+	}
+
+	// 从数据库读取DERP信息
+	naviRegions := m.ListNaviRegions()
+	if len(naviRegions) != 0 {
+		for _, nr := range naviRegions {
+			if nr.OrgID == 0 || nr.OrgID == orgID {
+				derpRegion, err := m.toDERPRegion(nr)
+				if err != nil {
+					log.Error().Err(err).Msg("Cannot convert NaviRegion to DERPRegion")
+					return nil, err
+				}
+				derpMap.Regions[derpRegion.RegionID] = &derpRegion
+			}
+		}
+	}
+
+	return derpMap, nil
+}
+
 func (m *Mirage) toDERPRegion(nr NaviRegion) (tailcfg.DERPRegion, error) {
 	nodes := m.ListNaviNodes(nr.ID)
 	derpNodes, err := m.toDERPNodes(nodes)

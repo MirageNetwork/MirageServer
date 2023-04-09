@@ -27,7 +27,7 @@ type Config struct {
 
 	AllowRouteDueToMachine bool //DONE
 
-	DERPURL string //DONE
+	//	DERPURL string //DONE
 
 	ESURL string
 	ESKey string

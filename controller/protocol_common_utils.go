@@ -83,12 +83,22 @@ func (h *Mirage) generateMapResponse(
 
 		return nil, err
 	}
+
+	derpMap, err := h.LoadOrgDERPs(machine.User.OrganizationID)
+	if err != nil {
+		log.Error().
+			Caller().
+			Str("func", "generateMapResponse").
+			Err(err).
+			Msg("Failed to get DERP map of machine")
+	}
+
 	resp := tailcfg.MapResponse{
 		KeepAlive: false,
 		Node:      node,
 
 		// TODO: Only send if updated
-		DERPMap: h.DERPMap,
+		DERPMap: derpMap, //cgao6: h.DERPMap,
 
 		// TODO: Only send if updated
 		Peers: nodePeers,

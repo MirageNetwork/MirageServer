@@ -2,10 +2,10 @@
 import { ref, computed, nextTick, onMounted, onUnmounted, watch, watchEffect } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
 import NaviNodeMenu from "./components/NaviNodeMenu.vue";
-import EditTenant from "./umenu/EditTenant.vue";
 
 import Deploy from "./derp/Deploy.vue";
 import RemoveNavi from "./derp/RemoveNavi.vue";
+import NaviDetails from "./derp/NaviDetails.vue";
 import Toast from "./components/Toast.vue";
 
 //与框架交互部分
@@ -64,11 +64,11 @@ function showRemoveNavi() {
   removeNaviShow.value = true;
 }
 
-const editNaviNodeShow = ref(false);
-function showEditNaviNode() {
+const naviDetailsShow = ref(false);
+function showNaviDetails() {
   NaviNodeBtnShow.value = false;
   closeNaviNodeMenu();
-  editNaviNodeShow.value = true;
+  naviDetailsShow.value = true;
 }
 
 const deployDERPShow = ref(false);
@@ -95,30 +95,6 @@ function doRemoveNavi() {
       } else {
         toastMsg.value = response.data["status"].substring(6);
         toastShow.value = true;
-      }
-    })
-    .catch(function (error) {
-      toastMsg.value = error;
-      toastShow.value = true;
-    });
-}
-
-function doUpdateTenant(newV) {
-  axios
-    .post("/cockpit/api/tenants", {
-      tenantID: selectNaviNode.value["Name"],
-      action: "update_tenant",
-      newValue: newV,
-    })
-    .then(function (response) {
-      if (response.data["status"] != "success") {
-        toastMsg.value = response.data["status"].substring(6);
-        toastShow.value = true;
-      } else {
-        editTenantShow.value = false;
-        toastMsg.value = "已更新 " + selectNaviNode.value["HostName"] + " 租户配置";
-        toastShow.value = true;
-        getNaviRegions().then().catch();
       }
     })
     .catch(function (error) {
@@ -227,18 +203,20 @@ function secondsFormat(s) {
           }}
           共 {{ nr.Nodes ? nr.Nodes.length : 0 }} 只司南
         </div>
-        <table class="table w-full">
+        <table class="table w-full mb-3">
           <thead>
             <tr>
               <th
-                class="md:w-1/4 flex-auto md:flex-initial md:shrink-0 w-0 text-ellipsis"
+                class="md:w-1/4 flex-auto md:flex-initial md:shrink-0 w-0 text-ellipsis pt-2 pb-1"
               >
                 司南
               </th>
-              <th class="hidden md:table-cell md:w-1/4">IP</th>
-              <th class="hidden md:table-cell w-1/4 lg:w-1/5">端口</th>
-              <th class="hidden lg:table-cell md:flex-auto">状态</th>
-              <th class="table-cell justify-end ml-auto md:ml-0 relative w-1/6 lg:w-12">
+              <th class="hidden md:table-cell md:w-1/4 pt-2 pb-1">IP</th>
+              <th class="hidden md:table-cell w-1/4 lg:w-1/5 pt-2 pb-1">端口</th>
+              <th class="hidden lg:table-cell md:flex-auto pt-2 pb-1">状态</th>
+              <th
+                class="table-cell justify-end ml-auto md:ml-0 relative w-1/6 lg:w-12 pt-2 pb-1"
+              >
                 <span class="sr-only">司南操作菜单</span>
               </th>
             </tr>
@@ -419,7 +397,7 @@ function secondsFormat(s) {
       :select-navi="selectNaviNode"
       @close="closeNaviNodeMenu"
       @showdialog-removenavi="showRemoveNavi"
-      @showdialog-edittenant="showEditNaviNode"
+      @showdialog-detailinfo="showNaviDetails"
     ></NaviNodeMenu>
   </Teleport>
 
@@ -443,13 +421,12 @@ function secondsFormat(s) {
     </RemoveNavi>
 
     <!-- 编辑租户提示框显示 -->
-    <EditTenant
-      v-if="editTenantShow"
-      :select-tenant="selectTenant"
-      @close="editTenantShow = false"
-      @update-tenant="doUpdateTenant"
+    <NaviDetails
+      v-if="naviDetailsShow"
+      :select-navi="selectNaviNode"
+      @close="naviDetailsShow = false"
     >
-    </EditTenant>
+    </NaviDetails>
   </Teleport>
 </template>
 

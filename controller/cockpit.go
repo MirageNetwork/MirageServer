@@ -404,7 +404,7 @@ func (c *Cockpit) CheckCfgValid() (cfg *Config, ok bool) {
 		if err != nil {
 			return
 		}
-		if cfg.ServerURL == "" || cfg.Addr == "" || cfg.IPPrefixes == nil || cfg.BaseDomain == "" || cfg.DERPURL == "" {
+		if cfg.ServerURL == "" || cfg.Addr == "" || cfg.IPPrefixes == nil || cfg.BaseDomain == "" { //|| cfg.DERPURL == "" {
 			return
 		}
 		/*
@@ -558,22 +558,24 @@ func (c *Cockpit) SetSettingGeneral(
 			c.doAPIResponse(w, "更新系统配置失败", nil)
 			return
 		}
-	case "set-derpurl":
-		derpURL, ok := reqData["DERPURL"].(string)
-		if !ok {
-			c.doAPIResponse(w, "用户请求DERPURL解析失败", nil)
-			return
-		}
-		sysCfg := c.GetSysCfg()
-		if sysCfg == nil {
-			c.doAPIResponse(w, "获取系统配置失败", nil)
-			return
-		}
-		sysCfg.DerpUrl = derpURL
-		if err := c.db.Save(sysCfg).Error; err != nil {
-			c.doAPIResponse(w, "更新系统配置失败", nil)
-			return
-		}
+		/*
+			case "set-derpurl":
+				derpURL, ok := reqData["DERPURL"].(string)
+				if !ok {
+					c.doAPIResponse(w, "用户请求DERPURL解析失败", nil)
+					return
+				}
+				sysCfg := c.GetSysCfg()
+				if sysCfg == nil {
+					c.doAPIResponse(w, "获取系统配置失败", nil)
+					return
+				}
+				sysCfg.DerpUrl = derpURL
+				if err := c.db.Save(sysCfg).Error; err != nil {
+					c.doAPIResponse(w, "更新系统配置失败", nil)
+					return
+				}
+		*/
 	case "set-routeaccessduemachine":
 		SubnetAccessDueMachine, ok := reqData["SubnetAccessDueMachine"].(bool)
 		if !ok {

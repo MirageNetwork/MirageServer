@@ -15,13 +15,13 @@ type SysConfig struct {
 	gorm.Model
 	AdminCredential AdminCredential `gorm:"not null"`
 
-	ServerURL             string
-	Addr                  string   `gorm:"default:':8080'"`               // default port
-	Mip4                  IPPrefix `gorm:"default:'100.64.0.0/10'"`       // default prefix
-	Mip6                  IPPrefix `gorm:"default:'fd7a:115c:a1e0::/48'"` // default prefix
-	Basedomain            string   `gorm:"default:'mira.net'"`            // default domain
-	DerpUrl               string   `gorm:"default:'https://controlplane.tailscale.com/derpmap/default'"`
-	RouteAccessDueMachine bool     `gorm:"default:false"`
+	ServerURL  string
+	Addr       string   `gorm:"default:':8080'"`               // default port
+	Mip4       IPPrefix `gorm:"default:'100.64.0.0/10'"`       // default prefix
+	Mip6       IPPrefix `gorm:"default:'fd7a:115c:a1e0::/48'"` // default prefix
+	Basedomain string   `gorm:"default:'mira.net'"`            // default domain
+	//	DerpUrl               string   `gorm:"default:'https://controlplane.tailscale.com/derpmap/default'"`
+	RouteAccessDueMachine bool `gorm:"default:false"`
 
 	EsUrl string
 	EsKey string
@@ -76,12 +76,12 @@ type GeneralCfg struct {
 
 func (s *SysConfig) toGeneralCfg() GeneralCfg {
 	return GeneralCfg{
-		SrvAddr:               s.Addr,
-		ServerURL:             s.ServerURL,
-		MIPV4:                 s.Mip4.String(),
-		MIPV6:                 s.Mip6.String(),
-		BaseDomain:            s.Basedomain,
-		DERPURL:               s.DerpUrl,
+		SrvAddr:    s.Addr,
+		ServerURL:  s.ServerURL,
+		MIPV4:      s.Mip4.String(),
+		MIPV6:      s.Mip6.String(),
+		BaseDomain: s.Basedomain,
+		//		DERPURL:               s.DerpUrl,
 		RouteAccessDueMachine: s.RouteAccessDueMachine,
 
 		ESURL: s.EsUrl,
@@ -131,11 +131,11 @@ func (s *SysConfig) toSrvConfig() (*Config, error) {
 	}
 
 	return &Config{
-		ServerURL:              s.ServerURL,
-		Addr:                   s.Addr,
-		IPPrefixes:             []netip.Prefix{netip.Prefix(s.Mip4), netip.Prefix(s.Mip6)},
-		BaseDomain:             s.Basedomain,
-		DERPURL:                s.DerpUrl,
+		ServerURL:  s.ServerURL,
+		Addr:       s.Addr,
+		IPPrefixes: []netip.Prefix{netip.Prefix(s.Mip4), netip.Prefix(s.Mip6)},
+		BaseDomain: s.Basedomain,
+		//		DERPURL:                s.DerpUrl,
 		AllowRouteDueToMachine: s.RouteAccessDueMachine,
 
 		ESURL: s.EsUrl,

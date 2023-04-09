@@ -371,7 +371,7 @@ func (c *Cockpit) CAPIDelNaviNode(
 	}
 	delete(c.App.DERPNCs, naviID)
 	delete(c.App.DERPseqnum, naviID)
-	c.App.LoadDERPMapFromURL(c.App.cfg.DERPURL)
+	//	c.App.LoadDERPMapFromURL(c.App.cfg.DERPURL)
 
 	c.CAPIQueryDERP(w, r)
 }
