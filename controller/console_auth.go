@@ -832,19 +832,7 @@ func (h *Mirage) registerMachineFromConsole(
 	now := time.Now()
 	expiration := time.Now().AddDate(0, 0, int(user.Organization.ExpiryDuration))
 	givenName := h.GenMachineName(aCodeItem.regReq.Hostinfo.Hostname, user.ID, user.OrganizationID, MachinePublicKeyStripPrefix(aCodeItem.mKey))
-	newmachine := Machine{
-		MachineKey:           MachinePublicKeyStripPrefix(aCodeItem.mKey),
-		Hostname:             aCodeItem.regReq.Hostinfo.Hostname,
-		GivenName:            givenName,
-		AutoGenName:          true,
-		NodeKey:              NodePublicKeyStripPrefix(aCodeItem.regReq.NodeKey),
-		UserID:               user.ID,
-		ForcedTags:           aCodeItem.regReq.Hostinfo.RequestTags,
-		LastSeen:             &now,
-		LastSuccessfulUpdate: &now,
-		Expiry:               &expiration,
-		HostInfo:             HostInfo(*aCodeItem.regReq.Hostinfo.Clone()),
-	}
+
 	oldmachine, _ := h.GetUserMachineByMachineKey(aCodeItem.mKey, aCodeItem.uid)
 
 	if oldmachine != nil {
@@ -852,12 +840,16 @@ func (h *Mirage) registerMachineFromConsole(
 			Caller().
 			Str("machine", oldmachine.Hostname).
 			Msg("machine already registered, reauthenticating")
-		newmachine.ID = oldmachine.ID
-		newmachine.GivenName = oldmachine.GivenName
-		newmachine.AutoGenName = oldmachine.AutoGenName
-		newmachine.IPAddresses = oldmachine.IPAddresses
-		newmachine.RegisterMethod = RegisterMethodOIDC
-		err := h.RestructMachine(&newmachine, expiration)
+		oldmachine.Hostname = aCodeItem.regReq.Hostinfo.Hostname
+		oldNodeKey := oldmachine.NodeKey
+		oldmachine.NodeKey = NodePublicKeyStripPrefix(aCodeItem.regReq.NodeKey)
+		oldmachine.ForcedTags = aCodeItem.regReq.Hostinfo.RequestTags
+		oldmachine.LastSeen = &now
+		oldmachine.LastSuccessfulUpdate = &now
+		oldmachine.Expiry = &expiration
+		oldmachine.HostInfo = HostInfo(*aCodeItem.regReq.Hostinfo.Clone())
+		oldmachine.RegisterMethod = RegisterMethodOIDC
+		err := h.RestructMachine(oldmachine, expiration)
 		if err != nil {
 			log.Error().
 				Caller().
@@ -866,11 +858,24 @@ func (h *Mirage) registerMachineFromConsole(
 			return nil, ErrCouldNotConvertMachineInterface
 		}
 
-		h.NotifyNaviOrgNodesChange(user.OrganizationID, newmachine.NodeKey, oldmachine.NodeKey)
+		h.NotifyNaviOrgNodesChange(user.OrganizationID, oldmachine.NodeKey, oldNodeKey)
 
-		machine, err := h.GetMachineByID(newmachine.ID)
+		machine, err := h.GetMachineByID(oldmachine.ID)
 		return machine, nil
 	} else {
+		newmachine := Machine{
+			MachineKey:           MachinePublicKeyStripPrefix(aCodeItem.mKey),
+			Hostname:             aCodeItem.regReq.Hostinfo.Hostname,
+			GivenName:            givenName,
+			AutoGenName:          true,
+			NodeKey:              NodePublicKeyStripPrefix(aCodeItem.regReq.NodeKey),
+			UserID:               user.ID,
+			ForcedTags:           aCodeItem.regReq.Hostinfo.RequestTags,
+			LastSeen:             &now,
+			LastSuccessfulUpdate: &now,
+			Expiry:               &expiration,
+			HostInfo:             HostInfo(*aCodeItem.regReq.Hostinfo.Clone()),
+		}
 		machine, err := h.RegisterMachine(newmachine)
 
 		h.NotifyNaviOrgNodesChange(user.OrganizationID, newmachine.NodeKey, "")
