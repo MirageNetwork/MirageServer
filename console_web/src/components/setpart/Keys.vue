@@ -1,7 +1,7 @@
 <script setup>
 import { watch, ref, onMounted, onBeforeUpdate, computed } from "vue";
 import Toast from "../Toast.vue";
-import GenAuthKey from "./setDialog/GenAuthKey.vue";
+import GenAuthKey from "./GenAuthKey.vue";
 
 const devmode = ref(true);
 

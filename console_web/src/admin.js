@@ -8,6 +8,7 @@ import Machine from './components/Machine.vue'
 import DNS from './components/DNS.vue'
 import Settings from './components/Settings.vue'
 import Users from './components/Users.vue'
+import ACLs from './components/ACLs.vue'
 
 
 const routes = [
@@ -18,6 +19,8 @@ const routes = [
     { path: '/settings', redirect: '/settings/general' },
     { path: '/settings/:setpart', component: Settings },
     { path: '/users', component: Users },
+    { path: '/acls', redirect: '/acls/tags' },
+    { path: '/acls/:aclpart', component: ACLs },
 ]
 const router = createRouter({
     history: createWebHashHistory(),

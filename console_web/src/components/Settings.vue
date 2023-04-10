@@ -2,7 +2,6 @@
 import { ref, computed, nextTick, onMounted, watch, watchEffect } from "vue";
 import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import General from "./setpart/General.vue";
-import Tags from "./setpart/Tags.vue";
 import Keys from "./setpart/Keys.vue";
 import DeviceManagement from "./setpart/DeviceManagement.vue";
 import UserManagement from "./setpart/UserManagement.vue";
@@ -11,7 +10,6 @@ import Subscription from "./setpart/Subscription.vue";
 //路由及选择器页面控制
 const setPartContent = {
   general: General,
-  tags: Tags,
   "device-management": DeviceManagement,
   billing: Subscription,
   "user-management": UserManagement,
@@ -92,15 +90,6 @@ onMounted(() => {
                 to="/settings/billing"
                 >账单</router-link
               >
-              <router-link
-                class="flex font-medium mt-4"
-                :class="{
-                  'text-blue-600': currentSetPart == 'tags',
-                  'text-gray-700': currentSetPart != 'tags',
-                }"
-                to="/settings/tags"
-                >标签</router-link
-              >
             </div>
           </div>
           <div class="flex flex-row mb-12">
@@ -144,7 +133,6 @@ onMounted(() => {
               <option value="user-management">用户</option>
               <option value="device-management">设备</option>
               <option value="billing">账单</option>
-              <option value="tags">标签</option>
             </optgroup>
             <optgroup label="个人设置">
               <option value="keys">密钥</option>

@@ -1,6 +1,6 @@
 <script setup>
 import { watch, ref, onMounted, onBeforeUpdate, computed } from "vue";
-import Toast from "../../Toast.vue";
+import Toast from "../Toast.vue";
 import { useDisScroll } from "/src/utils.js";
 
 const emit = defineEmits(["added-tag", "close"]);

@@ -1,7 +1,7 @@
 <script setup>
 import { watch, ref, onMounted, onBeforeUpdate, computed } from "vue";
 import Toast from "../Toast.vue";
-import SetTag from "./setDialog/SetTag.vue";
+import SetTag from "./SetTag.vue";
 
 const devmode = ref(true);
 

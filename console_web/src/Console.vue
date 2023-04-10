@@ -39,6 +39,7 @@ const currentRoute = computed(() => {
   if (curPath.substring(0, 4) == "/dns") return "dns";
   if (curPath.substring(0, 8) == "/machine") return "machines";
   if (curPath.substring(0, 8) == "/setting") return "setting";
+  if (curPath.substring(0, 5) == "/acls") return "acls";
 });
 
 //数据填充控制部分
@@ -259,6 +260,34 @@ onMounted(() => {
               <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
             </svg>
             <div :class="{ 'font-medium': currentRoute == 'users' }">用户</div>
+          </div>
+        </router-link>
+
+        <router-link class="whitespace-nowrap py-2 group relative" to="/acls"
+          ><div
+            :class="{
+              'text-blue-600 after:visible': currentRoute == 'acls',
+              'text-gray-600 group-hover:text-gray-800 after:invisible':
+                currentRoute != 'acls',
+            }"
+            class="px-3 py-2 flex items-center rounded-md group-hover:bg-gray-200 after:absolute after:bottom-0 after:right-3 after:left-3 after:h-0.5"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="1.125em"
+              height="1.125em"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              :stroke-width="currentRoute == 'acls' ? '2.5' : '2'"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="mr-2 hidden sm:inline-block"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <div :class="{ 'font-medium': currentRoute == 'acls' }">访问控制</div>
           </div>
         </router-link>
 
