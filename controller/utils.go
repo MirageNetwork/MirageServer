@@ -357,3 +357,31 @@ func GetShortId(longID int64) string {
 	}
 	return shortID
 }
+
+type UtilsSet[K comparable] struct {
+	slice []K
+	set   map[K]struct{}
+}
+
+func NewUtilsSet[K comparable]() *UtilsSet[K] {
+	ret := &UtilsSet[K]{}
+	ret.set = make(map[K]struct{})
+	ret.slice = make([]K, 0)
+	return ret
+}
+
+func (s *UtilsSet[K]) SetKey(key K) {
+	if _, ok := s.set[key]; !ok {
+		s.set[key] = struct{}{}
+		s.slice = append(s.slice, key)
+	}
+}
+
+func (s *UtilsSet[K]) CheckKey(key K) bool {
+	_, ok := s.set[key]
+	return ok
+}
+
+func (s *UtilsSet[K]) GetKeys() []K {
+	return s.slice
+}

@@ -216,14 +216,14 @@ func (h *Mirage) handlePrimarySubnetFailover() error {
 	// first, get all the enabled routes
 	var routes []Route
 	err := h.db.
-		Preload("Machine").
+		Preload("Machine").Preload("Machine.User").
 		Where("advertised = ? AND enabled = ?", true, true).
 		Find(&routes).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Error().Err(err).Msg("error getting routes")
 	}
 
-	routesChanged := false
+	routesChangedOrgSet := NewUtilsSet[int64]()
 	for pos, route := range routes {
 		if route.isExitRoute() {
 			continue
@@ -244,8 +244,7 @@ func (h *Mirage) handlePrimarySubnetFailover() error {
 					return err
 				}
 
-				routesChanged = true
-
+				routesChangedOrgSet.SetKey(route.Machine.User.OrganizationID)
 				continue
 			}
 		}
@@ -318,12 +317,13 @@ func (h *Mirage) handlePrimarySubnetFailover() error {
 				return err
 			}
 
-			routesChanged = true
+			routesChangedOrgSet.SetKey(route.Machine.User.OrganizationID)
 		}
 	}
 
-	if routesChanged {
-		h.setLastStateChangeToNow()
+	changedOrgList := routesChangedOrgSet.GetKeys()
+	if len(changedOrgList) > 0 {
+		h.setOrgLastStateChangeToNow(changedOrgList...)
 	}
 
 	return nil

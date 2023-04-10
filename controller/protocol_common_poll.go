@@ -141,7 +141,7 @@ func (h *Mirage) handlePollCommon(
 
 	// There has been an update to _any_ of the nodes that the other nodes would
 	// need to know about
-	h.setLastStateChangeToNow()
+	h.setOrgLastStateChangeToNow(machine.User.OrganizationID)
 
 	// The request is not ReadOnly, so we need to set up channels for updating
 	// peers via longpoll
@@ -426,7 +426,7 @@ func (h *Mirage) pollNetMapStream(
 					Str("handler", "PollNetMapStream").
 					Str("machine", machine.Hostname).
 					Time("last_successful_update", lastUpdate).
-					Time("last_state_change", h.getLastStateChange(machine.User)).
+					Time("last_state_change", h.getOrgLastStateChange(machine.User.OrganizationID)).
 					Msgf("There has been updates since the last successful update to %s", machine.Hostname)
 				data, err := h.getMapResponseData(mapRequest, machine)
 				if err != nil {
@@ -513,7 +513,7 @@ func (h *Mirage) pollNetMapStream(
 					Str("handler", "PollNetMapStream").
 					Str("machine", machine.Hostname).
 					Time("last_successful_update", lastUpdate).
-					Time("last_state_change", h.getLastStateChange(machine.User)).
+					Time("last_state_change", h.getOrgLastStateChange(machine.User.OrganizationID)).
 					Msgf("%s is up to date", machine.Hostname)
 			}
 
@@ -555,7 +555,7 @@ func (h *Mirage) pollNetMapStream(
 					Msg("Cannot update machine LastSeen")
 			}
 			//cgao6 we should note sth for the machine gone w/o byebye
-			h.setLastStateChangeToNow()
+			h.setOrgLastStateChangeToNow(machine.User.OrganizationID)
 			//cgao6
 
 			// The connection has been closed, so we can stop polling.

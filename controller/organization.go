@@ -85,7 +85,7 @@ func (m *Mirage) UpdateMagicDNSDomain(orgID int64, netMagicDomain string) error 
 	if err != nil {
 		return err
 	}
-	m.setLastStateChangeToNow()
+	m.setOrgLastStateChangeToNow(orgID)
 	return nil
 }
 
@@ -161,6 +161,16 @@ func (m *Mirage) GetOrgnaizationByID(id int64) (*Organization, error) {
 	}
 	m.UpdateACLRulesOfOrg(org)
 	return org, err
+}
+
+// ListOrgnaizations List all the organizations in the database, but it not to generate acl rules
+func (m *Mirage) ListOrgnaizations() ([]Organization, error) {
+	var orgs []Organization
+	err := m.db.Find(&orgs).Error
+	if err != nil {
+		return nil, err
+	}
+	return orgs, err
 }
 
 func GetOrgnaizationByNameInTx(tx *gorm.DB, name, provider string) (*Organization, error) {
