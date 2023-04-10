@@ -91,7 +91,7 @@ func (h *Mirage) CAPIPostDNS(
 		h.doAPIResponse(w, "更新用户DNS设置失败", nil)
 		return
 	}
-	h.setLastStateChangeToNow()
+	h.setOrgLastStateChangeToNow(user.OrganizationID)
 	h.CAPIGetDNS(w, r)
 
 }

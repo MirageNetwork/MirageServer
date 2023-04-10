@@ -237,7 +237,7 @@ func (h *Mirage) expireEphemeralNodesWorker() {
 		}
 
 		if expiredFound {
-			h.setLastStateChangeToNow()
+			h.setOrgLastStateChangeToNow(user.OrganizationID)
 		}
 	}
 }
@@ -264,7 +264,7 @@ func (h *Mirage) expireExpiredMachinesWorker() {
 		expiredFound := false
 		for index, machine := range machines {
 			if machine.isExpired() &&
-				machine.Expiry.After(h.getLastStateChange(user)) {
+				machine.Expiry.After(h.getOrgLastStateChange(user.OrganizationID)) {
 				expiredFound = true
 
 				err := h.ExpireMachine(&machines[index])
@@ -286,7 +286,7 @@ func (h *Mirage) expireExpiredMachinesWorker() {
 		}
 
 		if expiredFound {
-			h.setLastStateChangeToNow()
+			h.setOrgLastStateChangeToNow(user.OrganizationID)
 		}
 	}
 }
@@ -602,6 +602,31 @@ func (h *Mirage) setLastStateChangeToNow() {
 	}
 }
 
+func (h *Mirage) setOrgLastStateChangeToNow(orgId ...int64) {
+	var err error
+	var users []User
+	now := time.Now().UTC()
+
+	if len(orgId) == 1 {
+		users, err = h.ListOrgUsers(orgId[0])
+	} else {
+		users, err = h.ListUsersInOrgs(orgId)
+	}
+	if err != nil {
+		log.Error().
+			Caller().
+			Err(err).
+			Msg("failed to fetch organization users, failing to update last changed state.")
+	}
+
+	for _, user := range users {
+		if h.lastStateChange == nil {
+			h.lastStateChange = xsync.NewMapOf[time.Time]()
+		}
+		h.lastStateChange.Store(user.StableID, now)
+	}
+}
+
 func (h *Mirage) getLastStateChange(users ...User) time.Time {
 	times := []time.Time{}
 
@@ -630,6 +655,34 @@ func (h *Mirage) getLastStateChange(users ...User) time.Time {
 	} else {
 		return times[0]
 	}
+}
+
+func (h *Mirage) getOrgLastStateChange(orgId int64) time.Time {
+	times := []time.Time{}
+
+	// getLastStateChange takes a list of users as a "filter", if no users
+	// are past, then use the entier list of users and look for the last update
+	users, err := h.ListOrgUsers(orgId)
+	if err != nil {
+		log.Error().
+			Caller().
+			Err(err).
+			Msg("failed to fetch organization users, failing to get last changed state.")
+	}
+	for _, user := range users {
+		if lastChange, ok := h.lastStateChange.Load(user.StableID); ok {
+			times = append(times, lastChange)
+		}
+	}
+
+	if len(times) == 0 {
+		return time.Now().UTC()
+	}
+	sort.Slice(times, func(i, j int) bool {
+		return times[i].After(times[j])
+	})
+
+	return times[0]
 }
 
 func stdoutHandler(

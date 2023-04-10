@@ -327,6 +327,15 @@ func (h *Mirage) ListOrgUsers(orgID int64) ([]User, error) {
 	return users, nil
 }
 
+func (h *Mirage) ListUsersInOrgs(orgID []int64) ([]User, error) {
+	var users []User
+	err := h.db.Preload("Organization").Where("organization_id in ?", orgID).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 // GetUser fetches a user by name.
 func (h *Mirage) GetUser(name, orgName, provider string) (*User, error) {
 	org, err := h.GetOrgnaizationByName(orgName, provider)

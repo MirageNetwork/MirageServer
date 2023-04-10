@@ -85,7 +85,7 @@ func (m *Mirage) UpdateMagicDNSDomain(orgID int64, netMagicDomain string) error 
 	if err != nil {
 		return err
 	}
-	m.setLastStateChangeToNow()
+	m.setOrgLastStateChangeToNow(orgID)
 	return nil
 }
 
