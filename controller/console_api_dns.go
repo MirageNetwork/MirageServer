@@ -24,9 +24,9 @@ func (h *Mirage) CAPIGetDNS(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(w, r)
-	if user.CheckEmpty() {
-		h.doAPIResponse(w, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
 	userDNSCfg, userBaseDomain := user.GetDNSConfig(h.cfg.IPPrefixes)
@@ -74,12 +74,12 @@ func (h *Mirage) CAPIPostDNS(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(w, r)
-	if user.CheckEmpty() {
-		h.doAPIResponse(w, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
-	err := r.ParseForm()
+	err = r.ParseForm()
 	if err != nil {
 		h.doAPIResponse(w, "用户请求解析失败:"+err.Error(), nil)
 		return
@@ -101,9 +101,9 @@ func (h *Mirage) CAPIDelDNS(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(w, r)
-	if user.CheckEmpty() {
-		h.doAPIResponse(w, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
 	targetKeyID := strings.TrimPrefix(r.URL.Path, "/admin/api/keys/")
@@ -147,9 +147,9 @@ func (h *Mirage) CAPIGetTCDOffers(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(w, r)
-	if user.CheckEmpty() {
-		h.doAPIResponse(w, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
 	if oldTCDOffers, ok := h.tcdCache.Get(user.Organization.StableID); ok {
@@ -186,12 +186,12 @@ func (h *Mirage) CAPIPostTCD(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(w, r)
-	if user.CheckEmpty() {
-		h.doAPIResponse(w, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
-	err := r.ParseForm()
+	err = r.ParseForm()
 	if err != nil {
 		h.doAPIResponse(w, "用户请求解析失败:"+err.Error(), nil)
 		return

@@ -105,25 +105,22 @@ function getMachines() {
           reject();
         }
         // 处理成功情况
-        if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
-          for (var k in response.data["mlist"]) {
-            MList.value[k] = response.data["mlist"][k];
-            let tailtwo = MList.value[k]["expirydesc"].slice(-2);
-            let tailthree = MList.value[k]["expirydesc"].slice(-3);
-            if (
-              MList.value[k]["expirydesc"] == "马上就要过期" ||
-              tailtwo == "分钟" ||
-              tailtwo == "小时" ||
-              tailthree == "剩1天"
-            ) {
-              MList.value[k]["soonexpiry"] = true;
+        if (response.data["status"] == "success") {
+          let resList = response.data["data"]["machines"];
+          for (var i in resList) {
+            MList.value[resList[i].id] = resList[i];
+            let expiresDuration =
+              new Date(MList.value[resList[i].id]["expires"]).getTime() -
+              new Date().getTime();
+            if (expiresDuration < 1000 * 60 * 60 * 24 * 7 && expiresDuration > 0) {
+              MList.value[resList[i].id]["soonexpiry"] = true;
             } else {
-              MList.value[k]["soonexpiry"] = false;
+              MList.value[resList[i].id]["soonexpiry"] = false;
             }
           }
           resolve();
-        } else if (response.data["errormsg"] != undefined) {
-          toastMsg.value = "获设备信息出错：" + response.data["errormsg"];
+        } else {
+          toastMsg.value = "获设备信息出错：" + response.data["status"].substring(6);
           toastShow.value = true;
           reject();
         }
@@ -133,9 +130,6 @@ function getMachines() {
         toastMsg.value = "更新页面出错：" + error;
         toastShow.value = true;
         reject();
-      })
-      .then(function () {
-        // 总是会执行
       });
   });
 }
@@ -205,13 +199,13 @@ function removeMachine(id) {
       mid: id,
     })
     .then(function (response) {
-      if (response.data["status"] == "OK") {
+      if (response.data["status"] == "success") {
         delConfirmShow.value = false;
         toastMsg.value = MList.value[id]["name"] + "已从您的蜃境网络移除！";
         toastShow.value = true;
         delete MList.value[id];
       } else {
-        toastMsg.value = "失败：" + response.data["status"];
+        toastMsg.value = "失败：" + response.data["status"].substring(6);
         toastShow.value = true;
       }
     })

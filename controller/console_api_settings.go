@@ -22,9 +22,9 @@ func (h *Mirage) getNetSettingAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(writer, req)
-	if user.CheckEmpty() {
-		h.doAPIResponse(writer, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(writer, req)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(writer, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
 	netsettingData := NetSettingResData{
@@ -45,12 +45,12 @@ func (h *Mirage) ConsoleUpdateKeyExpiryAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(writer, req)
-	if user.CheckEmpty() {
-		h.doAPIResponse(writer, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(writer, req)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(writer, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
-	err := req.ParseForm()
+	err = req.ParseForm()
 	if err != nil {
 		h.doAPIResponse(writer, "用户请求解析失败:"+err.Error(), nil)
 		return

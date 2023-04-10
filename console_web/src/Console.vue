@@ -56,13 +56,15 @@ function getSelf() {
       .get("/admin/api/self")
       .then(function (response) {
         // 处理成功情况
-        if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
-          SelfAccount.value = response.data["useraccount"];
-          Basedomain.value = response.data["basedomain"];
-          SelfName.value = response.data["username"];
-          SelfNameHead.value = response.data["usernamehead"];
-          OrgName.value = response.data["orgname"];
+        if (response.data["status"] == "success") {
+          SelfAccount.value = response.data["data"]["useraccount"];
+          Basedomain.value = response.data["data"]["basedomain"];
+          SelfName.value = response.data["data"]["username"];
+          SelfNameHead.value = response.data["data"]["usernamehead"];
+          OrgName.value = response.data["data"]["orgname"];
           resolve("success");
+        } else {
+          reject("err");
         }
         reject("err");
       })

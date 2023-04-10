@@ -348,6 +348,7 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	console_router.HandleFunc("/api/self", h.ConsoleSelfAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/users", h.CAPIGetUsers).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/machines", h.ConsoleMachinesAPI).Methods(http.MethodGet)
+	console_router.HandleFunc("/api/machine-debug", h.ConsoleMachineDebugAPI).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/dns", h.CAPIGetDNS).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/tcd/offers", h.CAPIGetTCDOffers).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/netsettings", h.getNetSettingAPI).Methods(http.MethodGet)

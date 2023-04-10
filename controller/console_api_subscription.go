@@ -44,9 +44,9 @@ func (h *Mirage) CAPIGetSubscription(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(w, r)
-	if user.CheckEmpty() {
-		h.doAPIResponse(w, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
 

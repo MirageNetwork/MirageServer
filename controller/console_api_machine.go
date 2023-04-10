@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
 type machineData struct {
@@ -23,28 +21,25 @@ type machineData struct {
 	HasExitNode            bool     `json:"hasExitNode"` //未实现
 	AllowedTags            []string `json:"allowedTags"` //未实现
 	InvalidTags            []string `json:"invalidTags"` //未实现
-	HasTags                bool     `json:"hasTags"`     //未实现
+	HasTags                bool     `json:"hasTags"`     //？？？移除？
 	Endpoints              []string `json:"endpoints"`
-	Derp                   string   `json:"derp"`           //未实现
-	IpnVersion             string   `json:"ipnVersion"`     //未实现
-	Os                     string   `json:"os"`             //未实现
-	Name                   string   `json:"name"`           //未实现
-	Fqdn                   string   `json:"fqdn"`           //未实现
-	Domain                 string   `json:"domain"`         //未实现
-	Created                string   `json:"created"`        //未实现
-	Hostname               string   `json:"hostname"`       //未实现
-	MachineKey             string   `json:"machineKey"`     //未实现
-	NodeKey                string   `json:"nodeKey"`        //未实现
-	Id                     string   `json:"id"`             //未实现
-	StableId               string   `json:"stableId"`       //未实现
-	DisplayNodeKey         string   `json:"displayNodeKey"` //未实现
-	LogID                  string   `json:"logID"`          //未实现
-	User                   string   `json:"user"`           //未实现
-	Creator                string   `json:"creator"`        //未实现
+	IpnVersion             string   `json:"ipnVersion"` //未实现
+	Os                     string   `json:"os"`         //未实现
+	Name                   string   `json:"name"`       //未实现
+	Fqdn                   string   `json:"fqdn"`       //未实现
+	Domain                 string   `json:"domain"`     //未实现
+	Created                string   `json:"created"`    //未实现
+	Hostname               string   `json:"hostname"`   //未实现
+	MachineKey             string   `json:"machineKey"` //未实现
+	NodeKey                string   `json:"nodeKey"`    //未实现
+	Id                     string   `json:"id"`         //未实现
+	StableId               string   `json:"stableId"`   //未实现
+	User                   string   `json:"user"`       //未实现
+	Creator                string   `json:"creator"`    //未实现
 	Expires                string   `json:"expires"`
 	NeverExpires           bool     `json:"neverExpires"`
 	Authorized             bool     `json:"authorized"`             //未实现
-	IsExternal             bool     `json:"isExternal"`             //未实现
+	IsExternal             bool     `json:"isExternal"`             // ？？？        //未实现
 	BrokenIPForwarding     bool     `json:"brokenIPForwarding"`     //未实现
 	IsEphemeral            bool     `json:"isEphemeral"`            //未实现
 	AvailableUpdateVersion string   `json:"availableUpdateVersion"` //未实现
@@ -58,7 +53,10 @@ type machineData struct {
 }
 
 type machineItem struct {
+	Id                 string   `json:"id"`                 //done
+	StableId           string   `json:"stableId"`           //未实现
 	Name               string   `json:"name"`               //done
+	Fqdn               string   `json:"fqdn"`               //未实现
 	User               string   `json:"user"`               //done
 	UserNameHead       string   `json:"usernamehead"`       // TODO
 	Addresses          []string `json:"addresses"`          //done
@@ -84,84 +82,36 @@ type machineItem struct {
 	InvalidTags        []string `json:"invalidTags"`
 	HasTags            bool     `json:"hasTags"`
 
-	Varies      bool `json:"varies"`
-	HairPinning bool `json:"hairpinning"`
-	CanIPv6     bool `json:"ipv6en"`
-	CanUDP      bool `json:"udpen"`
-	CanUPnP     bool `json:"upnpen"`
-	CanPCP      bool `json:"pcpen"`
-	CanPMP      bool `json:"pmpen"`
+	Expires time.Time `json:"expires"`
 
 	ExpiryDesc string `json:"expirydesc"`
 
-	Endpoints         []string       `json:"endpoints"`
-	DERPs             map[string]int `json:"derps"`
-	PrefferDERP       string         `json:"usederp"`
-	AutomaticNameMode bool           `json:"automaticNameMode"`
+	Endpoints         []string `json:"endpoints"`
+	AutomaticNameMode bool     `json:"automaticNameMode"`
 }
 
 // 控制台获取设备信息列表的API
 func (h *Mirage) ConsoleMachinesAPI(
-	writer http.ResponseWriter,
-	req *http.Request,
+	w http.ResponseWriter,
+	r *http.Request,
 ) {
-	controlCodeCookie, err := req.Cookie("miragecontrol")
-	if err != nil {
-		errRes := adminTemplateConfig{ErrorMsg: "Token不存在"}
-		err = json.NewEncoder(writer).Encode(&errRes)
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
-		return
-	}
-
-	controlCode := controlCodeCookie.Value
-	controlCodeC, controlCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCode)
-	if !ok || controlCodeExpiration.Compare(time.Now()) != 1 {
-		errRes := adminTemplateConfig{ErrorMsg: "解析Token失败"}
-		err = json.NewEncoder(writer).Encode(&errRes)
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
-		return
-	}
-	controlCodeItem := controlCodeC.(ControlCacheItem)
-	user, err := h.GetUserByID(controlCodeItem.uid)
-	if err != nil {
-		errRes := adminTemplateConfig{ErrorMsg: "提取用户信息失败"}
-		err = json.NewEncoder(writer).Encode(&errRes)
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
+	user, err := h.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
 
 	OrgMachines, err := h.ListMachinesByOrgID(user.OrganizationID)
 	if err != nil {
-		errRes := adminTemplateConfig{ErrorMsg: "查询用户节点列表失败"}
-		err = json.NewEncoder(writer).Encode(&errRes)
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
+		h.doAPIResponse(w, "查询用户节点列表失败", nil)
 		return
 	}
 
-	mlist := make(map[string]machineItem)
+	mlist := make([]machineItem, 0)
 	for _, machine := range OrgMachines {
 		tz, _ := time.LoadLocation("Asia/Shanghai")
 		tmpMachine := machineItem{
+			Id:                 strconv.FormatInt(machine.ID, 10),
 			Name:               machine.GivenName,
 			User:               machine.User.Name,
 			UserNameHead:       string([]rune(machine.User.Display_Name)[0]),
@@ -177,28 +127,18 @@ func (h *Mirage) ConsoleMachinesAPI(
 
 			IsEphemeral:  machine.isEphemeral(),
 			NeverExpires: *machine.Expiry == time.Time{},
+			Expires:      *machine.Expiry,
 
-			Varies:            machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
-			HairPinning:       machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.HairPinning.EqualBool(true),
-			CanIPv6:           machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.WorkingIPv6.EqualBool(true),
-			CanUDP:            machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.WorkingUDP.EqualBool(true),
-			CanUPnP:           machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.UPnP.EqualBool(true),
-			CanPCP:            machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.PCP.EqualBool(true),
-			CanPMP:            machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.PMP.EqualBool(true),
 			Endpoints:         machine.Endpoints,
 			AutomaticNameMode: machine.AutoGenName,
+		}
+		if machine.User.Organization.EnableMagic {
+			tmpMachine.Fqdn = machine.GivenName + "." + machine.User.Organization.MagicDnsDomain
 		}
 		// 处理路由部分
 		machineRoutes, err := h.GetMachineRoutes(&machine)
 		if err != nil {
-			errRes := adminTemplateConfig{ErrorMsg: "查询设备路由失败"}
-			err = json.NewEncoder(writer).Encode(&errRes)
-			if err != nil {
-				log.Error().
-					Caller().
-					Err(err).
-					Msg("Failed to write response")
-			}
+			h.doAPIResponse(w, "查询设备路由失败", nil)
 			return
 		}
 		for _, route := range machineRoutes {
@@ -214,14 +154,7 @@ func (h *Mirage) ConsoleMachinesAPI(
 					tmpMachine.HasSubnets = true
 					routeV := netip.Prefix(route.Prefix).String()
 					if err != nil {
-						errRes := adminTemplateConfig{ErrorMsg: "子网路由地址转换失败"}
-						err = json.NewEncoder(writer).Encode(&errRes)
-						if err != nil {
-							log.Error().
-								Caller().
-								Err(err).
-								Msg("Failed to write response")
-						}
+						h.doAPIResponse(w, "子网路由地址转换失败", nil)
 						return
 					}
 					tmpMachine.AdvertisedIPs = append(tmpMachine.AdvertisedIPs, routeV)
@@ -234,44 +167,6 @@ func (h *Mirage) ConsoleMachinesAPI(
 			}
 		}
 
-		if machine.HostInfo.NetInfo != nil && machine.HostInfo.NetInfo.PreferredDERP != 0 {
-			tmpMachine.DERPs = make(map[string]int)
-			for derpname, latency := range machine.HostInfo.NetInfo.DERPLatency {
-				ipver := strings.Split(derpname, "-")[1]
-				derpRehionID, err := strconv.ParseInt(strings.Split(derpname, "-")[0], 10, 64)
-				derpname = strings.Split(derpname, "-")[0]
-				if err == nil {
-					region := h.GetNaviRegion(derpRehionID)
-					if region != nil {
-						derpname = region.RegionName
-					}
-				}
-
-				if ipver == "v4" {
-					if peerlatency, ok := machine.HostInfo.NetInfo.DERPLatency[derpname+"-v6"]; ok {
-						if latency < peerlatency {
-							tmpMachine.DERPs[derpname] = int(latency * 1000)
-						}
-					} else {
-						tmpMachine.DERPs[derpname] = int(latency * 1000)
-					}
-				} else if ipver == "v6" {
-					if peerlatency, ok := machine.HostInfo.NetInfo.DERPLatency[derpname+"-v4"]; ok {
-						if latency < peerlatency {
-							tmpMachine.DERPs[derpname] = int(latency * 1000)
-						}
-					} else {
-						tmpMachine.DERPs[derpname] = int(latency * 1000)
-					}
-				} else {
-					tmpMachine.DERPs[derpname] = int(latency * 1000)
-				}
-			}
-			tmpMachine.PrefferDERP = strconv.Itoa(machine.HostInfo.NetInfo.PreferredDERP)
-		} else {
-			tmpMachine.PrefferDERP = "x"
-			tmpMachine.DERPs = nil
-		}
 		if !tmpMachine.NeverExpires {
 			ExpiryDuration := machine.Expiry.Sub(time.Now())
 			tmpMachine.ExpiryDesc = convExpiryToStr(ExpiryDuration)
@@ -285,35 +180,118 @@ func (h *Mirage) ConsoleMachinesAPI(
 				machine.IPAddresses[1].String(),
 				machine.IPAddresses[0].String()}
 		}
-		mlist[strconv.FormatInt(machine.ID, 10)] = tmpMachine
+		mlist = append(mlist, tmpMachine)
 	}
 
-	renderData := adminTemplateConfig{
-		Basedomain: user.Organization.MagicDnsDomain,
-		MList:      mlist,
+	h.doAPIResponse(w, "", struct {
+		Machines []machineItem `json:"machines"`
+	}{
+		Machines: mlist,
+	})
+}
+
+type MachineDebugInfo struct {
+	MappingVariesByDestIP bool                `json:"mappingVariesByDestIP"`
+	HairPinning           bool                `json:"hairPinning"`
+	IPv6                  bool                `json:"ipv6"`
+	UDP                   bool                `json:"udp"`
+	UPnP                  bool                `json:"upnp"`
+	PMP                   bool                `json:"pmp"`
+	PCP                   bool                `json:"pcp"`
+	Latency               map[string]*Latency `json:"latency"` // "derp区域编号"-结构体
+}
+type Latency struct {
+	RegionName string  `json:"regionName"`
+	Preferred  bool    `json:"preferred"`
+	LatencyMs  float64 `json:"latencyMs"`
+}
+
+func (m *Mirage) ConsoleMachineDebugAPI(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	user, err := m.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		m.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
+		return
 	}
 
-	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(writer).Encode(&renderData)
+	targetMIPStr := r.URL.Query().Get("ip")
+	if targetMIPStr == "" {
+		m.doAPIResponse(w, "用户查询IP为空", nil)
+		return
+	}
+	targetMIP, err := netip.ParseAddr(targetMIPStr)
 	if err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Failed to write response")
+		m.doAPIResponse(w, "用户请求IP解析失败", nil)
+		return
 	}
+	targetMachine := m.GetMachineByIP(targetMIP)
+	if targetMachine == nil || targetMachine.User.OrganizationID != user.OrganizationID {
+		m.doAPIResponse(w, "组织内无此设备", nil)
+		return
+	}
+	resData := &MachineDebugInfo{
+		MappingVariesByDestIP: targetMachine.HostInfo.NetInfo.MappingVariesByDestIP.EqualBool(true),
+		HairPinning:           targetMachine.HostInfo.NetInfo.HairPinning.EqualBool(true),
+		IPv6:                  targetMachine.HostInfo.NetInfo.WorkingIPv6.EqualBool(true),
+		UDP:                   targetMachine.HostInfo.NetInfo.WorkingUDP.EqualBool(true),
+		UPnP:                  targetMachine.HostInfo.NetInfo.UPnP.EqualBool(true),
+		PMP:                   targetMachine.HostInfo.NetInfo.PMP.EqualBool(true),
+		PCP:                   targetMachine.HostInfo.NetInfo.PCP.EqualBool(true),
+		Latency:               make(map[string]*Latency),
+	}
+	derpMap, err := m.LoadOrgDERPs(targetMachine.User.OrganizationID)
+	if err != nil {
+		m.doAPIResponse(w, "获取组织中继信息失败", nil)
+		return
+	}
+
+	if targetMachine.HostInfo.NetInfo != nil && targetMachine.HostInfo.NetInfo.PreferredDERP != 0 {
+		for derpname, latency := range targetMachine.HostInfo.NetInfo.DERPLatency {
+			ipver := strings.Split(derpname, "-")[1]
+			derpRegionIDStr := strings.Split(derpname, "-")[0]
+			derpRegionID, _ := strconv.Atoi(derpRegionIDStr)
+
+			if resData.Latency[derpRegionIDStr] == nil {
+				resData.Latency[derpRegionIDStr] = &Latency{
+					RegionName: derpMap.Regions[derpRegionID].RegionName,
+					Preferred:  targetMachine.HostInfo.NetInfo.PreferredDERP == derpRegionID,
+				}
+			}
+
+			if ipver == "v4" {
+				if peerlatency, ok := targetMachine.HostInfo.NetInfo.DERPLatency[derpRegionIDStr+"-v6"]; ok {
+					if latency < peerlatency {
+						resData.Latency[derpRegionIDStr].LatencyMs = latency * 1000
+					}
+				} else {
+					resData.Latency[derpRegionIDStr].LatencyMs = latency * 1000
+				}
+			} else {
+				if peerlatency, ok := targetMachine.HostInfo.NetInfo.DERPLatency[derpRegionIDStr+"-v4"]; ok {
+					if latency < peerlatency {
+						resData.Latency[derpRegionIDStr].LatencyMs = latency * 1000
+					}
+				} else {
+					resData.Latency[derpRegionIDStr].LatencyMs = latency * 1000
+				}
+			}
+		}
+	}
+	m.doAPIResponse(w, "", resData)
 }
 
 func (h *Mirage) ConsoleMachinesUpdateAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(writer, req)
-	if user.CheckEmpty() {
-		h.doAPIResponse(writer, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(writer, req)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(writer, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
-	err := req.ParseForm()
+	err = req.ParseForm()
 	if err != nil {
 		h.doAPIResponse(writer, "用户请求解析失败:"+err.Error(), nil)
 		return
@@ -475,50 +453,19 @@ func (h *Mirage) ConsoleRemoveMachineAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(writer, req)
-	resData := removeMachineRes{}
-	if user.CheckEmpty() {
-		resData.Status = "Error"
-		resData.ErrMsg = "用户信息核对失败"
-		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-		writer.WriteHeader(http.StatusOK)
-		err := json.NewEncoder(writer).Encode(&resData)
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
+	user, err := h.verifyTokenIDandGetUser(writer, req)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(writer, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
 	UserMachines, err := h.ListMachinesByUser(user.ID)
 	if err != nil {
-		resData.Status = "Error"
-		resData.ErrMsg = "用户设备检索失败"
-		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-		writer.WriteHeader(http.StatusOK)
-		err := json.NewEncoder(writer).Encode(&resData)
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
+		h.doAPIResponse(writer, "用户设备检索失败:"+err.Error(), nil)
 		return
 	}
 	err = req.ParseForm()
 	if err != nil {
-		resData.Status = "Error"
-		resData.ErrMsg = "用户请求解析失败"
-		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-		writer.WriteHeader(http.StatusOK)
-		err := json.NewEncoder(writer).Encode(&resData)
-		if err != nil {
-			log.Error().
-				Caller().
-				Err(err).
-				Msg("Failed to write response")
-		}
+		h.doAPIResponse(writer, "用户请求解析失败:"+err.Error(), nil)
 		return
 	}
 	reqData := make(map[string]string)
@@ -528,46 +475,16 @@ func (h *Mirage) ConsoleRemoveMachineAPI(
 		if strconv.FormatInt(machine.ID, 10) == wantRemoveID {
 			err = h.HardDeleteMachine(&machine)
 			if err != nil {
-				resData.Status = "Error"
-				resData.ErrMsg = "用户设备删除失败"
-				writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-				writer.WriteHeader(http.StatusOK)
-				err := json.NewEncoder(writer).Encode(&resData)
-				if err != nil {
-					log.Error().
-						Caller().
-						Err(err).
-						Msg("Failed to write response")
-				}
+				h.doAPIResponse(writer, "用户设备删除失败:"+err.Error(), nil)
 				return
 			}
 			h.NotifyNaviOrgNodesChange(user.OrganizationID, "", machine.NodeKey)
 
-			resData.Status = "OK"
-			resData.ErrMsg = "用户设备成功删除"
-			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-			writer.WriteHeader(http.StatusOK)
-			err := json.NewEncoder(writer).Encode(&resData)
-			if err != nil {
-				log.Error().
-					Caller().
-					Err(err).
-					Msg("Failed to write response")
-			}
+			h.doAPIResponse(writer, "", nil)
 			return
 		}
 	}
-	resData.Status = "Error"
-	resData.ErrMsg = "未找到目标设备"
-	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(writer).Encode(&resData)
-	if err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Failed to write response")
-	}
+	h.doAPIResponse(writer, "未找到目标设备", nil)
 }
 
 // 切换设备密钥是否禁用过期

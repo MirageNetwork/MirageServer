@@ -96,6 +96,7 @@ function showEditTags() {
 
 //数据填充控制部分
 const currentMachine = ref({});
+const debugInfo = ref({});
 const currentMID = ref("");
 const tagOwners = ref([]);
 const mipNotFound = ref(false);
@@ -114,20 +115,15 @@ onMounted(() => {
         reject();
       }
       // 处理成功情况
-      if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
-        basedomain.value = response.data["basedomain"];
-        for (var k in response.data["mlist"]) {
-          if (response.data["mlist"][k]["addresses"][0] === route.params.mip) {
-            currentMachine.value = response.data["mlist"][k];
-            currentMID.value = k;
-            let tailtwo = currentMachine.value["expirydesc"].slice(-2);
-            let tailthree = currentMachine.value["expirydesc"].slice(-3);
-            if (
-              currentMachine.value["expirydesc"] == "马上就要过期" ||
-              tailtwo == "分钟" ||
-              tailtwo == "小时" ||
-              tailthree == "剩1天"
-            ) {
+      if (response.data["status"] == "success") {
+        let resList = response.data["data"]["machines"];
+        for (var i in resList) {
+          if (resList[i]["addresses"][0] === route.params.mip) {
+            currentMachine.value = resList[i];
+            currentMID.value = resList[i]["id"];
+            let expiresDuration =
+              new Date(currentMachine.value["expires"]).getTime() - new Date().getTime();
+            if (expiresDuration < 1000 * 60 * 60 * 24 * 7 && expiresDuration > 0) {
               currentMachine.value["soonexpiry"] = true;
             } else {
               currentMachine.value["soonexpiry"] = false;
@@ -138,6 +134,9 @@ onMounted(() => {
         if (currentMID.value == "") {
           mipNotFound.value = true;
         }
+      } else {
+        toastMsg.value = "获取机器列表失败：" + response.data["status"].substring(6);
+        toastShow.value = true;
       }
     })
     .catch(function (error) {
@@ -145,6 +144,24 @@ onMounted(() => {
       toastMsg.value = "获取机器列表失败：" + error;
       toastShow.value = true;
     });
+
+  axios
+    .get("/admin/api/machine-debug?ip=" + route.params.mip)
+    .then(function (response) {
+      // 处理成功情况
+      if (response.data["status"] == "success") {
+        debugInfo.value = response.data["data"];
+      } else {
+        toastMsg.value = "获取设备调试信息失败：" + response.data["status"].substring(6);
+        toastShow.value = true;
+      }
+    })
+    .catch(function (error) {
+      // 处理错误情况
+      toastMsg.value = "获取设备调试信息失败：" + error;
+      toastShow.value = true;
+    });
+
   axios
     .get("/admin/api/acls/tags")
     .then(function (response) {
@@ -193,7 +210,7 @@ function removeMachine() {
       mid: currentMID,
     })
     .then(function (response) {
-      if (response.data["status"] == "OK") {
+      if (response.data["status"] == "success") {
         //TODO: 需处理设备页面删除跳转后的Toast显示
         delConfirmShow.value = false;
         toastMsg.value = currentMachine.value["name"] + "已从您的蜃境网络移除！";
@@ -614,11 +631,11 @@ function isInvalidTag(tag) {
                 </div>
               </dd>
             </dl>
-            <dl class="flex text-sm">
+            <dl v-if="currentMachine.fqdn != ''" class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">域名</dt>
               <dd class="min-w-0">
                 <div class="flex relative min-w-0">
-                  <div class="truncate">{{ currentMachine.name }}.{{ basedomain }}</div>
+                  <div class="truncate">{{ currentMachine.fqdn }}</div>
                   <div v-if="devmode" class="cursor-pointer text-blue-500 pl-2">复制</div>
                 </div>
               </dd>
@@ -680,15 +697,15 @@ function isInvalidTag(tag) {
             <dl class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">中继器</dt>
               <dd class="min-w-0 truncate">
-                <ul v-if="currentMachine.usederp == 'x'">
-                  <li>中继器未设定或出错</li>
+                <ul v-if="!debugInfo.latency || debugInfo.latency.length == 0">
+                  <li>未使用 或 出错</li>
                 </ul>
                 <ul v-else>
-                  <li v-for="(latency, derpname) in currentMachine.derps">
-                    <strong class="font-medium">{{ derpname }}</strong
-                    >: {{ latency }}&nbsp;ms
+                  <li v-for="region in debugInfo.latency">
+                    <strong class="font-medium">{{ region.regionName }}</strong
+                    >: {{ region.latencyMs.toFixed(2) }}&nbsp;ms
                     <svg
-                      v-if="currentMachine.usederp == derpname"
+                      v-if="region.preferred"
                       xmlns="http://www.w3.org/2000/svg"
                       width="1em"
                       height="1em"
@@ -730,39 +747,39 @@ function isInvalidTag(tag) {
             </h2>
             <dl class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">复杂网络 Varies</dt>
-              <dd v-if="currentMachine.varies" class="min-w-0 truncate">是</dd>
+              <dd v-if="debugInfo.mappingVariesByDestIP" class="min-w-0 truncate">是</dd>
               <dd v-else class="min-w-0 truncate">否</dd>
             </dl>
             <dl class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">
                 需发夹机制 Hairpinning
               </dt>
-              <dd v-if="currentMachine.hairpinning" class="min-w-0 truncate">是</dd>
+              <dd v-if="debugInfo.hairPinning" class="min-w-0 truncate">是</dd>
               <dd v-else class="min-w-0 truncate">否</dd>
             </dl>
             <dl class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">IPv6</dt>
-              <dd v-if="currentMachine.ipv6en" class="min-w-0 truncate">是</dd>
+              <dd v-if="debugInfo.ipv6" class="min-w-0 truncate">是</dd>
               <dd v-else class="min-w-0 truncate">否</dd>
             </dl>
             <dl class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">UDP</dt>
-              <dd v-if="currentMachine.udpen" class="min-w-0 truncate">是</dd>
+              <dd v-if="debugInfo.udp" class="min-w-0 truncate">是</dd>
               <dd v-else class="min-w-0 truncate">否</dd>
             </dl>
             <dl class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">UPnP</dt>
-              <dd v-if="currentMachine.upnpen" class="min-w-0 truncate">是</dd>
+              <dd v-if="debugInfo.upnp" class="min-w-0 truncate">是</dd>
               <dd v-else class="min-w-0 truncate">否</dd>
             </dl>
             <dl class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">PCP</dt>
-              <dd v-if="currentMachine.pcpen" class="min-w-0 truncate">是</dd>
+              <dd v-if="debugInfo.pcp" class="min-w-0 truncate">是</dd>
               <dd v-else class="min-w-0 truncate">否</dd>
             </dl>
             <dl class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">NAT-PMP</dt>
-              <dd v-if="currentMachine.pmpen" class="min-w-0 truncate">是</dd>
+              <dd v-if="debugInfo.pmp" class="min-w-0 truncate">是</dd>
               <dd v-else class="min-w-0 truncate">否</dd>
             </dl>
           </div>

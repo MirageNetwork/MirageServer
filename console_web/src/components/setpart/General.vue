@@ -29,10 +29,10 @@ onMounted(() => {
     .get("/admin/api/self")
     .then(function (response) {
       // 处理成功情况
-      if (response.data["errormsg"] == undefined || response.data["errormsg"] === "") {
-        OrgName.value = response.data["orgname"];
+      if (response.data["status"] == "success") {
+        OrgName.value = response.data["data"]["orgname"];
       } else {
-        toastMsg.value = "获取机构名称失败:" + response.data["errormsg"];
+        toastMsg.value = "获取机构名称失败:" + response.data["status"].substring(6);
         toastShow.value = true;
       }
     })

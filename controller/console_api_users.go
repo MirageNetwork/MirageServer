@@ -42,9 +42,9 @@ func (h *Mirage) CAPIGetUsers(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(w, r)
-	if user.CheckEmpty() {
-		h.doAPIResponse(w, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
 
@@ -110,12 +110,12 @@ func (h *Mirage) CAPIPostUsers(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	user := h.verifyTokenIDandGetUser(w, r)
-	if user.CheckEmpty() {
-		h.doAPIResponse(w, "用户信息核对失败", nil)
+	user, err := h.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		h.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
-	err := r.ParseForm()
+	err = r.ParseForm()
 	if err != nil {
 		h.doAPIResponse(w, "用户请求解析失败:"+err.Error(), nil)
 		return
