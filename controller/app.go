@@ -243,51 +243,58 @@ func (h *Mirage) expireEphemeralNodesWorker() {
 }
 
 func (h *Mirage) expireExpiredMachinesWorker() {
-	users, err := h.ListUsers()
+	orgs, err := h.ListOrgnaizations()
 	if err != nil {
-		log.Error().Err(err).Msg("Error listing users")
+		log.Error().Err(err).Msg("Error listing organizations")
 
 		return
 	}
-
-	for _, user := range users {
-		machines, err := h.ListMachinesByUser(user.ID)
+	orgChangeSet := NewUtilsSet[int64]()
+	for _, org := range orgs {
+		users, err := h.ListOrgUsers(org.ID)
 		if err != nil {
-			log.Error().
-				Err(err).
-				Str("user", user.Name).
-				Msg("Error listing machines in user")
+			log.Error().Err(err).Msg("Error listing users")
 
 			return
 		}
+		for _, user := range users {
+			machines, err := h.ListMachinesByUser(user.ID)
+			if err != nil {
+				log.Error().
+					Err(err).
+					Str("user", user.Name).
+					Msg("Error listing machines in user")
 
-		expiredFound := false
-		for index, machine := range machines {
-			if machine.isExpired() &&
-				machine.Expiry.After(h.getOrgLastStateChange(user.OrganizationID)) {
-				expiredFound = true
+				return
+			}
 
-				err := h.ExpireMachine(&machines[index])
-				if err != nil {
-					log.Error().
-						Err(err).
-						Str("machine", machine.Hostname).
-						Str("name", machine.GivenName).
-						Msg("🤮 Cannot expire machine")
-				} else {
-					log.Info().
-						Str("machine", machine.Hostname).
-						Str("name", machine.GivenName).
-						Msg("Machine successfully expired")
+			for index, machine := range machines {
+				if machine.isExpired() &&
+					machine.Expiry.After(h.getOrgLastStateChange(user.OrganizationID)) {
+					orgChangeSet.SetKey(org.ID)
+
+					err := h.ExpireMachine(&machines[index])
+					if err != nil {
+						log.Error().
+							Err(err).
+							Str("machine", machine.Hostname).
+							Str("name", machine.GivenName).
+							Msg("🤮 Cannot expire machine")
+					} else {
+						log.Info().
+							Str("machine", machine.Hostname).
+							Str("name", machine.GivenName).
+							Msg("Machine successfully expired")
+					}
+
+					h.NotifyNaviOrgNodesChange(machine.User.OrganizationID, "", machine.NodeKey)
 				}
-
-				h.NotifyNaviOrgNodesChange(machine.User.OrganizationID, "", machine.NodeKey)
 			}
 		}
-
-		if expiredFound {
-			h.setOrgLastStateChangeToNow(user.OrganizationID)
-		}
+	}
+	changedOrgList := orgChangeSet.GetKeys()
+	if len(changedOrgList) > 0 {
+		h.setOrgLastStateChangeToNow(changedOrgList...)
 	}
 }
 

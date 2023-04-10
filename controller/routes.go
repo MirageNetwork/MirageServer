@@ -223,8 +223,7 @@ func (h *Mirage) handlePrimarySubnetFailover() error {
 		log.Error().Err(err).Msg("error getting routes")
 	}
 
-	routesChangedOrgs := make([]int64, 0)
-	routesChangedOrgSet := make(map[int64]struct{})
+	routesChangedOrgSet := NewUtilsSet[int64]()
 	for pos, route := range routes {
 		if route.isExitRoute() {
 			continue
@@ -245,10 +244,7 @@ func (h *Mirage) handlePrimarySubnetFailover() error {
 					return err
 				}
 
-				if _, ok := routesChangedOrgSet[route.Machine.User.OrganizationID]; !ok {
-					routesChangedOrgs = append(routesChangedOrgs, route.Machine.User.OrganizationID)
-				}
-
+				routesChangedOrgSet.SetKey(route.Machine.User.OrganizationID)
 				continue
 			}
 		}
@@ -321,14 +317,13 @@ func (h *Mirage) handlePrimarySubnetFailover() error {
 				return err
 			}
 
-			if _, ok := routesChangedOrgSet[route.Machine.User.OrganizationID]; !ok {
-				routesChangedOrgs = append(routesChangedOrgs, route.Machine.User.OrganizationID)
-			}
+			routesChangedOrgSet.SetKey(route.Machine.User.OrganizationID)
 		}
 	}
 
-	if len(routesChangedOrgs) > 0 {
-		h.setOrgLastStateChangeToNow(routesChangedOrgs...)
+	changedOrgList := routesChangedOrgSet.GetKeys()
+	if len(changedOrgList) > 0 {
+		h.setOrgLastStateChangeToNow(changedOrgList...)
 	}
 
 	return nil

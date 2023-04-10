@@ -163,6 +163,16 @@ func (m *Mirage) GetOrgnaizationByID(id int64) (*Organization, error) {
 	return org, err
 }
 
+// ListOrgnaizations List all the organizations in the database, but it not to generate acl rules
+func (m *Mirage) ListOrgnaizations() ([]Organization, error) {
+	var orgs []Organization
+	err := m.db.Find(&orgs).Error
+	if err != nil {
+		return nil, err
+	}
+	return orgs, err
+}
+
 func GetOrgnaizationByNameInTx(tx *gorm.DB, name, provider string) (*Organization, error) {
 	if len(name) == 0 || len(provider) == 0 {
 		return nil, ErrGetOrgParams
