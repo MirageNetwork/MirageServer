@@ -39,6 +39,15 @@ const (
 	expectedTokenItems = 2
 )
 
+var DefaultEmptyAclPolicy *ACLPolicy = &ACLPolicy{
+	ACLs: []ACL{{
+		Action:       "accept",
+		Protocol:     "",
+		Sources:      []string{"*"},
+		Destinations: []string{"*:*"},
+	}},
+}
+
 // For some reason golang.org/x/net/internal/iana is an internal package.
 const (
 	protocolICMP     = 1   // Internet Control Message
@@ -183,14 +192,18 @@ func (h *Mirage) UpdateACLRules() error {
 }
 
 func (h *Mirage) UpdateACLRulesOfOrg(org *Organization) error {
-	if org == nil || org.AclPolicy == nil || org.ID == 0 {
-		return errEmptyPolicy
+	if org == nil || org.ID == 0 {
+		return ErrOrgNotFound
 	}
 	machines, err := h.ListMachinesByOrgID(org.ID)
 	if err != nil {
 		return err
 	}
-	rules, err := h.generateACLRules(machines, *org.AclPolicy, h.cfg.OIDC.StripEmaildomain)
+	var aclPolicy ACLPolicy
+	if org.AclPolicy == nil {
+		aclPolicy = *DefaultEmptyAclPolicy
+	}
+	rules, err := h.generateACLRules(machines, aclPolicy, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		return err
 	}
@@ -220,7 +233,7 @@ func (h *Mirage) generateSSHRulesOfOrg(machines []Machine, org *Organization) ([
 	}
 	a := org.AclPolicy
 	if a == nil {
-		return nil, errEmptyPolicy
+		a = DefaultEmptyAclPolicy
 	}
 
 	rules := []*tailcfg.SSHRule{}
