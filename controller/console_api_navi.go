@@ -106,6 +106,7 @@ func (m *Mirage) CAPIAddDERP(
 		// 开始处理服务端数据信息
 		if reqData.NaviNode.NaviRegionID == -1 {
 			naviRegion := &NaviRegion{
+				OrgID:      user.OrganizationID,
 				RegionCode: reqData.RegionCode,
 				RegionName: reqData.RegionName,
 			}
@@ -201,6 +202,7 @@ func (m *Mirage) CAPIAddDERP(
 	// 开始处理服务端数据信息
 	if reqData.NaviNode.NaviRegionID == -1 {
 		naviRegion := &NaviRegion{
+			OrgID:      user.OrganizationID,
 			RegionCode: reqData.RegionCode,
 			RegionName: reqData.RegionName,
 		}
