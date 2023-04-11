@@ -207,7 +207,7 @@ function setExpires() {
 function removeMachine() {
   axios
     .post("/admin/api/machine/remove", {
-      mid: currentMID,
+      mid: currentMID.value,
     })
     .then(function (response) {
       if (response.data["status"] == "success") {
