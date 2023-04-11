@@ -444,11 +444,6 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 }
 
 // 删除设备API
-type removeMachineRes struct {
-	Status string `json:"status"`
-	ErrMsg string `json:"errmsg"`
-}
-
 func (h *Mirage) ConsoleRemoveMachineAPI(
 	writer http.ResponseWriter,
 	req *http.Request,
