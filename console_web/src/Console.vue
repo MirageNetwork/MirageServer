@@ -424,4 +424,8 @@ onMounted(() => {
 .container {
   width: 94%;
 }
+html {
+  margin-right: calc(100% - 100vw);
+  overflow-x: hidden;
+}
 </style>
