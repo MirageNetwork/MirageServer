@@ -92,6 +92,29 @@ function doRemoveNavi() {
         toastMsg.value = "已删除 " + selectNaviNode.value["HostName"];
         toastShow.value = true;
         NaviRegionList.value = response.data["data"]["Regions"];
+        NaviDeplyPub.value = response.data["data"]["DeployPub"];
+        BannedRegions.value = response.data["data"]["BannedRegions"];
+      } else {
+        toastMsg.value = response.data["status"].substring(6);
+        toastShow.value = true;
+      }
+    })
+    .catch(function (error) {
+      toastMsg.value = error;
+      toastShow.value = true;
+    });
+}
+
+function toggleRegionBan(regionID) {
+  axios
+    .post("/admin/api/derp/ban/" + regionID, {})
+    .then(function (response) {
+      if (response.data["status"] == "success") {
+        toastMsg.value = "已切换公共区域采用状态";
+        toastShow.value = true;
+        NaviRegionList.value = response.data["data"]["Regions"];
+        NaviDeplyPub.value = response.data["data"]["DeployPub"];
+        BannedRegions.value = response.data["data"]["BannedRegions"];
       } else {
         toastMsg.value = response.data["status"].substring(6);
         toastShow.value = true;
@@ -105,6 +128,7 @@ function doRemoveNavi() {
 
 //数据填充控制部分
 const NaviDeplyPub = ref("");
+const BannedRegions = ref([]);
 const NaviRegionList = ref([]);
 const NaviRegionNum = computed(() => {
   if (NaviRegionList.value == null) {
@@ -127,6 +151,7 @@ function getNaviRegions() {
         // 处理成功情况
         NaviRegionList.value = response.data["data"]["Regions"];
         NaviDeplyPub.value = response.data["data"]["DeployPub"];
+        BannedRegions.value = response.data["data"]["BannedRegions"];
         resolve();
       })
       .catch(function (error) {
@@ -197,7 +222,160 @@ function secondsFormat(s) {
       </header>
 
       <template v-for="nr in NaviRegionList">
-        <table class="table w-full mb-3">
+        <table v-if="nr.Region.OrgID == 0" class="table w-full mb-3">
+          <thead>
+            <tr>
+              <th
+                class="md:w-1/4 flex-auto md:flex-initial md:shrink-0 w-0 text-ellipsis pt-2 pb-1"
+              >
+                <div
+                  class="inline-flex items-center align-middle justify-center font-medium border border-stone-200 bg-stone-200 text-gray-600 rounded-full px-2 py-1 leading-none text-xs min-w-fit"
+                >
+                  {{ nr.Region.RegionID }}# {{ nr.Region.RegionCode }}-{{
+                    nr.Region.RegionName + " "
+                  }}
+                  共 {{ nr.Nodes ? nr.Nodes.length : 0 }} 个
+                  <span
+                    class="ml-1 tooltip tooltip-top"
+                    :data-tip="
+                      BannedRegions.includes(nr.Region.RegionID) ? '点击启用' : '点击禁用'
+                    "
+                  >
+                    <div
+                      @click="toggleRegionBan(nr.Region.RegionID)"
+                      :class="{
+                        'border-red-50 bg-red-50 text-red-600': BannedRegions.includes(
+                          nr.Region.RegionID
+                        ),
+                        'border-green-50 bg-green-50 text-green-600': !BannedRegions.includes(
+                          nr.Region.RegionID
+                        ),
+                      }"
+                      class="inline-flex items-center align-middle justify-center font-medium border rounded-sm px-1 text-xs mr-1 cursor-pointer"
+                    >
+                      全局
+                    </div>
+                  </span>
+                </div>
+              </th>
+              <th class="hidden md:table-cell md:w-1/4 pt-2 pb-1">IP</th>
+              <th class="hidden md:table-cell w-1/4 lg:w-1/5 pt-2 pb-1">端口</th>
+              <th class="hidden lg:table-cell md:flex-auto pt-2 pb-1">状态</th>
+              <th
+                class="table-cell justify-end ml-auto md:ml-0 relative w-1/6 lg:w-12 pt-2 pb-1"
+              >
+                <span class="sr-only">司南操作菜单</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="nn in nr.Nodes">
+              <tr
+                :v-if="nn != nil"
+                @mouseenter="mouseOnNaviNode(nn)"
+                @mouseleave="mouseLeaveNaviNode()"
+                class="w-full px-0.5 hover"
+              >
+                <td
+                  class="md:w-1/4 flex-auto md:flex-initial md:shrink-0 w-0 text-ellipsis"
+                >
+                  <div class="relative">
+                    <div class="items-center text-gray-900">
+                      <p class="font-semibold hover:text-blue-500">
+                        <span
+                          :class="{
+                            'bg-green-500': nn.Statics.latency != -1,
+                            'bg-gray-300': nn.Statics.latency == -1,
+                          }"
+                          class="inline-block w-2 h-2 rounded-full relative -top-px lg:hidden mr-2"
+                        ></span>
+                        <a class="stretched-link">{{ nn.HostName }} </a>
+                      </p>
+                    </div>
+                    <div class="md:hidden flex space-x-1 truncate">
+                      <span class="text-sm">{{
+                        nn.Statics.latency != -1 ? nn.Statics.latency + "ms" : "断开"
+                      }}</span
+                      ><span>·</span
+                      ><span class="md:hidden text-gray-600 text-sm">{{
+                        nn.NoDERP ? "无中继" : "中继" + nn.DERPPort
+                      }}</span
+                      ><span>·</span
+                      ><span class="md:hidden text-gray-600 text-sm">{{
+                        nn.NoSTUN ? "无导航" : "导航" + nn.STUNPort
+                      }}</span>
+                    </div>
+                    <div class="flex items-center text-gray-600 text-xs">
+                      <span>{{ nn.Name }} </span>
+                    </div>
+                  </div>
+                </td>
+                <td class="hidden md:table-cell md:w-1/4">
+                  <div class="flex relative min-w-0">
+                    <div class="flex flex-col items-start text-gray-600 text-sm">
+                      <span>IPv4: {{ nn.IPv4 == "" ? "未指定" : nn.IPv4 }} </span>
+                      <span>IPv6: {{ nn.IPv6 == "" ? "未指定" : nn.IPv6 }} </span>
+                    </div>
+                  </div>
+                </td>
+                <td class="hidden md:table-cell w-1/4 lg:w-1/5">
+                  <div class="flex relative min-w-0">
+                    <div class="flex flex-col items-start text-sm">
+                      <span>中继: {{ nn.NoDERP ? "已禁用" : nn.DERPPort }}</span>
+                      <span>导航: {{ nn.NoSTUN ? "已禁用" : nn.STUNPort }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="hidden lg:table-cell md:flex-auto">
+                  <span>
+                    <div class="inline-flex items-center cursor-default">
+                      <span
+                        class="inline-block w-2 h-2 rounded-full mr-2"
+                        :class="{
+                          'bg-green-500': nn.Statics.latency != -1,
+                          'bg-gray-300': nn.Statics.latency == -1,
+                        }"
+                      ></span>
+                      <span class="text-sm text-gray-600">
+                        {{
+                          nn.Statics.latency != -1 ? nn.Statics.latency + "ms" : "断开"
+                        }}
+                      </span>
+                    </div>
+                  </span>
+                </td>
+                <td class="table-cell justify-end ml-auto md:ml-0 relative w-1/6 lg:w-12">
+                  <div class="flex-none w-12 -mt-0.5 relative">
+                    <div
+                      class="py-0.5 px-2 shadow-none rounded-md border border-gray-300/0 transition-shadow duration-100 ease-in-out z-20"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="none"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="text-gray-500"
+                      >
+                        <circle cx="12" cy="12" r="1"></circle>
+                        <circle cx="19" cy="12" r="1"></circle>
+                        <circle cx="5" cy="12" r="1"></circle>
+                      </svg>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </template>
+
+      <template v-for="nr in NaviRegionList">
+        <table v-if="nr.Region.OrgID != 0" class="table w-full mb-3">
           <thead>
             <tr>
               <th

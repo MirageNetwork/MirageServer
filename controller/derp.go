@@ -209,17 +209,25 @@ func (m *Mirage) LoadOrgDERPs(orgID int64) (*tailcfg.DERPMap, error) {
 		Regions: make(map[int]*tailcfg.DERPRegion),
 	}
 
+	org, err := m.GetOrgnaizationByID(orgID)
+	if err != nil {
+		log.Error().Err(err).Msg("Cannot get organization")
+		return nil, err
+	}
+
 	// 从数据库读取DERP信息
 	naviRegions := m.ListNaviRegions()
 	if len(naviRegions) != 0 {
 		for _, nr := range naviRegions {
-			if nr.OrgID == 0 || nr.OrgID == orgID {
-				derpRegion, err := m.toDERPRegion(nr)
-				if err != nil {
-					log.Error().Err(err).Msg("Cannot convert NaviRegion to DERPRegion")
-					return nil, err
+			if _, ok := org.NaviBanList[nr.ID]; !ok {
+				if nr.OrgID == 0 || nr.OrgID == orgID {
+					derpRegion, err := m.toDERPRegion(nr)
+					if err != nil {
+						log.Error().Err(err).Msg("Cannot convert NaviRegion to DERPRegion")
+						return nil, err
+					}
+					derpMap.Regions[derpRegion.RegionID] = &derpRegion
 				}
-				derpMap.Regions[derpRegion.RegionID] = &derpRegion
 			}
 		}
 	}

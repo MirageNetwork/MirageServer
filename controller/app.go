@@ -362,7 +362,7 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	console_router.HandleFunc("/api/keys", h.CAPIGetKeys).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/acls/tags", h.CAPIGetTags).Methods(http.MethodGet)
 	console_router.HandleFunc("/api/subscription", h.CAPIGetSubscription).Methods(http.MethodGet)
-	console_router.HandleFunc("/api/derp/add", h.CAPIAddDERP).Methods(http.MethodPost)
+	console_router.HandleFunc("/api/derp/query", h.CAPIQueryDERP).Methods(http.MethodGet)
 
 	// POST(更新类)API
 	console_router.HandleFunc("/api/users", h.CAPIPostUsers).Methods(http.MethodPost)
@@ -373,7 +373,8 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	console_router.HandleFunc("/api/acls/tags", h.CAPIPostTags).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/dns", h.CAPIPostDNS).Methods(http.MethodPost)
 	console_router.HandleFunc("/api/tcd", h.CAPIPostTCD).Methods(http.MethodPost)
-	console_router.HandleFunc("/api/derp/query", h.CAPIQueryDERP).Methods(http.MethodGet)
+	console_router.HandleFunc("/api/derp/add", h.CAPIAddDERP).Methods(http.MethodPost)
+	console_router.HandleFunc("/api/derp/ban/{id}", h.CAPISwitchRegionBan).Methods(http.MethodPost)
 
 	// DELETE(删除类)API
 	console_router.PathPrefix("/api/keys/").HandlerFunc(h.CAPIDelKeys).Methods(http.MethodDelete)

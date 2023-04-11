@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -17,8 +18,9 @@ import (
 )
 
 type NaviQueryRes struct {
-	DeployPub string            `json:"DeployPub"`
-	Regions   []NaviQueryRegion `json:"Regions"`
+	DeployPub     string            `json:"DeployPub"`
+	BannedRegions []int             `json:"BannedRegions"`
+	Regions       []NaviQueryRegion `json:"Regions"`
 }
 type NaviQueryRegion struct {
 	Region NaviRegion `json:"Region"`
@@ -82,6 +84,12 @@ func (m *Mirage) CAPIQueryDERP(
 			return
 		}
 	}
+
+	resData.BannedRegions = []int{}
+	for id := range org.NaviBanList {
+		resData.BannedRegions = append(resData.BannedRegions, id)
+	}
+
 	resData.DeployPub = org.NaviDeployPub
 
 	m.doAPIResponse(w, "", resData)
@@ -136,6 +144,9 @@ func (m *Mirage) CAPIAddDERP(
 			m.doAPIResponse(w, "新建司南档案失败", nil)
 			return
 		}
+
+		m.setOrgLastStateChangeToNow(user.OrganizationID)
+
 		m.CAPIQueryDERP(w, r)
 		return
 	}
@@ -330,6 +341,8 @@ WantedBy=multi-user.target`
 		return
 	}
 
+	m.setOrgLastStateChangeToNow(user.OrganizationID)
+
 	m.CAPIQueryDERP(w, r)
 }
 
@@ -368,6 +381,60 @@ func (m *Mirage) CAPIDelNaviNode(
 	delete(m.DERPNCs, naviID)
 	delete(m.DERPseqnum, naviID)
 	//	c.App.LoadDERPMapFromURL(c.App.cfg.DERPURL)
+
+	m.setOrgLastStateChangeToNow(user.OrganizationID)
+
+	m.CAPIQueryDERP(w, r)
+}
+
+func (m *Mirage) CAPISwitchRegionBan(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	user, err := m.verifyTokenIDandGetUser(w, r)
+	if err != nil || user.CheckEmpty() {
+		m.doAPIResponse(w, "用户信息核对失败:"+err.Error(), nil)
+		return
+	}
+
+	vars := mux.Vars(r)
+	regionIDStr, ok := vars["id"]
+	if !ok {
+		m.doAPIResponse(w, "未指定区域ID", nil)
+		return
+	}
+	regionID, err := strconv.Atoi(regionIDStr)
+	if err != nil {
+		m.doAPIResponse(w, "区域ID格式错误", nil)
+		return
+	}
+
+	region := m.GetNaviRegion(regionID)
+	if region == nil || region.OrgID != 0 {
+		m.doAPIResponse(w, "未找到该区域档案", nil)
+		return
+	}
+
+	org, err := m.GetOrgnaizationByID(user.OrganizationID)
+	if err != nil {
+		m.doAPIResponse(w, "查询用户所属组织失败", nil)
+		return
+	}
+	if _, ok := org.NaviBanList[regionID]; ok {
+		delete(org.NaviBanList, regionID)
+	} else {
+		if org.NaviBanList == nil {
+			org.NaviBanList = make(map[int]struct{})
+		}
+		org.NaviBanList[regionID] = struct{}{}
+	}
+
+	if err := m.db.Save(org).Error; err != nil {
+		m.doAPIResponse(w, "数据库更新组织禁用区域信息失败:"+err.Error(), nil)
+		return
+	}
+
+	m.setOrgLastStateChangeToNow(org.ID)
 
 	m.CAPIQueryDERP(w, r)
 }
