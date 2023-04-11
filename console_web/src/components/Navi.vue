@@ -197,21 +197,20 @@ function secondsFormat(s) {
       </header>
 
       <template v-for="nr in NaviRegionList">
-        <div
-          class="inline-flex items-center align-middle justify-center font-medium border border-gray-200 bg-gray-200 text-gray-600 rounded-full px-2 py-1 leading-none text-sm ml-4 min-w-fit h-7"
-        >
-          {{ nr.Region.RegionID }} 号区-{{ nr.Region.RegionCode }}-{{
-            nr.Region.RegionName
-          }}
-          共 {{ nr.Nodes ? nr.Nodes.length : 0 }} 只司南
-        </div>
         <table class="table w-full mb-3">
           <thead>
             <tr>
               <th
                 class="md:w-1/4 flex-auto md:flex-initial md:shrink-0 w-0 text-ellipsis pt-2 pb-1"
               >
-                司南
+                <div
+                  class="inline-flex items-center align-middle justify-center font-medium border border-stone-200 bg-stone-200 text-gray-600 rounded-full px-2 py-1 leading-none text-xs min-w-fit"
+                >
+                  {{ nr.Region.RegionID }}# {{ nr.Region.RegionCode }}-{{
+                    nr.Region.RegionName + " "
+                  }}
+                  共 {{ nr.Nodes ? nr.Nodes.length : 0 }} 个
+                </div>
               </th>
               <th class="hidden md:table-cell md:w-1/4 pt-2 pb-1">IP</th>
               <th class="hidden md:table-cell w-1/4 lg:w-1/5 pt-2 pb-1">端口</th>
