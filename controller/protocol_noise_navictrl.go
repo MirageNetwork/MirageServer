@@ -162,7 +162,8 @@ type NaviStatus struct {
 		PacketsSent                uint64 `json:"packets_sent"`
 		Version                    string `json:"version"`
 	} `json:"derp"`
-	Latency int64 `json:"latency"`
+	Latency       int64     `json:"latency"`
+	CertExpiresAt time.Time `json:"cert_expires_at"`
 }
 
 func (ns *NaviStatus) Scan(src interface{}) error {
@@ -188,6 +189,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 	start := time.Now()
 	res204, err := http.DefaultClient.Do(req204)
 	latency := time.Since(start)
+	certExpiresAt := res204.TLS.PeerCertificates[0].NotAfter
 	if err != nil {
 		navi.Statics = NaviStatus{
 			Latency: -1,
@@ -210,7 +212,8 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 	if navi.NaviKey == "" {
 		//TODO: 非受控节点只检查204状态
 		navi.Statics = NaviStatus{
-			Latency: latency.Milliseconds(),
+			Latency:       latency.Milliseconds(),
+			CertExpiresAt: certExpiresAt,
 		}
 		err = m.db.Save(navi).Error
 		return err
@@ -241,6 +244,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 	log.Debug().Msg(fmt.Sprintf("Navi %s status: %v", navi.HostName, status))
 	navi.Statics = status
 	navi.Statics.Latency = latency.Milliseconds()
+	navi.Statics.CertExpiresAt = certExpiresAt
 	m.db.Save(navi)
 
 	return nil

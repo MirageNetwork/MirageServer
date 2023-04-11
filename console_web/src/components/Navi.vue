@@ -259,7 +259,7 @@ function secondsFormat(s) {
                 </div>
               </th>
               <th class="hidden md:table-cell md:w-1/4 pt-2 pb-1">IP</th>
-              <th class="hidden md:table-cell w-1/4 lg:w-1/5 pt-2 pb-1">端口</th>
+              <th class="hidden md:table-cell w-1/5 lg:w-1/6 pt-2 pb-1">端口</th>
               <th class="hidden lg:table-cell md:flex-auto pt-2 pb-1">状态</th>
               <th
                 class="table-cell justify-end ml-auto md:ml-0 relative w-1/6 lg:w-12 pt-2 pb-1"
@@ -318,7 +318,7 @@ function secondsFormat(s) {
                     </div>
                   </div>
                 </td>
-                <td class="hidden md:table-cell w-1/4 lg:w-1/5">
+                <td class="hidden md:table-cell w-1/5 lg:w-1/6">
                   <div class="flex relative min-w-0">
                     <div class="flex flex-col items-start text-sm">
                       <span>中继: {{ nn.NoDERP ? "已禁用" : nn.DERPPort }}</span>
@@ -330,7 +330,7 @@ function secondsFormat(s) {
                   <span>
                     <div class="inline-flex items-center cursor-default">
                       <span
-                        class="inline-block w-2 h-2 rounded-full mr-2"
+                        class="inline-block w-2 h-2 rounded-full mx-2"
                         :class="{
                           'bg-green-500': nn.Statics.latency != -1,
                           'bg-gray-300': nn.Statics.latency == -1,
@@ -391,7 +391,7 @@ function secondsFormat(s) {
                 </div>
               </th>
               <th class="hidden md:table-cell md:w-1/4 pt-2 pb-1">IP</th>
-              <th class="hidden md:table-cell w-1/4 lg:w-1/5 pt-2 pb-1">端口</th>
+              <th class="hidden md:table-cell w-1/5 lg:w-1/6 pt-2 pb-1">端口</th>
               <th class="hidden lg:table-cell md:flex-auto pt-2 pb-1">状态</th>
               <th
                 class="table-cell justify-end ml-auto md:ml-0 relative w-1/6 lg:w-12 pt-2 pb-1"
@@ -457,7 +457,7 @@ function secondsFormat(s) {
                     </div>
                   </div>
                 </td>
-                <td class="hidden md:table-cell w-1/4 lg:w-1/5">
+                <td class="hidden md:table-cell w-1/5 lg:w-1/6">
                   <div class="flex relative min-w-0">
                     <div class="flex flex-col items-start text-sm">
                       <span>中继: {{ nn.NoDERP ? "已禁用" : nn.DERPPort }}</span>
@@ -466,35 +466,61 @@ function secondsFormat(s) {
                   </div>
                 </td>
                 <td class="hidden lg:table-cell md:flex-auto">
-                  <span>
+                  <span class="flex flex-col">
                     <div class="inline-flex items-center cursor-default">
                       <span
-                        class="inline-block w-2 h-2 rounded-full mr-2"
+                        class="inline-block w-2 h-2 rounded-full mx-2"
                         :class="{
                           'bg-green-500': nn.Statics.latency != -1,
                           'bg-gray-300': nn.Statics.latency == -1,
                         }"
                       ></span>
                       <span
-                        v-if="nn.Arch != 'external'"
                         class="text-sm text-gray-600 tooltip tooltip-top"
                         :data-tip="
-                          '已启动' + secondsFormat(nn.Statics.counter_uptime_sec)
+                          nn.Arch == 'external'
+                            ? '非受管司南'
+                            : '已启动' + secondsFormat(nn.Statics.counter_uptime_sec)
                         "
                         >{{
-                          nn.Statics.latency != -1 ? nn.Statics.latency + "ms" : "断开"
-                        }}</span
-                      >
-                      <span
-                        v-else
-                        class="text-sm text-gray-600 tooltip tooltip-top"
-                        data-tip="非受管司南"
-                      >
-                        {{
                           nn.Statics.latency != -1 ? nn.Statics.latency + "ms" : "断开"
                         }}
                       </span>
                     </div>
+                    <span class="inline-flex text-sm text-gray-600">
+                      <svg
+                        viewBox="0 0 1024 1024"
+                        version="1.1"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        fill="currentColor"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="text-gray-500 mr-1"
+                      >
+                        <path
+                          d="M237.44 752.213333a34.133333 34.133333 0 0 0 33.28 0l72.96-39.893333 72.746667 39.893333a36.48 36.48 0 0 0 16.213333 4.053334 33.92 33.92 0 0 0 33.706667-33.706667v-206.933333a154.666667 154.666667 0 1 0-245.333334 0v207.573333a33.92 33.92 0 0 0 16.426667 29.013333z m175.573333-62.08L359.68 661.333333a34.346667 34.346667 0 0 0-32.213333 0l-53.12 29.226667v-130.773333a152.746667 152.746667 0 0 0 138.666666 0zM343.68 320a101.333333 101.333333 0 1 1-101.333333 101.333333A101.333333 101.333333 0 0 1 343.68 320z"
+                          p-id="3939"
+                        ></path>
+                        <path
+                          d="M835.2 136.533333H124.8A82.133333 82.133333 0 0 0 42.666667 218.666667v586.666666a82.133333 82.133333 0 0 0 82.133333 82.133334h283.946667a35.2 35.2 0 1 0 0-70.4H124.8a11.733333 11.733333 0 0 1-11.733333-11.733334v-586.666666a11.733333 11.733333 0 0 1 11.733333-11.733334h710.4a11.733333 11.733333 0 0 1 11.733333 11.733334v140.586666a35.2 35.2 0 0 0 35.2 35.2A35.2 35.2 0 0 0 917.333333 359.253333v-140.586666a82.133333 82.133333 0 0 0-82.133333-82.133334z"
+                          p-id="3940"
+                        ></path>
+                        <path
+                          d="M951.68 720h-29.44v-110.08a177.706667 177.706667 0 0 0-148.053333-174.933333V405.333333a29.653333 29.653333 0 1 0-59.093334 0v29.866667a177.493333 177.493333 0 0 0-147.84 174.933333v110.08H537.6a29.653333 29.653333 0 1 0 0 59.093334h414.08a29.653333 29.653333 0 1 0 0-59.093334z m-88.746667 0H626.346667v-110.08a118.4 118.4 0 1 1 236.586666 0zM744.746667 887.466667a69.12 69.12 0 0 0 68.906666-69.12h-138.026666a69.12 69.12 0 0 0 69.12 69.12z"
+                          p-id="3941"
+                        ></path>
+                      </svg>
+                      {{
+                        new Date(nn.Statics.cert_expires_at)
+                          .toLocaleDateString()
+                          .replace("/", "年")
+                          .replace("/", "月") + "日"
+                      }}
+                    </span>
                   </span>
                 </td>
                 <td class="table-cell justify-end ml-auto md:ml-0 relative w-1/6 lg:w-12">
