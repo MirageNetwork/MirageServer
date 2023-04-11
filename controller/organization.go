@@ -36,6 +36,8 @@ type Organization struct {
 	AclPolicy      *ACLPolicy
 	AclRules       []tailcfg.FilterRule `gorm:"-"`
 	SshPolicy      *tailcfg.SSHPolicy   `gorm:"-"`
+	NaviDeployKey  string
+	NaviDeployPub  string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

@@ -278,7 +278,7 @@ func (m *Mirage) ListNaviRegions() []NaviRegion {
 	return naviRegions
 }
 
-func (m *Mirage) GetNaviRegion(id int64) *NaviRegion {
+func (m *Mirage) GetNaviRegion(id int) *NaviRegion {
 	naviRegion := NaviRegion{}
 	if err := m.db.First(&naviRegion, id).Error; err != nil {
 		return nil
@@ -314,6 +314,13 @@ func (m *Mirage) GetNaviNode(id string) *NaviNode {
 	}
 	return &naviNode
 }
+func (m *Mirage) CreateNaviNode(naviNode *NaviNode) *NaviNode {
+	if err := m.db.Create(naviNode).Error; err != nil {
+		return nil
+	}
+	return naviNode
+}
+
 func (m *Mirage) UpdateNaviNode(naviNode *NaviNode) *NaviNode {
 	if err := m.db.Save(naviNode).Error; err != nil {
 		return nil
