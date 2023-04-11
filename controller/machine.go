@@ -831,6 +831,7 @@ func (h *Mirage) HardDeleteMachine(machine *Machine) error {
 		return err
 	}
 
+	h.setOrgLastStateChangeToNow(machine.User.OrganizationID)
 	return nil
 }
 
