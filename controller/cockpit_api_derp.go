@@ -40,19 +40,21 @@ func (c *Cockpit) CAPIQueryDERP(
 	}{}
 	naviRegions := c.ListNaviRegions()
 	for _, naviRegion := range naviRegions {
-		naviNodes := c.ListNaviNodes(naviRegion.ID)
-		for index := range naviNodes { // 清除掉敏感信息
-			naviNodes[index].NaviKey = ""
-			naviNodes[index].SSHPwd = ""
-			naviNodes[index].DNSKey = ""
+		if naviRegion.OrgID == 0 {
+			naviNodes := c.ListNaviNodes(naviRegion.ID)
+			for index := range naviNodes { // 清除掉敏感信息
+				naviNodes[index].NaviKey = ""
+				naviNodes[index].SSHPwd = ""
+				naviNodes[index].DNSKey = ""
+			}
+			resData = append(resData, struct {
+				Region NaviRegion `json:"Region"`
+				Nodes  []NaviNode `json:"Nodes"`
+			}{
+				Region: naviRegion,
+				Nodes:  naviNodes,
+			})
 		}
-		resData = append(resData, struct {
-			Region NaviRegion `json:"Region"`
-			Nodes  []NaviNode `json:"Nodes"`
-		}{
-			Region: naviRegion,
-			Nodes:  naviNodes,
-		})
 	}
 	c.doAPIResponse(w, "", resData)
 }
@@ -70,6 +72,7 @@ func (c *Cockpit) CAPIAddDERP(
 		// 开始处理服务端数据信息
 		if reqData.NaviNode.NaviRegionID == -1 {
 			naviRegion := &NaviRegion{
+				OrgID:      0,
 				RegionCode: reqData.RegionCode,
 				RegionName: reqData.RegionName,
 			}
@@ -163,6 +166,7 @@ func (c *Cockpit) CAPIAddDERP(
 	// 开始处理服务端数据信息
 	if reqData.NaviNode.NaviRegionID == -1 {
 		naviRegion := &NaviRegion{
+			OrgID:      0,
 			RegionCode: reqData.RegionCode,
 			RegionName: reqData.RegionName,
 		}
