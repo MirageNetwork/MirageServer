@@ -9,7 +9,7 @@ import DNS from './components/DNS.vue'
 import Settings from './components/Settings.vue'
 import Users from './components/Users.vue'
 import ACLs from './components/ACLs.vue'
-
+import Navi from './components/Navi.vue'
 
 const routes = [
     { path: '/', redirect: '/machines' },
@@ -21,6 +21,7 @@ const routes = [
     { path: '/users', component: Users },
     { path: '/acls', redirect: '/acls/tags' },
     { path: '/acls/:aclpart', component: ACLs },
+    { path: '/navi', component: Navi },
 ]
 const router = createRouter({
     history: createWebHashHistory(),

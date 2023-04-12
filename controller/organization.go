@@ -1,7 +1,10 @@
 package controller
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -36,9 +39,30 @@ type Organization struct {
 	AclPolicy      *ACLPolicy
 	AclRules       []tailcfg.FilterRule `gorm:"-"`
 	SshPolicy      *tailcfg.SSHPolicy   `gorm:"-"`
+	NaviBanList    NaviBanList
+	NaviDeployKey  string
+	NaviDeployPub  string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type NaviBanList map[int]struct{}
+
+func (nbl NaviBanList) Value() (driver.Value, error) {
+	b, err := json.Marshal(nbl)
+	return string(b), err
+}
+
+func (nbl *NaviBanList) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, nbl)
+	case string:
+		return json.Unmarshal([]byte(v), nbl)
+	default:
+		return fmt.Errorf("cannot parse admin credential: unexpected data type %T", value)
+	}
 }
 
 func (o *Organization) BeforeCreate(tx *gorm.DB) error {

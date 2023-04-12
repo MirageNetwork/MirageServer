@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "element-plus": "^2.3.3",
     "vue": "^3.2.45",
     "vue3-smooth-dnd": "^0.0.4"
   },
@@ -21,6 +22,8 @@
     "postcss": "^8.4.21",
     "sass": "^1.57.1",
     "tailwindcss": "^3.2.4",
+    "unplugin-auto-import": "^0.15.2",
+    "unplugin-vue-components": "^0.24.1",
     "vite": "^4.0.0",
     "vue-router": "^4.1.6",
     "vue3-click-away": "^1.2.4"

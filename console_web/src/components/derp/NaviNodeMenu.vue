@@ -1,6 +1,6 @@
 <script setup>
 import { watch, ref, onMounted, computed } from "vue";
-import { useDisScroll } from "../utils.js";
+import { useDisScroll } from "../../utils.js";
 
 useDisScroll();
 
