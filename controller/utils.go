@@ -385,3 +385,18 @@ func (s *UtilsSet[K]) CheckKey(key K) bool {
 func (s *UtilsSet[K]) GetKeys() []K {
 	return s.slice
 }
+func ShadowClone[K any](in K) K {
+	if reflect.TypeOf(in).Kind() == reflect.Ptr { // check if in is a pointer
+		val := reflect.ValueOf(in).Elem() // get the value pointed to by the pointer
+		// use val here to work with the value pointed to by the pointer
+
+		newPtr := reflect.New(reflect.TypeOf(in).Elem()) // create a new pointer to K
+		newVal := newPtr.Elem()                          // get the value pointed to by the new pointer
+		newVal.Set(val)                                  // copy the input's content to the new value
+
+		return newPtr.Interface().(K) // return the new pointer as type K
+	} else {
+		// in is not a pointer, so use it directly
+		return in
+	}
+}
