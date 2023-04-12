@@ -126,7 +126,7 @@ func (s *SysConfig) toSrvConfig() (*Config, error) {
 		Issuer:       "https://" + s.ServerURL + "/issuer",
 		ClientID:     "MirageServer",
 		ClientSecret: s.DexSecret,
-		Scope:        []string{"openid", "profile", "email", "groups", "name"},
+		Scope:        []string{"offline_access", "openid", "profile", "email", "groups", "name"},
 		ExtraParams:  map[string]string{"prompt": "login"},
 	}
 
