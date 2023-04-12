@@ -43,6 +43,9 @@ func (c *Cockpit) CAPIQueryDERP(
 		if naviRegion.OrgID == 0 {
 			naviNodes := c.ListNaviNodes(naviRegion.ID)
 			for index := range naviNodes { // 清除掉敏感信息
+				if naviNodes[index].NaviKey != "" && naviNodes[index].Arch == "external" {
+					naviNodes[index].Arch = "unknown"
+				}
 				naviNodes[index].NaviKey = ""
 				naviNodes[index].SSHPwd = ""
 				naviNodes[index].DNSKey = ""

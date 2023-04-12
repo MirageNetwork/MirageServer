@@ -48,7 +48,10 @@ const closeMe = (event) => {
       <div class="block px-2 py-1 hover:bg-gray-100 text-xs">
         版本 {{ selectNavi.Statics.derp.version.split("-")[0] }}
       </div>
-      <div class="block px-2 py-1 hover:bg-gray-100 text-xs">
+      <div
+        v-if="selectNavi.Arch != 'unknown'"
+        class="block px-2 py-1 hover:bg-gray-100 text-xs"
+      >
         主机 {{ selectNavi.SSHAddr }}
       </div>
       <div class="block px-2 py-1 hover:bg-gray-100 text-xs">

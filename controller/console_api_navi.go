@@ -49,7 +49,9 @@ func (m *Mirage) CAPIQueryDERP(
 					naviNodes[index].Statics = NaviStatus{
 						Latency: latency,
 					}
-					naviNodes[index].Arch = "external"
+					naviNodes[index].Arch = "common"
+				} else if naviNodes[index].NaviKey != "" && naviNodes[index].Arch == "external" {
+					naviNodes[index].Arch = "unknown"
 				}
 				naviNodes[index].NaviKey = ""
 				naviNodes[index].SSHPwd = ""
