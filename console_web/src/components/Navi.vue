@@ -515,10 +515,12 @@ function secondsFormat(s) {
                         ></path>
                       </svg>
                       {{
-                        new Date(nn.Statics.cert_expires_at)
-                          .toLocaleDateString()
-                          .replace("/", "年")
-                          .replace("/", "月") + "日"
+                        nn.Statics.latency != -1
+                          ? new Date(nn.Statics.cert_expires_at)
+                              .toLocaleDateString()
+                              .replace("/", "年")
+                              .replace("/", "月") + "日"
+                          : "未知"
                       }}
                     </span>
                   </span>

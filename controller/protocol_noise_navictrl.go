@@ -189,7 +189,6 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 	start := time.Now()
 	res204, err := http.DefaultClient.Do(req204)
 	latency := time.Since(start)
-	certExpiresAt := res204.TLS.PeerCertificates[0].NotAfter
 	if err != nil {
 		navi.Statics = NaviStatus{
 			Latency: -1,
@@ -208,6 +207,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 		return fmt.Errorf("update navi status request: http %d: %.200s",
 			res204.StatusCode, strings.TrimSpace(string(msg)))
 	}
+	certExpiresAt := res204.TLS.PeerCertificates[0].NotAfter
 
 	if navi.NaviKey == "" {
 		//TODO: 非受控节点只检查204状态
