@@ -39,6 +39,14 @@ const (
 	expectedTokenItems = 2
 )
 
+const (
+	AutoGroupSelf = "*self"
+)
+
+var AutoGroupMap = map[string]struct{}{
+	AutoGroupSelf: {},
+}
+
 // For some reason golang.org/x/net/internal/iana is an internal package.
 const (
 	protocolICMP     = 1   // Internet Control Message
@@ -678,6 +686,11 @@ func (h *Mirage) expandAlias(
 		}
 
 		return ips, nil
+	}
+
+	// autogroup
+	if strings.HasPrefix(alias, "autogroup:") {
+		return []string{AutoGroupSelf}, nil
 	}
 
 	// if alias is a user

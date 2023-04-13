@@ -212,48 +212,65 @@ func getFilteredByACLPeers(
 		if peer.ID == machine.ID {
 			continue
 		}
+	rulesLoop:
 		for _, rule := range rules {
+			// normal dst ip slice
 			var dst []string
+			// dst ip slice for autogroup
+			var autoDst = map[string]struct{}{}
 			for _, d := range rule.DstPorts {
-				dst = append(dst, d.IP)
+				if _, ok := AutoGroupMap[d.IP]; !ok {
+					dst = append(dst, d.IP)
+				} else {
+					autoDst[d.IP] = struct{}{}
+				}
 			}
 			peerIPs := peer.IPAddresses.ToStringSlice()
+			for autoGroupKey := range autoDst {
+				switch autoGroupKey {
+				case AutoGroupSelf:
+					if peer.UserID == machine.UserID {
+						peers[peer.ID] = peer
+					}
+					continue rulesLoop
+				}
+			}
 			if matchSourceAndDestinationWithRule(
 				rule.SrcIPs,
 				dst,
-				machineIPs,
-				peerIPs,
-			) || // match source and destination
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					peerIPs,
-					machineIPs,
-				) || // match return path
+				[]string{"*"},
+				[]string{"*"},
+			) || // match all source and all destination
 				matchSourceAndDestinationWithRule(
 					rule.SrcIPs,
 					dst,
 					machineIPs,
 					[]string{"*"},
-				) || // match source and all destination
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					[]string{"*"},
-					[]string{"*"},
-				) || // match source and all destination
+				) || // match machine source and all destination
 				matchSourceAndDestinationWithRule(
 					rule.SrcIPs,
 					dst,
 					[]string{"*"},
 					peerIPs,
-				) || // match source and all destination
+				) || // match all source and peer destination
 				matchSourceAndDestinationWithRule(
 					rule.SrcIPs,
 					dst,
 					[]string{"*"},
 					machineIPs,
-				) { // match all sources and source
+				) || // match all sources and machine destination
+				matchSourceAndDestinationWithRule(
+					rule.SrcIPs,
+					dst,
+					machineIPs,
+					peerIPs,
+				) || // match source and destination
+				matchSourceAndDestinationWithRule(
+					rule.SrcIPs,
+					dst,
+					peerIPs,
+					machineIPs,
+				) { // match return path
 				peers[peer.ID] = peer
 			} else {
 				invalidNodeIDs = append(invalidNodeIDs, tailcfg.NodeID(peer.ID))
