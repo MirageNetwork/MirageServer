@@ -48,6 +48,21 @@ var AutoGroupMap = map[string]struct{}{
 	AutoGroupSelf: {},
 }
 
+var DefaultEmptyAclPolicy ACLPolicy = ACLPolicy{
+	ACLs: []ACL{{
+		Action:       "accept",
+		Protocol:     "",
+		Sources:      []string{"*"},
+		Destinations: []string{"*:*"},
+	}},
+}
+var DefaultEmptyAcls []ACL = []ACL{{
+	Action:       "accept",
+	Protocol:     "",
+	Sources:      []string{"*"},
+	Destinations: []string{"*:*"},
+}}
+
 // For some reason golang.org/x/net/internal/iana is an internal package.
 const (
 	protocolICMP     = 1   // Internet Control Message
@@ -192,14 +207,21 @@ func (h *Mirage) UpdateACLRules() error {
 }
 
 func (h *Mirage) UpdateACLRulesOfOrg(org *Organization) error {
-	if org == nil || org.AclPolicy == nil || org.ID == 0 {
-		return errEmptyPolicy
+	if org == nil || org.ID == 0 {
+		return ErrOrgNotFound
 	}
 	machines, err := h.ListMachinesByOrgID(org.ID)
 	if err != nil {
 		return err
 	}
-	rules, err := h.generateACLRules(machines, *org.AclPolicy, h.cfg.OIDC.StripEmaildomain)
+	aclPolicy := org.AclPolicy
+	if org.AclPolicy == nil {
+		aclPolicy = &DefaultEmptyAclPolicy
+	} else if len(org.AclPolicy.ACLs) == 0 {
+		aclPolicy = ShadowClone(org.AclPolicy)
+		aclPolicy.ACLs = DefaultEmptyAcls
+	}
+	rules, err := h.generateACLRules(machines, *aclPolicy, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		return err
 	}
@@ -229,7 +251,10 @@ func (h *Mirage) generateSSHRulesOfOrg(machines []Machine, org *Organization) ([
 	}
 	a := org.AclPolicy
 	if a == nil {
-		return nil, errEmptyPolicy
+		a = &DefaultEmptyAclPolicy
+	} else if len(a.ACLs) == 0 {
+		a = ShadowClone(org.AclPolicy)
+		a.ACLs = DefaultEmptyAcls
 	}
 
 	rules := []*tailcfg.SSHRule{}

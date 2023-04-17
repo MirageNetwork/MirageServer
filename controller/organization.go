@@ -127,15 +127,8 @@ func (m *Mirage) CreateOrgnaizationInTx(tx *gorm.DB, name, provider string) (*Or
 	org := Organization{}
 	org.Name = name
 	org.Provider = provider
-	org.AclPolicy = &ACLPolicy{
-		ACLs: []ACL{{
-			Action:       "accept",
-			Protocol:     "",
-			Sources:      []string{"*"},
-			Destinations: []string{"*:*"},
-		}},
-	}
 	org.ExpiryDuration = DefaultExpireTime
+	org.AclPolicy = &ACLPolicy{}
 
 	//cgao6: 添加组织幻域域名roll生成
 	newMagicDNSDomain, err := m.GenNewMagicDNSDomain(tx)
