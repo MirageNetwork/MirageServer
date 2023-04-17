@@ -219,10 +219,12 @@ func getFilteredByACLPeers(
 			// dst ip slice for autogroup
 			var autoDst = map[string]struct{}{}
 			for _, d := range rule.DstPorts {
-				if _, ok := AutoGroupMap[d.IP]; !ok {
-					dst = append(dst, d.IP)
+				if strings.HasPrefix(d.IP, AutoGroupPrefix) {
+					if _, ok := AutoGroupMap[d.IP]; ok {
+						autoDst[d.IP] = struct{}{}
+					}
 				} else {
-					autoDst[d.IP] = struct{}{}
+					dst = append(dst, d.IP)
 				}
 			}
 			peerIPs := peer.IPAddresses.ToStringSlice()

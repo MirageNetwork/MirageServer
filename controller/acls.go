@@ -40,7 +40,8 @@ const (
 )
 
 const (
-	AutoGroupSelf = "*self"
+	AutoGroupPrefix = "autogroup:"
+	AutoGroupSelf   = "autogroup:self"
 )
 
 var AutoGroupMap = map[string]struct{}{
@@ -689,7 +690,7 @@ func (h *Mirage) expandAlias(
 	}
 
 	// autogroup
-	if strings.HasPrefix(alias, "autogroup:") {
+	if strings.HasPrefix(alias, AutoGroupPrefix) {
 		return []string{AutoGroupSelf}, nil
 	}
 
