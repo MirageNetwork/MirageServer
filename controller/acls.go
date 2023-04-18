@@ -42,8 +42,10 @@ const (
 const (
 	AutoGroupPrefix = "autogroup:"
 	AutoGroupSelf   = "autogroup:self"
+	AutoGroupOwner  = "autogroup:owner"
 )
 
+// 需要在获取peers时候特殊处理的autogroup类型
 var AutoGroupMap = map[string]struct{}{
 	AutoGroupSelf: {},
 }
@@ -716,7 +718,21 @@ func (h *Mirage) expandAlias(
 
 	// autogroup
 	if strings.HasPrefix(alias, AutoGroupPrefix) {
-		return []string{AutoGroupSelf}, nil
+		// 处理 autogroup:xxx 中需要特殊处理的
+		if _, ok := AutoGroupMap[alias]; ok {
+			return []string{alias}, nil
+			// 处理 autogroup:owner
+		} else if alias == AutoGroupOwner {
+			for _, machine := range machines {
+				if machine.User.Role == RoleOwner {
+					ips = append(ips, machine.IPAddresses.ToStringSlice()...)
+					if autoAddRoute {
+						ips = append(ips, h.expandMachineRoutes(machine)...)
+					}
+					return ips, nil
+				}
+			}
+		}
 	}
 
 	// if alias is a user

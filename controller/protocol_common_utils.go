@@ -73,15 +73,20 @@ func (h *Mirage) generateMapResponse(
 	)
 
 	now := time.Now()
-	org, err := h.GetOrgnaizationByID(machine.User.OrganizationID)
-	if err != nil {
-		log.Error().
-			Caller().
-			Str("func", "generateMapResponse").
-			Err(err).
-			Msg("Failed to get organization of machine")
+	var org *Organization
+	if machine.User.Organization.AclPolicy != nil {
+		org = &machine.User.Organization
+	} else {
+		org, err = h.GetOrgnaizationByID(machine.User.OrganizationID)
+		if err != nil {
+			log.Error().
+				Caller().
+				Str("func", "generateMapResponse").
+				Err(err).
+				Msg("Failed to get organization of machine")
 
-		return nil, err
+			return nil, err
+		}
 	}
 
 	derpMap, err := h.LoadOrgDERPs(machine.User.OrganizationID)
@@ -91,6 +96,15 @@ func (h *Mirage) generateMapResponse(
 			Str("func", "generateMapResponse").
 			Err(err).
 			Msg("Failed to get DERP map of machine")
+	}
+
+	err = h.checkAndHandleAutogroupRules(machine, org)
+	if err != nil {
+		log.Error().
+			Caller().
+			Str("func", "generateMapResponse").
+			Err(err).
+			Msg("Failed to get machines of the user")
 	}
 
 	resp := tailcfg.MapResponse{

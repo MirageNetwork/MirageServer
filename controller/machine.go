@@ -361,6 +361,7 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 			return Machines{}, []tailcfg.NodeID{}, err
 		}
 		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, machine)
+		machine.User.Organization = *org
 	} else {
 		peers, err = h.ListPeers(machine)
 		if err != nil {

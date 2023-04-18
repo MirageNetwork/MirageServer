@@ -152,6 +152,7 @@ func (m *Mirage) CreateOrgnaizationInTx(tx *gorm.DB, name, provider string) (*Or
 	return &org, nil
 }
 
+// GetOrgnaizationByName get Organization Info and update the AclRules
 func (m *Mirage) GetOrgnaizationByName(name, provider string) (*Organization, error) {
 	org, err := GetOrgnaizationByNameInTx(m.db.Session(&gorm.Session{}), name, provider)
 	if err != nil {
@@ -161,6 +162,17 @@ func (m *Mirage) GetOrgnaizationByName(name, provider string) (*Organization, er
 	return org, err
 }
 
+// GetOrgnaizationRecordByName get Organization Info only(not to update the AclRules)
+func (m *Mirage) GetOrgnaizationRecordByName(name, provider string) (*Organization, error) {
+	var org Organization
+	err := m.db.Model(&Organization{}).Where(&Organization{
+		Name:     name,
+		Provider: provider,
+	}).Take(&org).Error
+	return &org, err
+}
+
+// GetOrgnaizationIDByName get Organization id (the primary key of the db table)
 func (m *Mirage) GetOrgnaizationIDByName(name, provider string) (int64, error) {
 	var id int64
 	err := m.db.Model(&Organization{}).Where(&Organization{
@@ -170,6 +182,7 @@ func (m *Mirage) GetOrgnaizationIDByName(name, provider string) (int64, error) {
 	return id, err
 }
 
+// GetOrgnaizationByID get Organization Info and update the AclRules
 func (m *Mirage) GetOrgnaizationByID(id int64) (*Organization, error) {
 	org := &Organization{}
 	err := m.db.Where(&Organization{ID: id}).Take(org).Error
@@ -282,4 +295,42 @@ func (m *Mirage) UpdateOrgDNSConfig(org *Organization, newDNSCfg DNSData) error 
 	org.SplitDns = newSplitDns
 	err := m.db.Select("EnableMagic", "Nameservers", "OverrideLocal", "Nameservers", "OverrideLocal", "SplitDns").Updates(org).Error
 	return err
+}
+
+func (m *Mirage) checkAndHandleAutogroupRules(machine *Machine, organization *Organization) error {
+	autogroupIpsMap := map[string][]string{}
+	nodes, err := m.ListMachinesByUser(machine.UserID)
+	if err != nil {
+		return err
+	}
+	for index := range organization.AclRules {
+		for i := 0; i < len(organization.AclRules[index].DstPorts); {
+			dest := organization.AclRules[index].DstPorts[i]
+			if dest.IP == AutoGroupSelf {
+				if autogroupIpsMap[AutoGroupSelf] == nil {
+					ips := []string{}
+					for _, node := range nodes {
+						ips = append(ips, node.IPAddresses.ToStringSlice()...)
+						if m.cfg.AllowRouteDueToMachine {
+							ips = append(ips, m.expandMachineRoutes(node)...)
+						}
+					}
+					autogroupIpsMap[AutoGroupSelf] = ips
+				}
+				dests := []tailcfg.NetPortRange{}
+				for _, ip := range autogroupIpsMap[AutoGroupSelf] {
+					dests = append(dests, tailcfg.NetPortRange{
+						IP:    ip,
+						Ports: dest.Ports,
+					})
+				}
+				organization.AclRules[index].DstPorts = append(organization.AclRules[index].DstPorts[:i], append(dests, organization.AclRules[index].DstPorts[i+1:]...)...)
+				organization.AclRules[index].SrcIPs = autogroupIpsMap[AutoGroupSelf]
+				i = i + len(dests)
+			} else {
+				i++
+			}
+		}
+	}
+	return nil
 }
