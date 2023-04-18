@@ -360,6 +360,12 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 
 			return Machines{}, []tailcfg.NodeID{}, err
 		}
+		err = h.UpdateACLRulesOfOrg(org)
+		if err != nil {
+			log.Error().Err(err).Msg("Error get ACL rules")
+
+			return Machines{}, []tailcfg.NodeID{}, err
+		}
 		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, machine)
 		machine.User.Organization = *org
 	} else {
@@ -687,10 +693,12 @@ func (h *Mirage) UpdateMachineFromDatabase(machine *Machine) error {
 
 // SetTags takes a Machine struct pointer and update the forced tags.
 func (h *Mirage) SetTags(machine *Machine, tags []string) error {
-	org, err := h.GetMachineOrgByID(machine)
-	if err != nil {
-		return fmt.Errorf("failed to update tags for machine in the database: %w", err)
-	}
+	/*
+		org, err := h.GetMachineOrgByID(machine)
+		if err != nil {
+			return fmt.Errorf("failed to update tags for machine in the database: %w", err)
+		}
+	*/
 	newTags := []string{}
 	for _, tag := range tags {
 		if !contains(newTags, tag) {
@@ -698,9 +706,11 @@ func (h *Mirage) SetTags(machine *Machine, tags []string) error {
 		}
 	}
 	machine.ForcedTags = newTags
-	if err := h.UpdateACLRulesOfOrg(org); err != nil && !errors.Is(err, errEmptyPolicy) {
-		return err
-	}
+	/*
+		if err := h.UpdateACLRulesOfOrg(org); err != nil && !errors.Is(err, errEmptyPolicy) {
+			return err
+		}
+	*/
 	h.setOrgLastStateChangeToNow(machine.User.OrganizationID)
 
 	if err := h.db.Save(machine).Error; err != nil {

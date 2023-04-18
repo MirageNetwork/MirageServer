@@ -189,7 +189,7 @@ func (m *Mirage) GetOrgnaizationByID(id int64) (*Organization, error) {
 	if err != nil {
 		return nil, err
 	}
-	m.UpdateACLRulesOfOrg(org)
+	//m.UpdateACLRulesOfOrg(org)
 	return org, err
 }
 

@@ -73,17 +73,16 @@ func (h *Mirage) generateMapResponse(
 	)
 
 	now := time.Now()
-	var org *Organization
-	if machine.User.Organization.AclPolicy != nil {
-		org = &machine.User.Organization
-	} else {
-		org, err = h.GetOrgnaizationByID(machine.User.OrganizationID)
+	org := &machine.User.Organization
+	// if AclPolicy is nil, get the default AclRules for it
+	if machine.User.Organization.AclPolicy == nil {
+		err = h.UpdateACLRulesOfOrg(org)
 		if err != nil {
 			log.Error().
 				Caller().
 				Str("func", "generateMapResponse").
 				Err(err).
-				Msg("Failed to get organization of machine")
+				Msg("Failed to get aclRules of machine")
 
 			return nil, err
 		}
