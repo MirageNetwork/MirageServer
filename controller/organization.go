@@ -297,6 +297,7 @@ func (m *Mirage) UpdateOrgDNSConfig(org *Organization, newDNSCfg DNSData) error 
 	return err
 }
 
+// 检查rules里是否有需要替换的autogroup相关内容
 func (m *Mirage) checkAndHandleAutogroupRules(machine *Machine, organization *Organization) error {
 	autogroupIpsMap := map[string][]string{}
 	nodes, err := m.ListMachinesByUser(machine.UserID)
@@ -306,6 +307,8 @@ func (m *Mirage) checkAndHandleAutogroupRules(machine *Machine, organization *Or
 	for index := range organization.AclRules {
 		for i := 0; i < len(organization.AclRules[index].DstPorts); {
 			dest := organization.AclRules[index].DstPorts[i]
+			// 对于autogroup:self,需要将dest里面的autogroup:self替换成machine的user下的所有节点
+			// 同时需要把src里面的内容换成machine的user下的所有节点
 			if dest.IP == AutoGroupSelf {
 				if autogroupIpsMap[AutoGroupSelf] == nil {
 					ips := []string{}
