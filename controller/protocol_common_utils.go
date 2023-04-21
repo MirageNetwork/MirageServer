@@ -35,6 +35,7 @@ func (h *Mirage) generateMapResponse(
 		return nil, err
 	}
 
+	// in this function, we get the peers and the organization(with aclRules updated), organization was set to field :machine.User.Organization
 	peers, invalidNodeIDs, err := h.getValidPeers(machine)
 	if invalidNodeIDs != nil {
 		//log.Info().Msg("Should ignore invalidNodeIDs for current")
@@ -74,19 +75,6 @@ func (h *Mirage) generateMapResponse(
 
 	now := time.Now()
 	org := &machine.User.Organization
-	// if AclPolicy is nil, get the default AclRules for it
-	if machine.User.Organization.AclPolicy == nil {
-		err = h.UpdateACLRulesOfOrg(org)
-		if err != nil {
-			log.Error().
-				Caller().
-				Str("func", "generateMapResponse").
-				Err(err).
-				Msg("Failed to get aclRules of machine")
-
-			return nil, err
-		}
-	}
 
 	derpMap, err := h.LoadOrgDERPs(machine.User.OrganizationID)
 	if err != nil {

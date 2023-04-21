@@ -344,15 +344,23 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 	var invalidNodeIDs []tailcfg.NodeID
 	var err error
 
+	// get the organization's content and update the AclRules
+	org, err := h.GetOrgnaizationByID(machine.User.OrganizationID)
+	if err != nil {
+		log.Error().Err(err).Msg("Error retrieving organization of machine")
+
+		return Machines{}, []tailcfg.NodeID{}, err
+	}
+	err = h.UpdateACLRulesOfOrg(org)
+	if err != nil {
+		log.Error().Err(err).Msg("Error get ACL rules")
+
+		return Machines{}, []tailcfg.NodeID{}, err
+	}
+	machine.User.Organization = *org
 	// If ACLs rules are defined, filter visible host list with the ACLs
 	// else use the classic user scope
 	if machine.User.Organization.AclPolicy != nil {
-		org, err := h.GetOrgnaizationByID(machine.User.OrganizationID)
-		if err != nil {
-			log.Error().Err(err).Msg("Error retrieving organization of machine")
-
-			return Machines{}, []tailcfg.NodeID{}, err
-		}
 		var machines []Machine
 		machines, err = h.ListMachinesByOrgID(org.ID)
 		if err != nil {
@@ -360,14 +368,7 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 
 			return Machines{}, []tailcfg.NodeID{}, err
 		}
-		err = h.UpdateACLRulesOfOrg(org)
-		if err != nil {
-			log.Error().Err(err).Msg("Error get ACL rules")
-
-			return Machines{}, []tailcfg.NodeID{}, err
-		}
 		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, machine)
-		machine.User.Organization = *org
 	} else {
 		peers, err = h.ListPeers(machine)
 		if err != nil {
