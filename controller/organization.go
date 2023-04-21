@@ -152,16 +152,6 @@ func (m *Mirage) CreateOrgnaizationInTx(tx *gorm.DB, name, provider string) (*Or
 	return &org, nil
 }
 
-// GetOrgnaizationByName get Organization Info and update the AclRules
-func (m *Mirage) GetOrgnaizationByName(name, provider string) (*Organization, error) {
-	org, err := GetOrgnaizationByNameInTx(m.db.Session(&gorm.Session{}), name, provider)
-	if err != nil {
-		return nil, err
-	}
-	m.UpdateACLRulesOfOrg(org)
-	return org, err
-}
-
 // GetOrgnaizationRecordByName get Organization Info only(not to update the AclRules)
 func (m *Mirage) GetOrgnaizationRecordByName(name, provider string) (*Organization, error) {
 	var org Organization
@@ -295,45 +285,4 @@ func (m *Mirage) UpdateOrgDNSConfig(org *Organization, newDNSCfg DNSData) error 
 	org.SplitDns = newSplitDns
 	err := m.db.Select("EnableMagic", "Nameservers", "OverrideLocal", "Nameservers", "OverrideLocal", "SplitDns").Updates(org).Error
 	return err
-}
-
-// 检查rules里是否有需要替换的autogroup相关内容
-func (m *Mirage) checkAndHandleAutogroupRules(machine *Machine, organization *Organization) error {
-	autogroupIpsMap := map[string][]string{}
-	nodes, err := m.ListMachinesByUser(machine.UserID)
-	if err != nil {
-		return err
-	}
-	for index := range organization.AclRules {
-		for i := 0; i < len(organization.AclRules[index].DstPorts); {
-			dest := organization.AclRules[index].DstPorts[i]
-			// 对于autogroup:self,需要将dest里面的autogroup:self替换成machine的user下的所有节点
-			// 同时需要把src里面的内容换成machine的user下的所有节点
-			if dest.IP == AutoGroupSelf {
-				if autogroupIpsMap[AutoGroupSelf] == nil {
-					ips := []string{}
-					for _, node := range nodes {
-						ips = append(ips, node.IPAddresses.ToStringSlice()...)
-						if m.cfg.AllowRouteDueToMachine {
-							ips = append(ips, m.expandMachineRoutes(node)...)
-						}
-					}
-					autogroupIpsMap[AutoGroupSelf] = ips
-				}
-				dests := []tailcfg.NetPortRange{}
-				for _, ip := range autogroupIpsMap[AutoGroupSelf] {
-					dests = append(dests, tailcfg.NetPortRange{
-						IP:    ip,
-						Ports: dest.Ports,
-					})
-				}
-				organization.AclRules[index].DstPorts = append(organization.AclRules[index].DstPorts[:i], append(dests, organization.AclRules[index].DstPorts[i+1:]...)...)
-				organization.AclRules[index].SrcIPs = autogroupIpsMap[AutoGroupSelf]
-				i = i + len(dests)
-			} else {
-				i++
-			}
-		}
-	}
-	return nil
 }

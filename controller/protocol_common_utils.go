@@ -85,15 +85,6 @@ func (h *Mirage) generateMapResponse(
 			Msg("Failed to get DERP map of machine")
 	}
 
-	err = h.checkAndHandleAutogroupRules(machine, org)
-	if err != nil {
-		log.Error().
-			Caller().
-			Str("func", "generateMapResponse").
-			Err(err).
-			Msg("Failed to get machines of the user")
-	}
-
 	resp := tailcfg.MapResponse{
 		KeepAlive: false,
 		Node:      node,

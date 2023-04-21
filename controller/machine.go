@@ -212,31 +212,14 @@ func getFilteredByACLPeers(
 		if peer.ID == machine.ID {
 			continue
 		}
-	rulesLoop:
 		for _, rule := range rules {
 			// normal dst ip slice
 			var dst []string
 			// dst ip slice for autogroup
-			var autoDst = map[string]struct{}{}
 			for _, d := range rule.DstPorts {
-				if strings.HasPrefix(d.IP, AutoGroupPrefix) {
-					if _, ok := AutoGroupMap[d.IP]; ok {
-						autoDst[d.IP] = struct{}{}
-					}
-				} else {
-					dst = append(dst, d.IP)
-				}
+				dst = append(dst, d.IP)
 			}
 			peerIPs := peer.IPAddresses.ToStringSlice()
-			for autoGroupKey := range autoDst {
-				switch autoGroupKey {
-				case AutoGroupSelf:
-					if peer.UserID == machine.UserID {
-						peers[peer.ID] = peer
-					}
-					continue rulesLoop
-				}
-			}
 			if matchSourceAndDestinationWithRule(
 				rule.SrcIPs,
 				dst,
@@ -351,7 +334,7 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 
 		return Machines{}, []tailcfg.NodeID{}, err
 	}
-	err = h.UpdateACLRulesOfOrg(org)
+	err = h.UpdateACLRulesOfOrg(org, machine.UserID)
 	if err != nil {
 		log.Error().Err(err).Msg("Error get ACL rules")
 
@@ -1363,7 +1346,7 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 			if approvedAlias == machine.User.Name {
 				approvedRoutes = append(approvedRoutes, advertisedRoute)
 			} else {
-				approvedIps, err := h.expandAlias(false, []Machine{*machine}, *(machine.User.Organization.AclPolicy), approvedAlias, h.cfg.OIDC.StripEmaildomain)
+				approvedIps, err := h.expandAlias(false, []Machine{*machine}, machine.UserID, *(machine.User.Organization.AclPolicy), approvedAlias, h.cfg.OIDC.StripEmaildomain)
 				if err != nil {
 					log.Err(err).
 						Str("alias", approvedAlias).
