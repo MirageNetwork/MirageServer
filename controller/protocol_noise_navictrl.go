@@ -98,12 +98,14 @@ func (m *Mirage) NotifyNaviOrgNodesChange(orgID int64, addNode, removeNode strin
 		if nr.OrgID == orgID || nr.OrgID == 0 {
 			nns := m.ListNaviNodes(nr.ID)
 			for _, nn := range nns {
-				err := m.sendNodesChange(&nn, addNode, removeNode)
-				if err != nil {
-					log.Error().
-						Caller().
-						Err(err).
-						Msg("Cannot send nodes change")
+				if nn.NaviKey != "" {
+					err := m.sendNodesChange(&nn, addNode, removeNode)
+					if err != nil {
+						log.Error().
+							Caller().
+							Err(err).
+							Msg("Cannot send nodes change")
+					}
 				}
 			}
 		}
