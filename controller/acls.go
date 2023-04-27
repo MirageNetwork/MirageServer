@@ -382,9 +382,20 @@ func (h *Mirage) generateACLRules(
 		srcIPs := []string{}
 		// 如果dest里面配置了autogroup:self那么src按照self的ip来取，目前只支持了*，没有支持autogroup:member
 		if containsStr(acl.Destinations, AutoGroupPrefix) {
-			for _, dest := range destPorts {
-				srcIPs = append(srcIPs, dest.IP)
+			/*
+				for _, dest := range destPorts {
+					srcIPs = append(srcIPs, dest.IP)
+				}
+			*/
+			// src 按照autogroup:self的规则来解析
+			srcs, err := h.generateACLPolicySrc(machines, userId, aclPolicy, AutoGroupSelf, stripEmaildomain)
+			if err != nil {
+				log.Error().
+					Msgf("Error parsing ACL %d, Source %d", index, 0)
+
+				return nil, err
 			}
+			srcIPs = append(srcIPs, srcs...)
 		} else {
 			for innerIndex, src := range acl.Sources {
 				srcs, err := h.generateACLPolicySrc(machines, userId, aclPolicy, src, stripEmaildomain)
