@@ -23,7 +23,7 @@ config.yaml
 derp.yaml
 *.hujson
 *.key
-/db.sqlite
+db.sqlite*
 *.sqlite3
 
 

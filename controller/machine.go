@@ -668,7 +668,7 @@ func (h *Mirage) GetMachineByAnyKey(
 // UpdateMachineFromDatabase takes a Machine struct pointer (typically already loaded from database
 // and updates it with the latest data from the database.
 func (h *Mirage) UpdateMachineFromDatabase(machine *Machine) error {
-	if result := h.db.Find(machine).First(&machine); result.Error != nil {
+	if result := h.db.Find(machine).Preload("AuthKey").Preload("User").Preload("User.Organization").First(&machine); result.Error != nil {
 		return result.Error
 	}
 
