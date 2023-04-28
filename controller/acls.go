@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/samber/lo"
 	"github.com/tailscale/hujson"
+	"go4.org/netipx"
 	"gopkg.in/yaml.v3"
 	"tailscale.com/envknob"
 	"tailscale.com/tailcfg"
@@ -184,7 +186,7 @@ func (h *Mirage) UpdateACLRules(userId int64) error {
 		return errEmptyPolicy
 	}
 
-	rules, err := h.generateACLRules(machines, userId, *h.aclPolicy, h.cfg.OIDC.StripEmaildomain)
+	rules, _, err := h.generateACLRules(machines, userId, *h.aclPolicy, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		return err
 	}
@@ -208,6 +210,65 @@ func (h *Mirage) UpdateACLRules(userId int64) error {
 	return nil
 }
 
+func (h *Mirage) generateAclPeerCacheMap(rules []tailcfg.FilterRule) (aclCachePeerMap map[string]map[string]struct{}) {
+	aclCachePeerMap = map[string]map[string]struct{}{}
+	for _, rule := range rules {
+		for _, srcIP := range rule.SrcIPs {
+			for _, ip := range expandACLPeerAddr(srcIP) {
+				if data, ok := aclCachePeerMap[ip]; ok {
+					for _, dstPort := range rule.DstPorts {
+						data[dstPort.IP] = struct{}{}
+					}
+				} else {
+					dstPortsMap := make(map[string]struct{})
+					for _, dstPort := range rule.DstPorts {
+						dstPortsMap[dstPort.IP] = struct{}{}
+					}
+					aclCachePeerMap[ip] = dstPortsMap
+				}
+			}
+		}
+	}
+
+	log.Trace().Interface("ACL Cache Map", aclCachePeerMap).Msg("ACL Peer Cache Map generated")
+	return
+}
+
+// expandACLPeerAddr takes a "tailcfg.FilterRule" "IP" and expands it into
+// something our cache logic can look up, which is "*" or single IP addresses.
+// This is probably quite inefficient, but it is a result of
+// "make it work, then make it fast", and a lot of the ACL stuff does not
+// work, but people have tried to make it fast.
+func expandACLPeerAddr(srcIP string) []string {
+	if ip, err := netip.ParseAddr(srcIP); err == nil {
+		return []string{ip.String()}
+	}
+
+	if cidr, err := netip.ParsePrefix(srcIP); err == nil {
+		addrs := []string{}
+
+		ipRange := netipx.RangeOfPrefix(cidr)
+
+		from := ipRange.From()
+		too := ipRange.To()
+
+		if from == too {
+			return []string{from.String()}
+		}
+
+		for from != too && from.Less(too) {
+			addrs = append(addrs, from.String())
+			from = from.Next()
+		}
+		addrs = append(addrs, too.String()) // Add the last IP address in the range
+
+		return addrs
+	}
+
+	// probably "*" or other string based "IP"
+	return []string{srcIP}
+}
+
 func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) error {
 	if org == nil || org.ID == 0 {
 		return ErrOrgNotFound
@@ -223,12 +284,14 @@ func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) error {
 		aclPolicy = ShadowClone(org.AclPolicy)
 		aclPolicy.ACLs = DefaultEmptyAcls
 	}
-	rules, err := h.generateACLRules(machines, userId, *aclPolicy, h.cfg.OIDC.StripEmaildomain)
+	rules, autogroupMap, err := h.generateACLRules(machines, userId, *aclPolicy, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		return err
 	}
 	log.Trace().Interface("ACL", rules).Msg("ACL rules generated")
 	org.AclRules = rules
+	org.AutoGroupMap = autogroupMap
+	org.AclPeersCacheMap = h.generateAclPeerCacheMap(rules)
 
 	if featureEnableSSH() {
 		sshRules, err := h.generateSSHRulesOfOrg(machines, userId, org)
@@ -344,12 +407,12 @@ func (h *Mirage) generateACLRules(
 	userId int64,
 	aclPolicy ACLPolicy,
 	stripEmaildomain bool,
-) ([]tailcfg.FilterRule, error) {
+) ([]tailcfg.FilterRule, map[string]struct{}, error) {
 	rules := []tailcfg.FilterRule{}
-
+	agMap := map[string]struct{}{}
 	for index, acl := range aclPolicy.ACLs {
 		if acl.Action != "accept" {
-			return nil, errInvalidAction
+			return nil, agMap, errInvalidAction
 		}
 
 		protocols, needsWildcard, err := parseProtocol(acl.Protocol)
@@ -357,7 +420,7 @@ func (h *Mirage) generateACLRules(
 			log.Error().
 				Msgf("Error parsing ACL %d. protocol unknown %s", index, acl.Protocol)
 
-			return nil, err
+			return nil, agMap, err
 		}
 
 		destPorts := []tailcfg.NetPortRange{}
@@ -374,26 +437,27 @@ func (h *Mirage) generateACLRules(
 				log.Error().
 					Msgf("Error parsing ACL %d, Destination %d", index, innerIndex)
 
-				return nil, err
+				return nil, agMap, err
 			}
 			destPorts = append(destPorts, dests...)
 		}
 
 		srcIPs := []string{}
 		// 如果dest里面配置了autogroup:self那么src按照self的ip来取，目前只支持了*，没有支持autogroup:member
-		if containsStr(acl.Destinations, AutoGroupPrefix) {
+		if containsStr(acl.Destinations, AutoGroupSelf) {
 			/*
 				for _, dest := range destPorts {
 					srcIPs = append(srcIPs, dest.IP)
 				}
 			*/
 			// src 按照autogroup:self的规则来解析
+			agMap[AutoGroupSelf] = struct{}{}
 			srcs, err := h.generateACLPolicySrc(machines, userId, aclPolicy, AutoGroupSelf, stripEmaildomain)
 			if err != nil {
 				log.Error().
 					Msgf("Error parsing ACL %d, Source %d", index, 0)
 
-				return nil, err
+				return nil, agMap, err
 			}
 			srcIPs = append(srcIPs, srcs...)
 		} else {
@@ -403,7 +467,7 @@ func (h *Mirage) generateACLRules(
 					log.Error().
 						Msgf("Error parsing ACL %d, Source %d", index, innerIndex)
 
-					return nil, err
+					return nil, agMap, err
 				}
 				srcIPs = append(srcIPs, srcs...)
 			}
@@ -415,7 +479,7 @@ func (h *Mirage) generateACLRules(
 		})
 	}
 
-	return rules, nil
+	return rules, agMap, nil
 }
 
 func (h *Mirage) generateSSHRules(userId int64) ([]*tailcfg.SSHRule, error) {
@@ -667,10 +731,13 @@ func (h *Mirage) expandAlias(
 	aclPolicy ACLPolicy,
 	alias string,
 	stripEmailDomain bool,
-) ([]string, error) {
-	ips := []string{}
+) (ips []string, resErr error) {
+	defer func() {
+		ips = lo.Uniq(ips)
+	}()
 	if alias == "*" {
-		return []string{"*"}, nil
+		ips = []string{"*"}
+		return
 	}
 
 	log.Debug().
@@ -680,7 +747,8 @@ func (h *Mirage) expandAlias(
 	if strings.HasPrefix(alias, "group:") {
 		users, err := expandGroup(aclPolicy, alias, stripEmailDomain)
 		if err != nil {
-			return ips, err
+			resErr = err
+			return
 		}
 		for _, n := range users {
 			nodes := filterMachinesByUser(machines, n)
@@ -691,8 +759,7 @@ func (h *Mirage) expandAlias(
 				}
 			}
 		}
-
-		return ips, nil
+		return
 	}
 
 	if strings.HasPrefix(alias, "tag:") {
@@ -711,16 +778,17 @@ func (h *Mirage) expandAlias(
 		if err != nil {
 			if errors.Is(err, errInvalidTag) {
 				if len(ips) == 0 {
-					return ips, fmt.Errorf(
+					resErr = fmt.Errorf(
 						"%w. %v isn't owned by a TagOwner and no forced tags are defined",
 						errInvalidTag,
 						alias,
 					)
+					return
 				}
-
-				return ips, nil
+				return
 			} else {
-				return ips, err
+				resErr = err
+				return
 			}
 		}
 
@@ -738,7 +806,7 @@ func (h *Mirage) expandAlias(
 			}
 		}
 
-		return ips, nil
+		return
 	}
 
 	// autogroup
@@ -747,7 +815,8 @@ func (h *Mirage) expandAlias(
 		if alias == AutoGroupSelf {
 			nodes, err := h.ListMachinesByUser(userId)
 			if err != nil {
-				return ips, err
+				resErr = err
+				return
 			}
 			for _, node := range nodes {
 				ips = append(ips, node.IPAddresses.ToStringSlice()...)
@@ -763,10 +832,10 @@ func (h *Mirage) expandAlias(
 					if autoAddRoute {
 						ips = append(ips, h.expandMachineRoutes(machine)...)
 					}
-					return ips, nil
 				}
 			}
 		}
+		return
 	}
 
 	// if alias is a user
@@ -780,11 +849,12 @@ func (h *Mirage) expandAlias(
 		}
 	}
 	if len(ips) > 0 {
-		return ips, nil
+		return
 	}
 
 	// if alias is an host
 	if host, ok := aclPolicy.Hosts[alias]; ok {
+		ips = []string{host.String()}
 		if autoAddRoute {
 			mlist := h.GetMachinesInPrefix(host)
 			if mlist != nil {
@@ -794,12 +864,13 @@ func (h *Mirage) expandAlias(
 			}
 
 		}
-		return []string{host.String()}, nil
+		return
 	}
 
 	// if alias is an IP
 	ip, err := netip.ParseAddr(alias)
 	if err == nil {
+		ips = []string{ip.String()}
 		if autoAddRoute {
 			m := h.GetMachineByIP(ip)
 			if m != nil {
@@ -807,12 +878,13 @@ func (h *Mirage) expandAlias(
 			}
 
 		}
-		return []string{ip.String()}, nil
+		return
 	}
 
 	// if alias is an CIDR
 	cidr, err := netip.ParsePrefix(alias)
 	if err == nil {
+		ips = []string{cidr.String()}
 		if autoAddRoute {
 			mlist := h.GetMachinesInPrefix(cidr)
 			if mlist != nil {
@@ -822,12 +894,12 @@ func (h *Mirage) expandAlias(
 			}
 
 		}
-		return []string{cidr.String()}, nil
+		return
 	}
 
 	log.Debug().Msgf("No IPs found with the alias %v", alias)
 
-	return ips, nil
+	return
 }
 
 // excludeCorrectlyTaggedNodes will remove from the list of input nodes the ones

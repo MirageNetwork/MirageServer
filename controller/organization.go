@@ -26,22 +26,25 @@ const (
 )
 
 type Organization struct {
-	ID             int64  `gorm:"primary_key;unique;not null"`
-	StableID       string `gorm:"unique"`
-	Name           string `gorm:"uniqueIndex:idx_name_provider"`
-	Provider       string `gorm:"uniqueIndex:idx_name_provider"`
-	ExpiryDuration uint   `gorm:"default:180"`
-	EnableMagic    bool   `gorm:"default:false"`
-	MagicDnsDomain string
-	OverrideLocal  bool `gorm:"default:false"`
-	Nameservers    StringList
-	SplitDns       SplitDNS
-	AclPolicy      *ACLPolicy
-	AclRules       []tailcfg.FilterRule `gorm:"-"`
-	SshPolicy      *tailcfg.SSHPolicy   `gorm:"-"`
-	NaviBanList    NaviBanList
-	NaviDeployKey  string
-	NaviDeployPub  string
+	ID               int64  `gorm:"primary_key;unique;not null"`
+	StableID         string `gorm:"unique"`
+	Name             string `gorm:"uniqueIndex:idx_name_provider"`
+	Provider         string `gorm:"uniqueIndex:idx_name_provider"`
+	ExpiryDuration   uint   `gorm:"default:180"`
+	EnableMagic      bool   `gorm:"default:false"`
+	MagicDnsDomain   string
+	OverrideLocal    bool `gorm:"default:false"`
+	Nameservers      StringList
+	SplitDns         SplitDNS
+	AclPolicy        *ACLPolicy
+	AclRules         []tailcfg.FilterRule           `gorm:"-"`
+	AclPeersCacheMap map[string]map[string]struct{} `gorm:"-"`
+	// 可以在过滤peer阶段提前处理的autogroup
+	AutoGroupMap  map[string]struct{} `gorm:"-"`
+	SshPolicy     *tailcfg.SSHPolicy  `gorm:"-"`
+	NaviBanList   NaviBanList
+	NaviDeployKey string
+	NaviDeployPub string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

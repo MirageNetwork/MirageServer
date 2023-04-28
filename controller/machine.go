@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"net"
 	"net/netip"
 	"sort"
 	"strconv"
@@ -196,6 +197,8 @@ func matchSourceAndDestinationWithRule(
 func getFilteredByACLPeers(
 	machines []Machine,
 	rules []tailcfg.FilterRule,
+	aclPeerCacheMap map[string]map[string]struct{},
+	autogroupMap map[string]struct{},
 	machine *Machine,
 ) (Machines, []tailcfg.NodeID) {
 	log.Trace().
@@ -208,59 +211,148 @@ func getFilteredByACLPeers(
 	// Aclfilter peers here. We are itering through machines in all users and search through the computed aclRules
 	// for match between rule SrcIPs and DstPorts. If the rule is a match we allow the machine to be viewable.
 	machineIPs := machine.IPAddresses.ToStringSlice()
+PeersLoop:
 	for _, peer := range machines {
+		// chuanh: add peer if it is same as machine
 		if peer.ID == machine.ID {
-			continue
+			continue PeersLoop
 		}
-		for _, rule := range rules {
-			// normal dst ip slice
-			var dst []string
-			// dst ip slice for autogroup
-			for _, d := range rule.DstPorts {
-				dst = append(dst, d.IP)
-			}
-			peerIPs := peer.IPAddresses.ToStringSlice()
-			if matchSourceAndDestinationWithRule(
-				rule.SrcIPs,
-				dst,
-				[]string{"*"},
-				[]string{"*"},
-			) || // match all source and all destination
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					machineIPs,
-					[]string{"*"},
-				) || // match machine source and all destination
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					[]string{"*"},
-					peerIPs,
-				) || // match all source and peer destination
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					[]string{"*"},
-					machineIPs,
-				) || // match all sources and machine destination
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					machineIPs,
-					peerIPs,
-				) || // match source and destination
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					peerIPs,
-					machineIPs,
-				) { // match return path
+		// chuanh: add peer if autogroup:self set and peer's user is the same as the machine's
+		if _, ok := autogroupMap[AutoGroupSelf]; ok && peer.UserID == machine.UserID {
+			peers[peer.ID] = peer
+			continue PeersLoop
+		}
+
+		peerIPs := peer.IPAddresses.ToStringSlice()
+		if dstMap, ok := aclPeerCacheMap["*"]; ok {
+			// match source and all destination
+			if _, ok := dstMap["*"]; ok {
 				peers[peer.ID] = peer
-			} else {
-				invalidNodeIDs = append(invalidNodeIDs, tailcfg.NodeID(peer.ID))
+				continue PeersLoop
+			}
+
+			// match source and all destination
+			for _, peerIP := range peerIPs {
+				for dst := range dstMap {
+					_, cdr, _ := net.ParseCIDR(dst)
+					ip := net.ParseIP(peerIP)
+					if dst == peerIP || (cdr != nil && ip != nil && cdr.Contains(ip)) {
+						peers[peer.ID] = peer
+						continue PeersLoop
+					}
+				}
+			}
+
+			// match all sources and source
+			for _, machineIP := range machineIPs {
+				for dst := range dstMap {
+					_, cdr, _ := net.ParseCIDR(dst)
+					ip := net.ParseIP(machineIP)
+					if dst == machineIP || (cdr != nil && ip != nil && cdr.Contains(ip)) {
+						peers[peer.ID] = peer
+						continue PeersLoop
+					}
+				}
 			}
 		}
+
+		for _, machineIP := range machineIPs {
+			if dstMap, ok := aclPeerCacheMap[machineIP]; ok {
+				// match source and all destination
+				if _, ok := dstMap["*"]; ok {
+					peers[peer.ID] = peer
+					continue PeersLoop
+				}
+
+				// match source and destination
+				for _, peerIP := range peerIPs {
+					for dst := range dstMap {
+						_, cdr, _ := net.ParseCIDR(dst)
+						ip := net.ParseIP(peerIP)
+						if dst == peerIP || (cdr != nil && ip != nil && cdr.Contains(ip)) {
+							peers[peer.ID] = peer
+
+							continue
+						}
+					}
+				}
+			}
+
+		}
+
+		for _, peerIP := range peerIPs {
+			if dstMap, ok := aclPeerCacheMap[peerIP]; ok {
+				// match source and all destination
+				if _, ok := dstMap["*"]; ok {
+					peers[peer.ID] = peer
+					continue PeersLoop
+				}
+
+				// match return path
+				for _, machineIP := range machineIPs {
+					for dst := range dstMap {
+						_, cdr, _ := net.ParseCIDR(dst)
+						ip := net.ParseIP(machineIP)
+						if dst == machineIP || (cdr != nil && ip != nil && cdr.Contains(ip)) {
+							peers[peer.ID] = peer
+							continue PeersLoop
+						}
+					}
+				}
+			}
+		}
+		invalidNodeIDs = append(invalidNodeIDs, tailcfg.NodeID(peer.ID))
+		/*
+			for _, rule := range rules {
+				// normal dst ip slice
+				var dst []string
+				// dst ip slice for autogroup
+				for _, d := range rule.DstPorts {
+					dst = append(dst, d.IP)
+				}
+				peerIPs := peer.IPAddresses.ToStringSlice()
+				if matchSourceAndDestinationWithRule(
+					rule.SrcIPs,
+					dst,
+					[]string{"*"},
+					[]string{"*"},
+				) || // match all source and all destination
+					matchSourceAndDestinationWithRule(
+						rule.SrcIPs,
+						dst,
+						machineIPs,
+						[]string{"*"},
+					) || // match machine source and all destination
+					matchSourceAndDestinationWithRule(
+						rule.SrcIPs,
+						dst,
+						[]string{"*"},
+						peerIPs,
+					) || // match all source and peer destination
+					matchSourceAndDestinationWithRule(
+						rule.SrcIPs,
+						dst,
+						[]string{"*"},
+						machineIPs,
+					) || // match all sources and machine destination
+					matchSourceAndDestinationWithRule(
+						rule.SrcIPs,
+						dst,
+						machineIPs,
+						peerIPs,
+					) || // match source and destination
+					matchSourceAndDestinationWithRule(
+						rule.SrcIPs,
+						dst,
+						peerIPs,
+						machineIPs,
+					) { // match return path
+					peers[peer.ID] = peer
+				} else {
+					invalidNodeIDs = append(invalidNodeIDs, tailcfg.NodeID(peer.ID))
+				}
+			}
+		*/
 	}
 
 	authorizedPeers := make([]Machine, 0, len(peers))
@@ -351,7 +443,7 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 
 			return Machines{}, []tailcfg.NodeID{}, err
 		}
-		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, machine)
+		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, org.AclPeersCacheMap, org.AutoGroupMap, machine)
 	} else {
 		peers, err = h.ListPeers(machine)
 		if err != nil {
