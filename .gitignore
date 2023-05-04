@@ -36,6 +36,8 @@ test_output/
 control_logs/
 
 /controller/html
+/controller/console_html
+/controller/cockpit_html
 
 # Nix build output
 result

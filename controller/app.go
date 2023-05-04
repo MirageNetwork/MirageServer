@@ -298,26 +298,26 @@ func (h *Mirage) expireExpiredMachinesWorker() {
 	}
 }
 
-//go:embed html/admin
+//go:embed console_html/admin
 var adminFS embed.FS
 
-//go:embed html
+//go:embed console_html
 var mainpageFS embed.FS
 
-//go:embed html/login
+//go:embed console_html/login
 var loginFS embed.FS
 
 func (h *Mirage) initRouter(router *mux.Router) {
 
-	adminDir, err := fs.Sub(adminFS, "html/admin")
+	adminDir, err := fs.Sub(adminFS, "console_html/admin")
 	if err != nil {
 		log.Fatal().Msg(err.Error())
 	}
-	loginDir, err := fs.Sub(loginFS, "html/login")
+	loginDir, err := fs.Sub(loginFS, "console_html/login")
 	if err != nil {
 		log.Fatal().Msg(err.Error())
 	}
-	mainpageDir, err := fs.Sub(mainpageFS, "html")
+	mainpageDir, err := fs.Sub(mainpageFS, "console_html")
 	if err != nil {
 		log.Fatal().Msg(err.Error())
 	}

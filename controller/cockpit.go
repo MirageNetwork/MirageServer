@@ -118,7 +118,7 @@ func (c *Cockpit) GetSysCfg() *SysConfig {
 	return &cfg[0]
 }
 
-//go:embed html/cockpit
+//go:embed cockpit_html
 var cockpitFS embed.FS
 
 // createRouter 创建路由
@@ -126,7 +126,7 @@ var cockpitFS embed.FS
 func (c *Cockpit) createRouter() *mux.Router {
 	router := mux.NewRouter()
 
-	cockpitDir, err := fs.Sub(cockpitFS, "html/cockpit")
+	cockpitDir, err := fs.Sub(cockpitFS, "cockpit_html")
 	if err != nil {
 		log.Fatal().Msg(err.Error())
 	}

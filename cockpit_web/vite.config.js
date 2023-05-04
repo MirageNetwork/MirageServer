@@ -43,7 +43,7 @@ export default defineConfig({
     },
     emptyOutDir: true,
     // 指定输出路径，默认'dist'
-    outDir: '../controller/html/cockpit',
+    outDir: '../controller/cockpit_html/',
     // 指定生成静态资源的存放路径(相对于build.outDir)
     assetsDir: 'assets',
     // 小于此阈值的导入或引用资源将内联为base64编码，设置为0可禁用此项。默认4096（4kb）
