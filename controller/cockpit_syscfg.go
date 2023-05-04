@@ -49,13 +49,13 @@ type SysConfig struct {
 }
 
 type GeneralCfg struct {
-	SrvAddr               string `json:"srvaddr"`
-	ServerURL             string `json:"server_url"`
-	MIPV4                 string `json:"mipv4"`
-	MIPV6                 string `json:"mipv6"`
-	BaseDomain            string `json:"basedomain"`
-	DERPURL               string `json:"derp_url"`
-	RouteAccessDueMachine bool   `json:"route_access_due_machine"`
+	SrvAddr    string `json:"srvaddr"`
+	ServerURL  string `json:"server_url"`
+	MIPV4      string `json:"mipv4"`
+	MIPV6      string `json:"mipv6"`
+	BaseDomain string `json:"basedomain"`
+	//		DERPURL               string `json:"derp_url"`
+	RouteAccessDueMachine bool `json:"route_access_due_machine"`
 
 	ESURL string `json:"es_url"`
 	ESKey string `json:"es_key"`
@@ -259,13 +259,14 @@ func (ghCfg AppleCfg) Value() (driver.Value, error) {
 }
 
 type ClientVersionInfo struct {
-	NaviAMD64   string    `json:"naviAmd64"`
-	NaviAARCH64 string    `json:"naviAarch64"`
-	Win         ClientVer `json:"win"`
-	Mac         ClientVer `json:"mac"`
-	Linux       ClientVer `json:"linux"`
-	Android     ClientVer `json:"android"`
-	Ios         ClientVer `json:"ios"`
+	NaviAMD64     string    `json:"naviAmd64"`
+	NaviAARCH64   string    `json:"naviAarch64"`
+	Win           ClientVer `json:"win"`
+	Mac           ClientVer `json:"mac"`
+	Linux         ClientVer `json:"linux"`
+	Android       ClientVer `json:"android"`
+	IOSStore      ClientVer `json:"ios_store"`
+	IOSTestFlight ClientVer `json:"ios_test"`
 }
 
 func (c *ClientVersionInfo) Scan(value interface{}) error {

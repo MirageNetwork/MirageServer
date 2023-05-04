@@ -8,6 +8,9 @@
       <figure><img src="/img/logo_withname@1024.png" alt="Logo" /></figure>
       <div class="card-body mx-auto lg:flex-shrink-0 w-96">
         <div class="card-actions justify-end pt-4">
+          <a href="/downloads">
+            <button class="btn btn-primary">下载客户端</button>
+          </a>
           <a href="/admin">
             <button class="btn btn-primary">进入控制台</button>
           </a>

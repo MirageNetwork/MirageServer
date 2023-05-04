@@ -476,6 +476,8 @@ func (h *Mirage) pollNetMapStream(
 				// TODO(kradalby): Abstract away all the database calls, this can cause race conditions
 				// when an outdated machine object is kept alive, e.g. db is update from
 				// command line, but then overwritten.
+
+				/* cgao6: 临时注释掉，因为怀疑这里有重复调用的嫌疑
 				err = h.UpdateMachineFromDatabase(machine)
 				if err != nil {
 					log.Error().
@@ -489,6 +491,7 @@ func (h *Mirage) pollNetMapStream(
 					// since the stream opened, terminate connection.
 					return
 				}
+				*/
 				now := time.Now().UTC()
 
 				machine.LastSuccessfulUpdate = &now

@@ -259,7 +259,7 @@ func (m *Mirage) refreshAllNaviStatus() {
 		for _, nn := range nns {
 			err := m.updateNaviStatus(&nn)
 			if err != nil {
-				log.Error().
+				log.Warn().
 					Caller().
 					Err(err).
 					Msg("Cannot update navi status")

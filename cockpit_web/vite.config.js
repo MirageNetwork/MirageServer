@@ -22,9 +22,11 @@ export default defineConfig({
     vue(),
   ],
   build: {
+    /*
     watch:{
 
     },
+    */
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),

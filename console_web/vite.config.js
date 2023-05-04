@@ -22,14 +22,17 @@ export default defineConfig({
     vue(),
   ],
   build: {
+    /*
     watch:{
 
     },
+    */
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
         admin: resolve(__dirname, 'admin/index.html'),
-        login: resolve(__dirname, 'login/index.html')
+        login: resolve(__dirname, 'login/index.html'),
+        downloads: resolve(__dirname, 'downloads/index.html'),
       },
       output:{
         // https://github.com/rollup/rollup/blob/master/src/utils/sanitizeFileName.ts

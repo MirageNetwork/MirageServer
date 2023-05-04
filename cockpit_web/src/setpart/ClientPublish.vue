@@ -45,6 +45,9 @@ const winFileName = ref("");
 const winProc = ref("");
 const winProcPercent = ref(0);
 
+const wantIOSStoreVersion = ref({});
+const wantIOSTestVersion = ref({});
+
 function handleNaviChange(uploadFile) {
   switch (uploadFile.status) {
     case "success":
@@ -196,6 +199,16 @@ onMounted(() => {
           response.data["data"]["client_version"]["win"]["version"];
         wantWinVersion.value["url"] =
           response.data["data"]["client_version"]["win"]["url"];
+        wantIOSStoreVersion.value = {};
+        wantIOSStoreVersion.value["version"] =
+          response.data["data"]["client_version"]["ios_store"]["version"];
+        wantIOSStoreVersion.value["url"] =
+          response.data["data"]["client_version"]["ios_store"]["url"];
+        wantIOSTestVersion.value = {};
+        wantIOSTestVersion.value["version"] =
+          response.data["data"]["client_version"]["ios_test"]["version"];
+        wantIOSTestVersion.value["url"] =
+          response.data["data"]["client_version"]["ios_test"]["url"];
       } else {
         toastMsg.value = response.data["status"].substring(6);
         toastShow.value = true;
@@ -234,6 +247,55 @@ function publishWin() {
     return;
   }
   winUploader.value?.submit();
+}
+
+function publishIOSToStore() {
+  axios
+    .post("/cockpit/api/publish/ios_store", {
+      version: wantIOSStoreVersion.value["version"],
+      url: wantIOSStoreVersion.value["url"],
+    })
+    .then(function (response) {
+      // 处理成功情况
+      if (response.data["status"] == "success") {
+        toastMsg.value = "iOS客户端AppStore发布成功";
+        toastShow.value = true;
+        ClientVersion.value = response.data["data"]["client_version"];
+      } else {
+        toastMsg.value = response.data["status"].substring(6);
+        toastShow.value = true;
+      }
+    })
+    .catch(function (error) {
+      // 处理错误情况
+      toastMsg.value = error;
+      toastShow.value = true;
+    });
+  return;
+}
+function publishIOSToTestflight() {
+  axios
+    .post("/cockpit/api/publish/ios_test", {
+      version: wantIOSTestVersion.value["version"],
+      url: wantIOSTestVersion.value["url"],
+    })
+    .then(function (response) {
+      // 处理成功情况
+      if (response.data["status"] == "success") {
+        toastMsg.value = "iOS客户端TestFlight发布成功";
+        toastShow.value = true;
+        ClientVersion.value = response.data["data"]["client_version"];
+      } else {
+        toastMsg.value = response.data["status"].substring(6);
+        toastShow.value = true;
+      }
+    })
+    .catch(function (error) {
+      // 处理错误情况
+      toastMsg.value = error;
+      toastShow.value = true;
+    });
+  return;
 }
 </script>
 
@@ -582,7 +644,169 @@ function publishWin() {
         </label>
       </div>
       <!---->
+      <div>
+        <header class="max-w-sm flex mt-4">
+          <svg
+            t="1679468518353"
+            viewBox="0 0 1024 1024"
+            version="1.1"
+            xmlns="http://www.w3.org/2000/svg"
+            p-id="1724"
+            width="28"
+            height="28"
+          >
+            <path
+              d="M645.289723 165.758826C677.460161 122.793797 701.865322 62.036894 693.033384 0c-52.607627 3.797306-114.089859 38.61306-149.972271 84.010072-32.682435 41.130375-59.562245 102.313942-49.066319 161.705521 57.514259 1.834654 116.863172-33.834427 151.294929-79.956767zM938.663644 753.402663c-23.295835 52.820959-34.517089 76.415459-64.511543 123.177795-41.855704 65.279538-100.905952 146.644295-174.121433 147.198957-64.980873 0.725328-81.748754-43.30636-169.982796-42.751697-88.234042 0.46933-106.623245 43.605024-171.732117 42.965029-73.130149-0.682662-129.065752-74.026142-170.964122-139.348347-117.11917-182.441374-129.44975-396.626524-57.172928-510.545717 51.327636-80.895427 132.393729-128.212425 208.553189-128.212425 77.482118 0 126.207106 43.519692 190.377318 43.519692 62.292892 0 100.137957-43.647691 189.779989-43.647691 67.839519 0 139.732344 37.802399 190.889315 103.03927-167.678812 94.036667-140.543004 339.069598 28.885128 404.605134z"
+              fill="#0B0B0A"
+              p-id="1725"
+            ></path>
+          </svg>
+          <h3 class="text-xl font-semibold tracking-tight ml-4 min-w-fit">
+            iOS 客户端发布
+          </h3>
+        </header>
+        <div
+          class="rounded-md border border-stone-200 mt-4 mb-3 gap-2 max-w-sm bg-stone-50 p-2"
+        >
+          <div class="flex flex-col justify-start">
+            <div class="w-full text-left font-bold max-w-xl text-gray-500">
+              当前AppStore版本
+            </div>
+            <div class="w-full text-left max-w-xl text-gray-500">
+              {{
+                ClientVersion.ios_store.version && ClientVersion.ios_store.version != ""
+                  ? ClientVersion.ios_store.version
+                  : "未设置"
+              }}
+            </div>
+            <div class="w-full text-left font-bold max-w-xl text-gray-500">
+              当前AppStore地址
+            </div>
+            <div class="w-full text-left max-w-xl break-all text-gray-500">
+              {{
+                ClientVersion.ios_store.url && ClientVersion.ios_store.url != ""
+                  ? ClientVersion.ios_store.url
+                  : "未设置"
+              }}
+            </div>
+            <div class="w-full text-left font-bold max-w-xl text-gray-500">
+              当前TestFlight版本
+            </div>
+            <div class="w-full text-left max-w-xl text-gray-500">
+              {{
+                ClientVersion.ios_test.version && ClientVersion.ios_test.version != ""
+                  ? ClientVersion.ios_test.version
+                  : "未设置"
+              }}
+            </div>
+            <div class="w-full text-left font-bold max-w-xl text-gray-500">
+              当前TestFlight地址
+            </div>
+            <div class="w-full text-left max-w-xl break-all text-gray-500">
+              {{
+                ClientVersion.ios_test.url && ClientVersion.ios_test.url != ""
+                  ? ClientVersion.ios_test.url
+                  : "未设置"
+              }}
+            </div>
+          </div>
+        </div>
+        <div class="flex w-full max-w-sm">
+          <p class="text-gray-600 max-w-sm min-w-fit">AppStore版本号</p>
+          <div class="w-full flex justify-end">
+            <button
+              :disabled="
+                wantIOSStoreVersion.version == '' ||
+                wantIOSStoreVersion.url == '' ||
+                !isValidURL(wantIOSStoreVersion.url) ||
+                (wantIOSStoreVersion.version == ClientVersion.ios_store.version &&
+                  wantIOSStoreVersion.url == ClientVersion.ios_store.url)
+              "
+              @click="publishIOSToStore"
+              class="btn border-0 bg-blue-500 hover:bg-blue-900 disabled:bg-blue-500/60 text-white disabled:text-white/60 h-7 min-h-fit"
+            >
+              发布
+            </button>
+          </div>
+        </div>
+        <div
+          :class="{
+            'border-red-500 hover:border-red-700': wantIOSStoreVersion.version == '',
+            'border-stone-200 hover:border-stone-400': wantIOSStoreVersion.version != '',
+          }"
+          class="mt-1 max-w-sm flex border rounded-md relative overflow-hidden min-w-0"
+        >
+          <input
+            class="outline-none py-2 px-3 w-full h-full font-mono text-sm text-ellipsis"
+            v-model="wantIOSStoreVersion.version"
+          />
+        </div>
 
+        <div class="flex flex-row w-full max-w-sm justify-start mt-2 space-x-2">
+          <p class="text-gray-600 min-w-fit">AppStore URL</p>
+        </div>
+        <div
+          class="max-w-sm flex w-full border rounded-md relative overflow-hidden min-w-0"
+          :class="{
+            'border-red-500 hover:border-red-700': !isValidURL(wantIOSStoreVersion.url),
+            'border-stone-200 hover:border-stone-400': isValidURL(
+              wantIOSStoreVersion.url
+            ),
+          }"
+        >
+          <input
+            class="outline-none py-2 px-3 w-full h-9 font-mono text-sm text-ellipsis"
+            v-model="wantIOSStoreVersion.url"
+          />
+        </div>
+        <div class="flex w-full max-w-sm mt-1">
+          <p class="text-gray-600 max-w-sm min-w-fit">TestFlight版本号</p>
+          <div class="w-full flex justify-end">
+            <button
+              :disabled="
+                wantIOSTestVersion.version == '' ||
+                wantIOSTestVersion.url == '' ||
+                !isValidURL(wantIOSTestVersion.url) ||
+                (wantIOSTestVersion.version == ClientVersion.ios_test.version &&
+                  wantIOSTestVersion.url == ClientVersion.ios_test.url)
+              "
+              @click="publishIOSToTestflight"
+              class="btn border-0 bg-blue-500 hover:bg-blue-900 disabled:bg-blue-500/60 text-white disabled:text-white/60 h-7 min-h-fit"
+            >
+              发布
+            </button>
+          </div>
+        </div>
+        <div
+          :class="{
+            'border-red-500 hover:border-red-700': wantIOSTestVersion.version == '',
+            'border-stone-200 hover:border-stone-400': wantIOSTestVersion.version != '',
+          }"
+          class="mt-1 max-w-sm flex border rounded-md relative overflow-hidden min-w-0"
+        >
+          <input
+            class="outline-none py-2 px-3 w-full h-full font-mono text-sm text-ellipsis"
+            v-model="wantIOSTestVersion.version"
+          />
+        </div>
+
+        <div class="flex flex-row w-full max-w-sm justify-start mt-2 space-x-2">
+          <p class="text-gray-600 min-w-fit">TestFlight URL</p>
+        </div>
+        <div
+          class="max-w-sm flex w-full border rounded-md relative overflow-hidden min-w-0"
+          :class="{
+            'border-red-500 hover:border-red-700': !isValidURL(wantIOSTestVersion.url),
+            'border-stone-200 hover:border-stone-400': isValidURL(wantIOSTestVersion.url),
+          }"
+        >
+          <input
+            class="outline-none py-2 px-3 w-full h-9 font-mono text-sm text-ellipsis"
+            v-model="wantIOSTestVersion.url"
+          />
+        </div>
+      </div>
+      <!---->
       <!---->
     </div>
   </div>
