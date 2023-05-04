@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -17,6 +18,8 @@ const (
 type contextKey string
 
 const machineNameContextKey = contextKey("machineName")
+
+var globalUpdateTs int64
 
 // handlePollCommon is the common code for the Noise protocols to
 // managed the poll loop.
@@ -177,6 +180,7 @@ func (h *Mirage) handlePollCommon(
 		// It sounds like we should update the nodes when we have received a endpoint update
 		// even tho the comments in the tailscale code dont explicitly say so.
 		updateChan <- struct{}{}
+		atomic.StoreInt64(&globalUpdateTs, time.Now().UnixMilli())
 
 		return
 	} else if mapRequest.OmitPeers && mapRequest.Stream {
@@ -204,6 +208,7 @@ func (h *Mirage) handlePollCommon(
 		Str("machine", machine.Hostname).
 		Msg("Notifying peers")
 	updateChan <- struct{}{}
+	atomic.StoreInt64(&globalUpdateTs, time.Now().UnixMilli())
 
 	h.pollNetMapStream(
 		writer,
@@ -581,6 +586,9 @@ func (h *Mirage) scheduledPollWorker(
 ) {
 	keepAliveTicker := time.NewTicker(keepAliveInterval)
 	updateCheckerTicker := time.NewTicker(NodeUpdateCheckInterval)
+	updateShortTicker := time.NewTicker(100 * time.Millisecond)
+	var lastTs int64
+	defer updateShortTicker.Stop()
 
 	defer closeChanWithLog(
 		updateChan,
@@ -629,6 +637,20 @@ func (h *Mirage) scheduledPollWorker(
 			case <-ctx.Done():
 				return
 			}
+		case ti := <-updateShortTicker.C:
+			ts := ti.UnixMilli()
+			if atomic.LoadInt64(&globalUpdateTs) > lastTs {
+				log.Debug().
+					Str("func", "detectUpdate").
+					Str("machine", machine.Hostname).
+					Msg("Sending update request")
+				select {
+				case updateChan <- struct{}{}:
+				case <-ctx.Done():
+					return
+				}
+			}
+			lastTs = ts
 		}
 	}
 }

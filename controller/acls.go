@@ -210,7 +210,7 @@ func (h *Mirage) UpdateACLRules(userId int64) error {
 	return nil
 }
 
-func (h *Mirage) generateAclPeerCacheMap(rules []tailcfg.FilterRule) (aclCachePeerMap map[string]map[string]struct{}) {
+func (h *Mirage) generateACLPeerCacheMap(rules []tailcfg.FilterRule) (aclCachePeerMap map[string]map[string]struct{}) {
 	aclCachePeerMap = map[string]map[string]struct{}{}
 	for _, rule := range rules {
 		for _, srcIP := range rule.SrcIPs {
@@ -291,7 +291,7 @@ func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) error {
 	log.Trace().Interface("ACL", rules).Msg("ACL rules generated")
 	org.AclRules = rules
 	org.AutoGroupMap = autogroupMap
-	org.AclPeersCacheMap = h.generateAclPeerCacheMap(rules)
+	org.AclPeersCacheMap = h.generateACLPeerCacheMap(rules)
 
 	if featureEnableSSH() {
 		sshRules, err := h.generateSSHRulesOfOrg(machines, userId, org)
