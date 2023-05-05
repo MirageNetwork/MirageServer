@@ -9,8 +9,8 @@ import Mac from './downloads/Mac.vue'
 import Android from './downloads/Android.vue'
 
 const routes = [
-    { path: '/', redirect: '/win' },
-    { path: '/win', component: Windows },
+    { path: '/', redirect: '/windows' },
+    { path: '/windows', component: Windows },
     { path: '/ios', component: IOS },
     { path: '/linux', component: Linux },
     { path: '/mac', component: Mac },
@@ -27,4 +27,4 @@ app.config.errorHandler = (err) => {
     
 }
 app.use(router)
-app.mount('body')
+app.mount('#app-root')

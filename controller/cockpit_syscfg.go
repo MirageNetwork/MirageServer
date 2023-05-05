@@ -263,8 +263,10 @@ type ClientVersionInfo struct {
 	NaviAMD64     string    `json:"naviAmd64"`
 	NaviAARCH64   string    `json:"naviAarch64"`
 	Win           ClientVer `json:"win"`
-	Mac           ClientVer `json:"mac"`
-	Linux         ClientVer `json:"linux"`
+	MacStore      ClientVer `json:"mac_store"`
+	MacTestFlight ClientVer `json:"mac_test"`
+	LinuxAMD64    ClientVer `json:"linuxAmd64"`
+	LinuxAARCH64  ClientVer `json:"linuxAarch64"`
 	Android       ClientVer `json:"android"`
 	IOSStore      ClientVer `json:"ios_store"`
 	IOSTestFlight ClientVer `json:"ios_test"`

@@ -297,8 +297,8 @@ var mainpageFS embed.FS
 //go:embed console_html/login
 var loginFS embed.FS
 
-//go:embed console_html/downloads
-var downloadsFS embed.FS
+////go:embed console_html/downloads
+//var downloadsFS embed.FS
 
 func (h *Mirage) initRouter(router *mux.Router) {
 
@@ -315,11 +315,12 @@ func (h *Mirage) initRouter(router *mux.Router) {
 		log.Fatal().Msg(err.Error())
 	}
 
-	downloadsDir, err := fs.Sub(downloadsFS, "console_html/downloads")
-	if err != nil {
-		log.Fatal().Msg(err.Error())
-	}
-	router.PathPrefix("/downloads").Handler(http.StripPrefix("/downloads", http.FileServer(http.FS(downloadsDir))))
+	//	downloadsDir, err := fs.Sub(downloadsFS, "console_html/downloads")
+	//	if err != nil {
+	//		log.Fatal().Msg(err.Error())
+	//	}
+	// router.PathPrefix("/downloads").Handler(http.StripPrefix("/downloads", http.FileServer(http.FS(downloadsDir))))
+	router.PathPrefix("/downloads").HandlerFunc(h.sendDownloadsPage).Methods(http.MethodGet)
 
 	router.PathPrefix("/download").Handler(http.StripPrefix("/download", http.FileServer(http.Dir("download"))))
 
