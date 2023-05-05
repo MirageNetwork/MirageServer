@@ -16,6 +16,7 @@ type SysConfig struct {
 	//	AdminCredential AdminCredential `gorm:"not null"`
 
 	ServerURL  string
+	ServerKey  string
 	Addr       string   `gorm:"default:':8080'"`               // default port
 	Mip4       IPPrefix `gorm:"default:'100.64.0.0/10'"`       // default prefix
 	Mip6       IPPrefix `gorm:"default:'fd7a:115c:a1e0::/48'"` // default prefix

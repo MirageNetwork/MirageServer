@@ -26,7 +26,7 @@ derp.yaml
 *.key
 db.sqlite*
 *.sqlite3
-
+.db.sqlite-litestream
 
 /download
 

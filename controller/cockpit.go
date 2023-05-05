@@ -22,6 +22,7 @@ import (
 	"go4.org/netipx"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
+	"tailscale.com/types/key"
 )
 
 type Cockpit struct {
@@ -226,7 +227,7 @@ func (c *Cockpit) Auth(next http.Handler) http.Handler {
 	})
 }
 
-// RebokeAdmin 注销超级管理员
+// RevokeAdmin 注销超级管理员
 func (c *Cockpit) RevokeAdmin(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -272,20 +273,54 @@ func (c *Cockpit) RegisterAdmin(
 		//		newSysCfg := c.GetSysCfg()
 		currentSysadmin := c.GetAdmin()
 		if currentSysadmin == nil {
-			dexSecret := c.GenAuthCode()
 			newSysCfg := c.GetSysCfg()
 			if newSysCfg == nil {
+				dexSecret := c.GenAuthCode()
+				machineKey := key.NewMachine()
+				machineKeyStr, err := machineKey.MarshalText()
+				if err != nil {
+					c.doAPIResponse(w, "创建机器密钥失败", nil)
+					return
+				}
 				newSysCfg = &SysConfig{
 					DexSecret: dexSecret,
+					ServerKey: string(machineKeyStr),
 				}
-			} else {
-				newSysCfg.DexSecret = dexSecret
+				c.db.Save(newSysCfg)
+				newSysCfg = c.GetSysCfg()
+				if newSysCfg.DexSecret == "" || newSysCfg.ServerKey == "" {
+					c.doAPIResponse(w, "创建dex认证随机数失败", nil)
+					return
+				}
+				if newSysCfg.ServerKey == "" {
+					c.doAPIResponse(w, "创建服务器私钥失败", nil)
+					return
+				}
 			}
-			c.db.Save(newSysCfg)
-			newSysCfg = c.GetSysCfg()
 			if newSysCfg.DexSecret == "" {
-				c.doAPIResponse(w, "创建dex认证随机数失败", nil)
-				return
+				dexSecret := c.GenAuthCode()
+				newSysCfg.DexSecret = dexSecret
+				c.db.Save(newSysCfg)
+				newSysCfg = c.GetSysCfg()
+				if newSysCfg.DexSecret == "" {
+					c.doAPIResponse(w, "创建dex认证随机数失败", nil)
+					return
+				}
+			}
+			if newSysCfg.ServerKey == "" {
+				machineKey := key.NewMachine()
+				machineKeyStr, err := machineKey.MarshalText()
+				if err != nil {
+					c.doAPIResponse(w, "创建机器密钥失败", nil)
+					return
+				}
+				newSysCfg.ServerKey = string(machineKeyStr)
+				c.db.Save(newSysCfg)
+				newSysCfg = c.GetSysCfg()
+				if newSysCfg.ServerKey == "" {
+					c.doAPIResponse(w, "创建服务器私钥失败", nil)
+					return
+				}
 			}
 			currentSysadmin = &SysAdmin{}
 		}

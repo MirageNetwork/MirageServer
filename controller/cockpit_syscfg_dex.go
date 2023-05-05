@@ -16,9 +16,9 @@ import (
 
 func (s *SysConfig) toDexConfig() (*server.Config, error) {
 	storageCfg := DexStorage{
-		Type: DexDBType,
+		Type: "sqlite3", //DexDBType,
 		Config: &dexSQL.SQLite3{
-			File: AbsolutePathFromConfigPath(DexDBPath),
+			File: AbsolutePathFromConfigPath(DatabasePath), //DexDBPath),
 		},
 	}
 	msConnCfg := &microsoft.Config{

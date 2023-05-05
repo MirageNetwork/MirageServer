@@ -3,15 +3,12 @@ package controller
 import (
 	"context"
 	"embed"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"net"
 	"net/http"
-	"os"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -30,11 +27,11 @@ import (
 )
 
 const (
-	NoiseKeyPath = "noise.key"
+	//	NoiseKeyPath = "noise.key"
 	DatabasePath = "db.sqlite"
-	DexDBPath    = "dexdb.sqlite"
-	DexDBType    = "sqlite3"
-	AuthPrefix   = "Bearer "
+	//	DexDBPath    = "db.sqlite"
+	//	DexDBType    = "sqlite3"
+	AuthPrefix = "Bearer "
 
 	EphemeralNodeInactivityTimeout = 5 * time.Minute  //不得低于65s
 	NodeUpdateCheckInterval        = 10 * time.Second //不得大于60s
@@ -87,7 +84,8 @@ type Mirage struct {
 }
 
 func NewMirage(cfg *Config, db *gorm.DB) (*Mirage, error) {
-	noisePrivateKey, err := readOrCreatePrivateKey(AbsolutePathFromConfigPath(NoiseKeyPath))
+	// noisePrivateKey, err := readOrCreatePrivateKey(AbsolutePathFromConfigPath(NoiseKeyPath))
+	noisePrivateKey, err := getServerPrivateKey(db)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read or create Noise protocol private key: %w", err)
 	}
@@ -712,6 +710,24 @@ func stdoutHandler(
 		Msg("Request did not match")
 }
 
+func getServerPrivateKey(db *gorm.DB) (*key.MachinePrivate, error) {
+	var sysCfg SysConfig
+	err := db.First(&sysCfg).Error
+	if err != nil || sysCfg.ServerKey == "" {
+		return nil, fmt.Errorf("failed to get server private key: %w", err)
+	}
+
+	var machineKey key.MachinePrivate
+	if err = machineKey.UnmarshalText([]byte(sysCfg.ServerKey)); err != nil {
+		log.Error().
+			Caller().
+			Msg("Convert db server key string to machinekey failed: " + err.Error())
+		return nil, fmt.Errorf("failed to parse private key: %w", err)
+	}
+	return &machineKey, nil
+}
+
+/*
 func readOrCreatePrivateKey(path string) (*key.MachinePrivate, error) {
 	privateKey, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -755,3 +771,4 @@ func readOrCreatePrivateKey(path string) (*key.MachinePrivate, error) {
 
 	return &machineKey, nil
 }
+*/
