@@ -696,44 +696,40 @@ func (h *Mirage) expandAlias(
 
 	// if alias is an host
 	if host, ok := aclPolicy.Hosts[alias]; ok {
+		ips = append(ips, host.String())
 		if autoAddRoute {
 			mlist := h.GetMachinesInPrefix(host)
-			if mlist != nil {
-				for _, m := range mlist {
-					ips = append(ips, h.expandMachineRoutes(m)...)
-				}
+			for _, m := range mlist {
+				ips = append(ips, h.expandMachineRoutes(m)...)
 			}
-
 		}
-		return []string{host.String()}, nil
+		return ips, nil
 	}
 
 	// if alias is an IP
 	ip, err := netip.ParseAddr(alias)
 	if err == nil {
+		ips = append(ips, ip.String())
 		if autoAddRoute {
 			m := h.GetMachineByIP(ip)
 			if m != nil {
 				ips = append(ips, h.expandMachineRoutes(*m)...)
 			}
-
 		}
-		return []string{ip.String()}, nil
+		return ips, nil
 	}
 
 	// if alias is an CIDR
 	cidr, err := netip.ParsePrefix(alias)
 	if err == nil {
+		ips = append(ips, cidr.String())
 		if autoAddRoute {
 			mlist := h.GetMachinesInPrefix(cidr)
-			if mlist != nil {
-				for _, m := range mlist {
-					ips = append(ips, h.expandMachineRoutes(m)...)
-				}
+			for _, m := range mlist {
+				ips = append(ips, h.expandMachineRoutes(m)...)
 			}
-
 		}
-		return []string{cidr.String()}, nil
+		return ips, nil
 	}
 
 	log.Debug().Msgf("No IPs found with the alias %v", alias)

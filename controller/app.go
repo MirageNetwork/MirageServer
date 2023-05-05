@@ -30,14 +30,6 @@ import (
 )
 
 const (
-	errSTUNAddressNotSet                   = Error("STUN address not set")
-	errUnsupportedDatabase                 = Error("unsupported DB")
-	errUnsupportedLetsEncryptChallengeType = Error(
-		"unknown value for Lets Encrypt challenge type",
-	)
-)
-
-const (
 	NoiseKeyPath = "noise.key"
 	DatabasePath = "db.sqlite"
 	DexDBPath    = "dexdb.sqlite"

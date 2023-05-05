@@ -91,7 +91,7 @@ func (h *Mirage) RegisterUserAPI(
 		// 发送短信验证码流程
 
 		// 生成六位验证码
-		rand.Seed(time.Now().UnixNano())
+		rand.NewSource(time.Now().UnixNano())
 		code := rand.Intn(899999) + 100000
 		newVerifyCode := strconv.Itoa(code)
 

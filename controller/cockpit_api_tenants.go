@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/netip"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -116,6 +117,10 @@ func (c *Cockpit) CAPIGetTenant(
 
 	tenants, err := c.ListTenants()
 	if err != nil {
+		if strings.Contains(err.Error(), "no such table") {
+			c.doAPIResponse(w, "", resData)
+			return
+		}
 		c.doAPIResponse(w, "租户列表获取失败:"+err.Error(), nil)
 		return
 	}

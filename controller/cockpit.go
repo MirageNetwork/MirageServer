@@ -2,12 +2,12 @@ package controller
 
 import (
 	"bytes"
+	"crypto/rand"
 	"embed"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/fs"
-	"math/rand"
 	"net"
 	"net/http"
 	"net/netip"
@@ -32,7 +32,7 @@ type Cockpit struct {
 	serviceState bool
 	CtrlChn      chan CtrlMsg
 	MsgChn       chan CtrlMsg
-	hasAdmin     bool
+	//	hasAdmin     bool
 
 	author     *webauthn.WebAuthn
 	superAdmin *MirageSuperAdmin
@@ -81,20 +81,42 @@ func NewCockpit(sysAddr string, ctrlChn, msgChn chan CtrlMsg, db *gorm.DB) (*Coc
 		MsgChn:       msgChn,
 	}
 	cockpit.authCache = cache.New(0, 0)
-	cockpit.superAdmin, cockpit.hasAdmin = cockpit.GetAdmin()
+	//	cockpit.superAdmin, cockpit.hasAdmin = cockpit.GetAdmin()
+	cockpit.superAdmin = cockpit.GetSuperAdmin()
 
 	return cockpit, nil
 }
 
 // isAdminSet 检查是否已经设置了管理员凭证
 // @return 如果已经设置了管理员凭证则返回true，否则返回false
+/* TODEL
 func (c *Cockpit) GetAdmin() (*MirageSuperAdmin, bool) {
-	if sysCfg := c.GetSysCfg(); sysCfg != nil {
+	if sysadmin := c.GetSysAdmin(); sysadmin != nil {
 		return &MirageSuperAdmin{
 			cred: sysCfg.AdminCredential,
 		}, true
 	}
 	return nil, false
+}
+*/
+
+func (c *Cockpit) GetSuperAdmin() *MirageSuperAdmin {
+	sysadmin := []SysAdmin{}
+	err := c.db.Find(&sysadmin).Error
+	if err != nil || sysadmin == nil || len(sysadmin) == 0 {
+		return nil
+	}
+	return &MirageSuperAdmin{
+		cred: sysadmin[0].AdminCredential,
+	}
+}
+func (c *Cockpit) GetAdmin() *SysAdmin {
+	sysadmin := []SysAdmin{}
+	err := c.db.Find(&sysadmin).Error
+	if err != nil || sysadmin == nil || len(sysadmin) == 0 {
+		return nil
+	}
+	return &sysadmin[0]
 }
 
 func (c *Cockpit) GetSysCfg() *SysConfig {
@@ -135,6 +157,7 @@ func (c *Cockpit) createRouter() *mux.Router {
 	cockpit_router.Use(c.Auth)
 
 	cockpit_router.HandleFunc("/api/regAdmin", c.RegisterAdmin).Methods(http.MethodPost)
+	cockpit_router.HandleFunc("/api/revokeAdmin", c.RevokeAdmin).Methods(http.MethodPost)
 	cockpit_router.HandleFunc("/api/login", c.Login).Methods(http.MethodPost)
 	cockpit_router.HandleFunc("/api/setting/general", c.SetSettingGeneral).Methods(http.MethodPost)
 	cockpit_router.HandleFunc("/api/service/start", c.DoServiceStart).Methods(http.MethodPost)
@@ -168,7 +191,7 @@ func (c *Cockpit) Auth(next http.Handler) http.Handler {
 		}
 
 		// If admin credential is not set, allow user to register admin credential
-		if !c.hasAdmin {
+		if c.superAdmin == nil {
 			if r.URL.Path == "/cockpit/api/regAdmin" {
 				next.ServeHTTP(w, r)
 				return
@@ -203,6 +226,25 @@ func (c *Cockpit) Auth(next http.Handler) http.Handler {
 	})
 }
 
+// RebokeAdmin 注销超级管理员
+func (c *Cockpit) RevokeAdmin(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	if c.superAdmin == nil {
+		c.doAPIResponse(w, "超级管理员不存在", nil)
+		return
+	}
+	sysAdmin := c.GetAdmin()
+	err := c.db.Delete(sysAdmin).Error
+	if err != nil {
+		c.doAPIResponse(w, "解绑超级管理员失败", nil)
+		return
+	}
+	c.superAdmin = nil
+	c.doAPIResponse(w, "", "ok")
+}
+
 // RegisterAdmin 注册超级管理员
 func (c *Cockpit) RegisterAdmin(
 	w http.ResponseWriter,
@@ -227,19 +269,31 @@ func (c *Cockpit) RegisterAdmin(
 			c.doAPIResponse(w, "创建超管凭证失败", nil)
 			return
 		}
-		newSysCfg := c.GetSysCfg()
-		if newSysCfg != nil {
-			newSysCfg.AdminCredential = AdminCredential(*credential)
-		} else {
+		//		newSysCfg := c.GetSysCfg()
+		currentSysadmin := c.GetAdmin()
+		if currentSysadmin == nil {
 			dexSecret := c.GenAuthCode()
-			newSysCfg = &SysConfig{
-				AdminCredential: AdminCredential(*credential),
-				DexSecret:       dexSecret,
+			newSysCfg := c.GetSysCfg()
+			if newSysCfg == nil {
+				newSysCfg = &SysConfig{
+					DexSecret: dexSecret,
+				}
+			} else {
+				newSysCfg.DexSecret = dexSecret
 			}
+			c.db.Save(newSysCfg)
+			newSysCfg = c.GetSysCfg()
+			if newSysCfg.DexSecret == "" {
+				c.doAPIResponse(w, "创建dex认证随机数失败", nil)
+				return
+			}
+			currentSysadmin = &SysAdmin{}
 		}
-		c.db.Save(newSysCfg)
-		c.superAdmin, c.hasAdmin = c.GetAdmin()
-		if !c.hasAdmin {
+		currentSysadmin.AdminCredential = AdminCredential(*credential)
+		c.db.Save(currentSysadmin)
+		// c.superAdmin, c.hasAdmin = c.GetAdmin()
+		c.superAdmin = c.GetSuperAdmin()
+		if c.superAdmin == nil {
 			c.doAPIResponse(w, "保存超管凭证失败", nil)
 			return
 		}
@@ -376,7 +430,6 @@ func (c *Cockpit) DoServiceStart(
 		return
 	}
 	c.doAPIResponse(w, "配置不完整", false)
-	return
 }
 
 // DoServiceStop 停止服务
@@ -393,7 +446,6 @@ func (c *Cockpit) DoServiceStop(
 		Msg: "stop",
 	}
 	c.doAPIResponse(w, "", false)
-	return
 }
 
 // CheckCfgValid 检查配置是否有效

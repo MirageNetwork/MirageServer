@@ -13,6 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"tailscale.com/control/controlclient"
+	"tailscale.com/net/netmon"
 	"tailscale.com/net/tsdial"
 	"tailscale.com/types/key"
 	"tailscale.com/util/singleflight"
@@ -25,11 +26,15 @@ func (m *Mirage) GetNaviNoiseClient(naviPub key.MachinePublic, naviHostname stri
 	nc, err, _ := sfGroup.Do(struct{}{}, func() (*controlclient.NoiseClient, error) {
 		log.Trace().Caller().Msg("creating new noise client")
 		var nc *controlclient.NoiseClient
-		var err error
+		netMon, err := netmon.New(log.Logger.Trace().Msgf)
+		if err != nil {
+			log.Printf("Could not create netMon: %v", err)
+			netMon = nil
+		}
 		if naviDERPPort == 0 {
-			nc, err = controlclient.NewNoiseClient(*m.noisePrivateKey, naviPub, "https://"+naviHostname, dialer, nil)
+			nc, err = controlclient.NewNoiseClient(*m.noisePrivateKey, naviPub, "https://"+naviHostname, dialer, log.Logger.Trace().Msgf, netMon, nil)
 		} else {
-			nc, err = controlclient.NewNoiseClient(*m.noisePrivateKey, naviPub, "https://"+naviHostname+":"+strconv.Itoa(naviDERPPort), dialer, nil)
+			nc, err = controlclient.NewNoiseClient(*m.noisePrivateKey, naviPub, "https://"+naviHostname+":"+strconv.Itoa(naviDERPPort), dialer, log.Logger.Trace().Msgf, netMon, nil)
 		}
 		if err != nil {
 			return nil, err

@@ -13,7 +13,7 @@ import (
 
 type SysConfig struct {
 	gorm.Model
-	AdminCredential AdminCredential `gorm:"not null"`
+	//	AdminCredential AdminCredential `gorm:"not null"`
 
 	ServerURL  string
 	Addr       string   `gorm:"default:':8080'"`               // default port

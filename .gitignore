@@ -15,6 +15,7 @@ __debug_bin
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
+/output
 /.mirage
 /Mirage
 /dexdb.sqlite

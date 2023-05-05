@@ -61,7 +61,7 @@ func (s *SysConfig) toDexConfig() (*server.Config, error) {
 	storage = dexStorage.WithStaticClients(storage, []dexStorage.Client{{
 		Name:   "MirageServer",
 		ID:     "MirageServer",
-		Secret: s.DexSecret, // TODO: change this to a random string
+		Secret: s.DexSecret,
 		RedirectURIs: []string{
 			"https://" + s.ServerURL + "/a/oauth_response",
 		},

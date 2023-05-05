@@ -60,7 +60,7 @@ func (h *Mirage) doLogin(w http.ResponseWriter, r *http.Request) {
 			stateCodeItem.provider = provider
 		}
 	}
-	h.stateCodeCache.Set(stateCode, stateCodeItem, time.Now().AddDate(0, 1, 0).Sub(time.Now()))
+	h.stateCodeCache.Set(stateCode, stateCodeItem, time.Until(time.Now().AddDate(0, 1, 0)))
 	stateCodeCookie := &http.Cookie{
 		Name:     "mirage-authstate2",
 		Value:    stateCode,
@@ -152,7 +152,6 @@ func (h *Mirage) doWXScanLogin(w http.ResponseWriter, r *http.Request, stateCode
 			Err(err).
 			Msg("Failed to write response")
 	}
-	return
 }
 
 func (h *Mirage) loginMidware(next http.Handler) http.Handler {
@@ -170,7 +169,6 @@ func (h *Mirage) loginMidware(next http.Handler) http.Handler {
 			return
 		}
 		http.Redirect(w, r, nextURL, http.StatusFound)
-		return
 	})
 }
 
@@ -453,7 +451,7 @@ func (h *Mirage) deviceReg(
 	}
 
 	aCodeItem.uid = controlCodeItem.uid
-	h.aCodeCache.Set(aCode, aCodeItem, aCodeExpiration.Sub(time.Now()))
+	h.aCodeCache.Set(aCode, aCodeItem, time.Until(aCodeExpiration))
 	// 过期时间先按照用户标准过期时间，后续可以考虑加入单独设备设置，与用户标准联合限制
 	machine, err := h.registerMachineFromConsole(aCodeItem)
 	if err != nil {
@@ -539,7 +537,7 @@ func (h *Mirage) oauthResponse(
 		}
 		qStateItem.userName = userName
 		qStateItem.userDisName = userDisName
-		h.stateCodeCache.Set(qState, qStateItem, qStateExpiration.Sub(time.Now()))
+		h.stateCodeCache.Set(qState, qStateItem, time.Until(qStateExpiration))
 
 		if claims.Groups == nil || len(claims.Groups) == 0 {
 			orgName = userName
@@ -619,7 +617,7 @@ func (h *Mirage) oauthResponse(
 
 		qStateItem.userName = userName
 		qStateItem.userDisName = userDisName
-		h.stateCodeCache.Set(qState, qStateItem, qStateExpiration.Sub(time.Now()))
+		h.stateCodeCache.Set(qState, qStateItem, time.Until(qStateExpiration))
 	}
 
 	h.finishOauthResponse(w, r, qState, orgName)
@@ -661,14 +659,14 @@ func (h *Mirage) finishOauthResponse(
 		return
 	}
 	stateItem.uid = user.toTailscaleUser().ID
-	h.stateCodeCache.Set(state, stateItem, qStateExpiration.Sub(time.Now()))
+	h.stateCodeCache.Set(state, stateItem, time.Until(qStateExpiration))
 	controlCode := h.GenStateCode()
 	h.controlCodeCache.Set(
 		controlCode,
 		ControlCacheItem{
 			uid: user.toTailscaleUser().ID,
 		},
-		time.Now().AddDate(0, 1, 0).Sub(time.Now()),
+		time.Until(time.Now().AddDate(0, 1, 0)),
 	)
 	machineKey := stateItem.machineKey
 	// 确认state来自机器注册用，需要记录与机器码对应关系，后续机器有新注册时要将原有对应control全部删除
@@ -682,7 +680,7 @@ func (h *Mirage) finishOauthResponse(
 		}
 		machineControlItem := machineControlCodes.(MachineControlCodeCacheItem)
 		machineControlItem.controlCodes = append(machineControlItem.controlCodes, controlCode)
-		h.machineControlCodeCache.Set(machineKey.String(), machineControlItem, machineControlCodeExpiration.Sub(time.Now()))
+		h.machineControlCodeCache.Set(machineKey.String(), machineControlItem, time.Until(machineControlCodeExpiration))
 	}
 
 	controlCodeCookie := &http.Cookie{
@@ -697,7 +695,6 @@ func (h *Mirage) finishOauthResponse(
 	}
 	http.SetCookie(w, controlCodeCookie)
 	http.Redirect(w, r, stateItem.nextURL, http.StatusFound)
-	return
 }
 
 type StateCacheItem struct {
@@ -861,7 +858,7 @@ func (h *Mirage) registerMachineFromConsole(
 		h.NotifyNaviOrgNodesChange(user.OrganizationID, oldmachine.NodeKey, oldNodeKey)
 
 		machine, err := h.GetMachineByID(oldmachine.ID)
-		return machine, nil
+		return machine, err
 	} else {
 		newmachine := Machine{
 			MachineKey:           MachinePublicKeyStripPrefix(aCodeItem.mKey),

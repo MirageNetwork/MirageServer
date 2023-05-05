@@ -140,5 +140,4 @@ func (c *Cockpit) CAPIPublishClient(
 	}
 
 	c.GetSettingGeneral(w, r)
-	return
 }
