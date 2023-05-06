@@ -90,7 +90,7 @@ func (h *Mirage) handlePollCommon(
 		}
 	}
 
-	mapResp, err := h.getMapResponseData(mapRequest, machine)
+	mapResp, err := h.getMapResponseData(mapRequest, machine, nil)
 	if err != nil {
 		log.Error().
 			Str("handler", "PollNetMap").
@@ -258,6 +258,7 @@ func (h *Mirage) pollNetMapStream(
 		Str("machine", machine.Hostname).
 		Msgf("pollData is %#v, keepAliveChan is %#v, updateChan is %#v", pollDataChan, keepAliveChan, updateChan)
 
+	var mapResponseState mapResponseStreamState
 	for {
 		select {
 		case data := <-pollDataChan:
@@ -428,7 +429,7 @@ func (h *Mirage) pollNetMapStream(
 					Time("last_successful_update", lastUpdate).
 					Time("last_state_change", h.getOrgLastStateChange(machine.User.OrganizationID)).
 					Msgf("There has been updates since the last successful update to %s", machine.Hostname)
-				data, err := h.getMapResponseData(mapRequest, machine)
+				data, err := h.getMapResponseData(mapRequest, machine, &mapResponseState)
 				if err != nil {
 					log.Error().
 						Str("handler", "PollNetMapStream").

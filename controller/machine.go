@@ -1364,3 +1364,12 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 
 	return nil
 }
+
+func machinesByID(machines Machines) map[int64]Machine {
+	byID := make(map[int64]Machine)
+	for _, machine := range machines {
+		byID[machine.ID] = machine
+	}
+
+	return byID
+}
