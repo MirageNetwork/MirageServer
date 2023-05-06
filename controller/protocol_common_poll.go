@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v2"
 	"github.com/rs/zerolog/log"
 	"tailscale.com/tailcfg"
 )
@@ -20,6 +21,8 @@ type contextKey string
 const machineNameContextKey = contextKey("machineName")
 
 var globalUpdateTs int64
+
+var orgUpdateTsMap = xsync.NewIntegerMapOf[int64, int64]()
 
 // handlePollCommon is the common code for the Noise protocols to
 // managed the poll loop.
@@ -181,6 +184,7 @@ func (h *Mirage) handlePollCommon(
 		// even tho the comments in the tailscale code dont explicitly say so.
 		updateChan <- struct{}{}
 		atomic.StoreInt64(&globalUpdateTs, time.Now().UnixMilli())
+		orgUpdateTsMap.Store(machine.User.OrganizationID, time.Now().UnixMilli())
 
 		return
 	} else if mapRequest.OmitPeers && mapRequest.Stream {
@@ -209,6 +213,7 @@ func (h *Mirage) handlePollCommon(
 		Msg("Notifying peers")
 	updateChan <- struct{}{}
 	atomic.StoreInt64(&globalUpdateTs, time.Now().UnixMilli())
+	orgUpdateTsMap.Store(machine.User.OrganizationID, time.Now().UnixMilli())
 
 	h.pollNetMapStream(
 		writer,
@@ -640,14 +645,16 @@ func (h *Mirage) scheduledPollWorker(
 		case ti := <-updateShortTicker.C:
 			ts := ti.UnixMilli()
 			if atomic.LoadInt64(&globalUpdateTs) > lastTs {
-				log.Debug().
-					Str("func", "detectUpdate").
-					Str("machine", machine.Hostname).
-					Msg("Sending update request")
-				select {
-				case updateChan <- struct{}{}:
-				case <-ctx.Done():
-					return
+				if updateTs, ok := orgUpdateTsMap.Load(machine.User.OrganizationID); ok && updateTs > lastTs {
+					log.Debug().
+						Str("func", "detectUpdate").
+						Str("machine", machine.Hostname).
+						Msg("Sending update request")
+					select {
+					case updateChan <- struct{}{}:
+					case <-ctx.Done():
+						return
+					}
 				}
 			}
 			lastTs = ts
