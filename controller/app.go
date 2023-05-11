@@ -3,15 +3,12 @@ package controller
 import (
 	"context"
 	"embed"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"net"
 	"net/http"
-	"os"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -30,19 +27,11 @@ import (
 )
 
 const (
-	errSTUNAddressNotSet                   = Error("STUN address not set")
-	errUnsupportedDatabase                 = Error("unsupported DB")
-	errUnsupportedLetsEncryptChallengeType = Error(
-		"unknown value for Lets Encrypt challenge type",
-	)
-)
-
-const (
-	NoiseKeyPath = "noise.key"
+	//	NoiseKeyPath = "noise.key"
 	DatabasePath = "db.sqlite"
-	DexDBPath    = "dexdb.sqlite"
-	DexDBType    = "sqlite3"
-	AuthPrefix   = "Bearer "
+	//	DexDBPath    = "db.sqlite"
+	//	DexDBType    = "sqlite3"
+	AuthPrefix = "Bearer "
 
 	EphemeralNodeInactivityTimeout = 5 * time.Minute  //不得低于65s
 	NodeUpdateCheckInterval        = 10 * time.Second //不得大于60s
@@ -95,7 +84,8 @@ type Mirage struct {
 }
 
 func NewMirage(cfg *Config, db *gorm.DB) (*Mirage, error) {
-	noisePrivateKey, err := readOrCreatePrivateKey(AbsolutePathFromConfigPath(NoiseKeyPath))
+	// noisePrivateKey, err := readOrCreatePrivateKey(AbsolutePathFromConfigPath(NoiseKeyPath))
+	noisePrivateKey, err := getServerPrivateKey(db)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read or create Noise protocol private key: %w", err)
 	}
@@ -298,29 +288,39 @@ func (h *Mirage) expireExpiredMachinesWorker() {
 	}
 }
 
-//go:embed html/admin
+//go:embed console_html/admin
 var adminFS embed.FS
 
-//go:embed html
+//go:embed console_html
 var mainpageFS embed.FS
 
-//go:embed html/login
+//go:embed console_html/login
 var loginFS embed.FS
+
+////go:embed console_html/downloads
+//var downloadsFS embed.FS
 
 func (h *Mirage) initRouter(router *mux.Router) {
 
-	adminDir, err := fs.Sub(adminFS, "html/admin")
+	adminDir, err := fs.Sub(adminFS, "console_html/admin")
 	if err != nil {
 		log.Fatal().Msg(err.Error())
 	}
-	loginDir, err := fs.Sub(loginFS, "html/login")
+	loginDir, err := fs.Sub(loginFS, "console_html/login")
 	if err != nil {
 		log.Fatal().Msg(err.Error())
 	}
-	mainpageDir, err := fs.Sub(mainpageFS, "html")
+	mainpageDir, err := fs.Sub(mainpageFS, "console_html")
 	if err != nil {
 		log.Fatal().Msg(err.Error())
 	}
+
+	//	downloadsDir, err := fs.Sub(downloadsFS, "console_html/downloads")
+	//	if err != nil {
+	//		log.Fatal().Msg(err.Error())
+	//	}
+	// router.PathPrefix("/downloads").Handler(http.StripPrefix("/downloads", http.FileServer(http.FS(downloadsDir))))
+	router.PathPrefix("/downloads").HandlerFunc(h.sendDownloadsPage).Methods(http.MethodGet)
 
 	router.PathPrefix("/download").Handler(http.StripPrefix("/download", http.FileServer(http.Dir("download"))))
 
@@ -719,6 +719,24 @@ func stdoutHandler(
 		Msg("Request did not match")
 }
 
+func getServerPrivateKey(db *gorm.DB) (*key.MachinePrivate, error) {
+	var sysCfg SysConfig
+	err := db.First(&sysCfg).Error
+	if err != nil || sysCfg.ServerKey == "" {
+		return nil, fmt.Errorf("failed to get server private key: %w", err)
+	}
+
+	var machineKey key.MachinePrivate
+	if err = machineKey.UnmarshalText([]byte(sysCfg.ServerKey)); err != nil {
+		log.Error().
+			Caller().
+			Msg("Convert db server key string to machinekey failed: " + err.Error())
+		return nil, fmt.Errorf("failed to parse private key: %w", err)
+	}
+	return &machineKey, nil
+}
+
+/*
 func readOrCreatePrivateKey(path string) (*key.MachinePrivate, error) {
 	privateKey, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -762,3 +780,4 @@ func readOrCreatePrivateKey(path string) (*key.MachinePrivate, error) {
 
 	return &machineKey, nil
 }
+*/

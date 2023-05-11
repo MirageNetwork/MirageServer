@@ -129,7 +129,6 @@ func (m *Mirage) handleRegisterNavi(
 		Caller().
 		Msg("Navi node not created yet or key mismatch")
 	http.Error(writer, "Internal error", http.StatusInternalServerError)
-	return
 }
 
 type PullNodesListResponse struct {
@@ -212,5 +211,4 @@ func (t *ts2021App) NoiseNaviPollNodesListHandler(
 		Caller().
 		Msg("Navi node not created yet or key mismatch")
 	http.Error(writer, "Internal error", http.StatusInternalServerError)
-	return
 }

@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"encoding/pem"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -299,7 +298,7 @@ Environment=MIRAGE_NAVI_ID=` + derpid + `
 WantedBy=multi-user.target`
 
 	// 将文本写入文件
-	err = ioutil.WriteFile("download/"+derpid+".service.tmp", []byte(serviceScript), 0644)
+	err = os.WriteFile("download/"+derpid+".service.tmp", []byte(serviceScript), 0644)
 	if err != nil {
 		m.doAPIResponse(w, "创建临时服务文件失败:"+err.Error(), nil)
 		return

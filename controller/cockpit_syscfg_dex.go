@@ -16,9 +16,9 @@ import (
 
 func (s *SysConfig) toDexConfig() (*server.Config, error) {
 	storageCfg := DexStorage{
-		Type: DexDBType,
+		Type: "sqlite3", //DexDBType,
 		Config: &dexSQL.SQLite3{
-			File: AbsolutePathFromConfigPath(DexDBPath),
+			File: AbsolutePathFromConfigPath(DatabasePath), //DexDBPath),
 		},
 	}
 	msConnCfg := &microsoft.Config{
@@ -61,7 +61,7 @@ func (s *SysConfig) toDexConfig() (*server.Config, error) {
 	storage = dexStorage.WithStaticClients(storage, []dexStorage.Client{{
 		Name:   "MirageServer",
 		ID:     "MirageServer",
-		Secret: s.DexSecret, // TODO: change this to a random string
+		Secret: s.DexSecret,
 		RedirectURIs: []string{
 			"https://" + s.ServerURL + "/a/oauth_response",
 		},

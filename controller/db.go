@@ -19,8 +19,6 @@ type DataPool struct {
 }
 
 const (
-	dbVersion = "1"
-
 	errValueNotFound     = Error("not found")
 	ErrCannotParsePrefix = Error("cannot parse prefix")
 )
@@ -30,7 +28,12 @@ func (dp *DataPool) DB() *gorm.DB {
 }
 
 func (dp *DataPool) InitCockpitDB() error {
-	err := dp.db.AutoMigrate(&SysConfig{})
+	err := dp.db.AutoMigrate(&SysAdmin{})
+	if err != nil {
+		return err
+	}
+
+	err = dp.db.AutoMigrate(&SysConfig{})
 	if err != nil {
 		return err
 	}
@@ -83,8 +86,7 @@ func (dp *DataPool) InitMirageDB() error {
 }
 
 func (dp *DataPool) OpenDB() error {
-	var log logger.Interface
-	log = logger.Default.LogMode(logger.Silent)
+	log := logger.Default.LogMode(logger.Silent)
 
 	db, err := gorm.Open(
 		sqlite.Open(AbsolutePathFromConfigPath(DatabasePath)+"?_synchronous=1&_journal_mode=WAL"),

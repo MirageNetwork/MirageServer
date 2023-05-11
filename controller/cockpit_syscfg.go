@@ -13,9 +13,10 @@ import (
 
 type SysConfig struct {
 	gorm.Model
-	AdminCredential AdminCredential `gorm:"not null"`
+	//	AdminCredential AdminCredential `gorm:"not null"`
 
 	ServerURL  string
+	ServerKey  string
 	Addr       string   `gorm:"default:':8080'"`               // default port
 	Mip4       IPPrefix `gorm:"default:'100.64.0.0/10'"`       // default prefix
 	Mip6       IPPrefix `gorm:"default:'fd7a:115c:a1e0::/48'"` // default prefix
@@ -49,13 +50,13 @@ type SysConfig struct {
 }
 
 type GeneralCfg struct {
-	SrvAddr               string `json:"srvaddr"`
-	ServerURL             string `json:"server_url"`
-	MIPV4                 string `json:"mipv4"`
-	MIPV6                 string `json:"mipv6"`
-	BaseDomain            string `json:"basedomain"`
-	DERPURL               string `json:"derp_url"`
-	RouteAccessDueMachine bool   `json:"route_access_due_machine"`
+	SrvAddr    string `json:"srvaddr"`
+	ServerURL  string `json:"server_url"`
+	MIPV4      string `json:"mipv4"`
+	MIPV6      string `json:"mipv6"`
+	BaseDomain string `json:"basedomain"`
+	//		DERPURL               string `json:"derp_url"`
+	RouteAccessDueMachine bool `json:"route_access_due_machine"`
 
 	ESURL string `json:"es_url"`
 	ESKey string `json:"es_key"`
@@ -259,13 +260,16 @@ func (ghCfg AppleCfg) Value() (driver.Value, error) {
 }
 
 type ClientVersionInfo struct {
-	NaviAMD64   string    `json:"naviAmd64"`
-	NaviAARCH64 string    `json:"naviAarch64"`
-	Win         ClientVer `json:"win"`
-	Mac         ClientVer `json:"mac"`
-	Linux       ClientVer `json:"linux"`
-	Android     ClientVer `json:"android"`
-	Ios         ClientVer `json:"ios"`
+	NaviAMD64     string    `json:"naviAmd64"`
+	NaviAARCH64   string    `json:"naviAarch64"`
+	Win           ClientVer `json:"win"`
+	MacStore      ClientVer `json:"mac_store"`
+	MacTestFlight ClientVer `json:"mac_test"`
+	LinuxAMD64    ClientVer `json:"linuxAmd64"`
+	LinuxAARCH64  ClientVer `json:"linuxAarch64"`
+	Android       ClientVer `json:"android"`
+	IOSStore      ClientVer `json:"ios_store"`
+	IOSTestFlight ClientVer `json:"ios_test"`
 }
 
 func (c *ClientVersionInfo) Scan(value interface{}) error {

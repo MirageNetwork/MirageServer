@@ -11,3 +11,422 @@
     transition: transform .4s ease, bottom .4s ease;
     transition: transform .4s ease, bottom .4s ease, -webkit-transform .4s ease;
 }
+
+.Markdown {
+    line-height: 1.5;
+    --tw-text-opacity: 1;
+    color: rgb(71 70 69/var(--tw-text-opacity));
+    letter-spacing:-.005em
+}
+
+.Markdown h1, .Markdown h2, .Markdown h3, .Markdown h4, .Markdown h5, .Markdown h6 {
+    font-weight: 500;
+    --tw-text-opacity: 1;
+    color: rgb(52 52 51/var(--tw-text-opacity));
+    scroll-margin-top:4rem
+}
+
+.lang-ja .Markdown h1, .lang-ja .Markdown h2, .lang-ja .Markdown h3, .lang-ja .Markdown h4, .lang-ja .Markdown h5, .lang-ja .Markdown h6 {
+    font-weight:600
+}
+
+.Markdown h1:not(:first-child), .Markdown h2:not(:first-child), .Markdown h3:not(:first-child), .Markdown h4:not(:first-child), .Markdown h5:not(:first-child), .Markdown h6:not(:first-child) {
+    margin-top:2rem
+}
+
+.Markdown h1, .Markdown h2 {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    line-height: 1.25;
+    letter-spacing:-.035em
+}
+
+.Markdown h3 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    line-height: 1.25;
+    letter-spacing:-.01em
+}
+
+.Markdown h4 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    line-height:1.25
+}
+
+.Markdown h5 {
+    font-size: 1rem;
+    line-height:1.5rem
+}
+
+.Markdown a:not(.header-link) {
+    --tw-text-opacity: 1;
+    color: rgb(74 125 221/var(--tw-text-opacity));
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+    transition-duration:.15s
+}
+
+.Markdown a:not(.header-link):hover {
+    --tw-text-opacity: 1;
+    color:rgb(73 100 149/var(--tw-text-opacity))
+}
+
+.Markdown .note, .Markdown .toc, .Markdown .tweet, .Markdown ol, .Markdown p, .Markdown table, .Markdown ul {
+    margin-top:1rem
+}
+
+.Markdown > :first-child {
+    margin-top:0
+}
+
+.Markdown strong {
+    font-weight:600
+}
+
+.Markdown li {
+    margin-top:.375rem
+}
+
+.Markdown > ol > li:first-child, .Markdown > ul > li:first-child {
+    margin-top:0
+}
+
+.Markdown ul > li {
+    position: relative;
+    padding-left:1.25rem
+}
+
+.Markdown ul > li p {
+    margin-top:.75rem
+}
+
+.Markdown ul > li:before {
+    position: absolute;
+    top: .625rem;
+    left: .125rem;
+    height: .375rem;
+    width: .375rem;
+    border-radius: 9999px;
+    background-color: currentColor;
+    opacity: .4;
+    content: ""
+}
+
+.Markdown ol {
+    counter-reset:listitem
+}
+
+.Markdown ol > li {
+    position: relative;
+    padding-left:1.75rem
+}
+
+.Markdown ol > li:before {
+    position: absolute;
+    left: 0;
+    top: .125rem;
+    box-sizing: initial;
+    height: .75rem;
+    width: 1.25rem;
+    border-radius: 9999px;
+    --tw-bg-opacity: 1;
+    background-color: rgb(230 228 226/var(--tw-bg-opacity));
+    padding: .25rem 0;
+    text-align: center;
+    font-size: .75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    line-height: 1;
+    --tw-text-opacity: 1;
+    color: rgb(71 70 69/var(--tw-text-opacity));
+    counter-increment: listitem;
+    content:counter(listitem)
+}
+
+.Markdown #TableOfContents ul {
+    margin-top:0
+}
+
+.Markdown hr {
+    margin-top: 2rem;
+    margin-bottom:2rem
+}
+
+.Markdown blockquote:not(.tweet):not(.customer-quote) {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    border-left-width: 2px;
+    --tw-border-opacity: 1;
+    border-color: rgb(230 228 226/var(--tw-border-opacity));
+    padding-left: .75rem;
+    --tw-text-opacity: 1;
+    color:rgb(52 52 51/var(--tw-text-opacity))
+}
+
+.Markdown cite:not(.customer-quote) {
+    margin-top: .25rem;
+    display: block;
+    --tw-text-opacity: 1;
+    color:rgb(102 99 97/var(--tw-text-opacity))
+}
+
+.Markdown cite:not(.customer-quote):before {
+    margin-right: .25rem;
+    content: "—"
+}
+
+.Markdown cite.customer-quote {
+    font-style:normal
+}
+
+.Markdown code, .Markdown pre {
+    font-family: SF Mono, SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+    font-size:1.05rem
+}
+
+.Markdown code {
+    font-size:.825em
+}
+
+.Markdown pre {
+    margin-top: 1rem;
+    overflow-wrap: normal;
+    word-break: normal;
+    border-radius: .375rem;
+    border-width: 1px;
+    border-style: solid;
+    --tw-border-opacity: 1;
+    border-color: rgb(230 228 226/var(--tw-border-opacity));
+    --tw-bg-opacity: 1;
+    background-color: rgb(246 244 242/var(--tw-bg-opacity));
+    line-height: 1.5;
+    word-spacing: normal;
+    tab-size:2
+}
+
+.Markdown pre code {
+    display: block;
+    overflow-x: auto;
+    padding:.75rem 1rem
+}
+
+.Markdown .note > code, .Markdown a > code, .Markdown dd > code, .Markdown dt > code, .Markdown h1 > code, .Markdown h2 > code, .Markdown h3 > code, .Markdown h4 > code, .Markdown h5 > code, .Markdown h6 > code, .Markdown li > code, .Markdown p > code {
+    display: inline-block;
+    border-radius: .375rem;
+    border-width: 1px;
+    border-style: solid;
+    --tw-border-opacity: 1;
+    border-color: rgb(230 228 226/var(--tw-border-opacity));
+    --tw-bg-opacity: 1;
+    background-color: rgb(246 244 242/var(--tw-bg-opacity));
+    padding:.125rem .25rem
+}
+
+.Markdown figure:not(.customer-quote) {
+    margin-top: 1.5rem;
+    margin-bottom:1.5rem
+}
+
+.Markdown figure img, .Markdown figure svg, .Markdown figure video {
+    display: inline-block;
+    border-radius:.375rem
+}
+
+.Markdown figure.bordered img {
+    border-width: 1px;
+    border-style: solid;
+    --tw-border-opacity: 1;
+    border-color:rgb(246 244 242/var(--tw-border-opacity))
+}
+
+.Markdown figcaption {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: .5rem;
+    width: 75%;
+    text-align:center
+}
+
+.Markdown aside, .Markdown figcaption {
+    font-size: .875rem;
+    line-height: 1.25rem;
+    --tw-text-opacity: 1;
+    color:rgb(102 99 97/var(--tw-text-opacity))
+}
+
+.Markdown aside {
+    margin-bottom: 2rem;
+    line-height:1.5
+}
+
+.Markdown table {
+    border-collapse: initial;
+    border-radius: .375rem;
+    border-width: 0 1px 1px;
+    border-spacing:0
+}
+
+.Markdown table, .Markdown table td, .Markdown table th {
+    border-style: solid;
+    --tw-border-opacity: 1;
+    border-color:rgb(246 244 242/var(--tw-border-opacity))
+}
+
+.Markdown table td, .Markdown table th {
+    border-width: 1px 0 0;
+    padding:.5rem .625rem
+}
+
+.Markdown table th {
+    --tw-bg-opacity: 1;
+    background-color: rgb(250 249 248/var(--tw-bg-opacity));
+    text-align: left;
+    font-size: .875rem;
+    line-height: 1.25rem;
+    font-weight:400
+}
+
+.Markdown table thead th {
+    border-bottom-width:0
+}
+
+.Markdown .note {
+    position: relative;
+    border-radius: .25rem;
+    border-width: 1px;
+    border-style: solid;
+    --tw-border-opacity: 1;
+    border-color: rgb(246 244 242/var(--tw-border-opacity));
+    padding: .75rem .75rem .5rem 2.25rem;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    line-height: 1.5;
+    letter-spacing:-.025em
+}
+
+@media (min-width: 768px) {
+    .Markdown .note {
+        font-size: .875rem;
+        line-height:1.25rem
+    }
+}
+
+.Markdown .note:before {
+    position: absolute;
+    top: .875rem;
+    left: .75rem;
+    display: inline-block;
+    height: 1rem;
+    width: 1rem;
+    background-size: contain;
+    content: "";
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23454545' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E")
+}
+
+.Markdown .note h1, .Markdown .note h2, .Markdown .note h3, .Markdown .note h4, .Markdown .note h5, .Markdown .note h6 {
+    margin-bottom: .375rem;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight:500
+}
+
+.Markdown .note p {
+    margin-top:0
+}
+
+.Markdown .note p + p {
+    margin-top:1rem
+}
+
+.Markdown .fa-icon {
+    margin-left: .125rem;
+    margin-right: .125rem;
+    display: inline-flex;
+    height: 1.5rem;
+    width: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background-color: currentColor;
+    padding: .375rem;
+    text-align: center;
+    --tw-text-opacity: 1;
+    color:rgb(182 176 173/var(--tw-text-opacity))
+}
+
+.Markdown .ArticlePreview {
+    padding-top: .75rem;
+    padding-bottom:.75rem
+}
+
+.Markdown .ArticlePreview p {
+    margin-top:.25rem
+}
+
+.Markdown--legal ol li:before {
+    all:unset
+}
+
+.Markdown--legal ol {
+    padding:.125rem
+}
+
+.Markdown--legal ol > li {
+    list-style-type: decimal;
+    padding-left: .125rem;
+    font-size: 1rem;
+    line-height:1.5rem
+}
+
+.Markdown--legal > ol > li {
+    padding-top: 1rem;
+    font-weight: 600;
+    --tw-text-opacity: 1;
+    color:rgb(36 36 36/var(--tw-text-opacity))
+}
+
+.Markdown--legal ol > li:first-child, .Markdown--legal ol > li > p + p {
+    margin-top:1rem
+}
+
+.Markdown--legal > ol > li > p:first-child {
+    font-weight: 600;
+    --tw-text-opacity: 1;
+    color:rgb(36 36 36/var(--tw-text-opacity))
+}
+
+.Markdown--legal > ol > li > ol, .Markdown--legal > ol > li > p {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 400;
+    --tw-text-opacity: 1;
+    color:rgb(71 70 69/var(--tw-text-opacity))
+}
+
+.Markdown--legal > ol > li li {
+    list-style:lower-alpha
+}
+
+.Markdown--legal > ol > li li li {
+    list-style:lower-roman
+}
+
+.Markdown--legal > ol > li li li li {
+    list-style:upper-alpha
+}
+
+.Markdown .image-center, .Markdown .image-wide {
+    text-align:center
+}
+
+.PostPreview .Markdown .image-center, .PostPreview .Markdown .image-wide {
+    text-align:left
+}
+
+.BlogMarkdown > * {
+    margin-left: auto;
+    margin-right: auto;
+    width: 91.666667%;
+    max-width:42rem
+}

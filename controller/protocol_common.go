@@ -73,8 +73,6 @@ func (h *Mirage) KeyHandler(
 			Err(err).
 			Msg("Failed to write response")
 	}
-
-	return
 }
 
 // cgao6: HS原本版本中存在诸多不合理的处理，这里我们需要根据自己的理解使用自己的版本
@@ -169,7 +167,7 @@ func (h *Mirage) handleRegisterCommon(
 			mKey:      machineKey,
 			regReq:    registerRequest,
 		},
-		time.Now().AddDate(0, 1, 0).Sub(time.Now()),
+		time.Until(time.Now().AddDate(0, 1, 0)),
 	)
 	h.stateCodeCache.Set(
 		stateCode,
@@ -178,7 +176,7 @@ func (h *Mirage) handleRegisterCommon(
 			uid:        -1,
 			machineKey: machineKey,
 		},
-		time.Now().AddDate(0, 1, 0).Sub(time.Now()),
+		time.Until(time.Now().AddDate(0, 1, 0)),
 	)
 	// 创建新acode时，将原先机器对应的controlCode全部清除
 	if machineControlCodeC, ok := h.machineControlCodeCache.Get(machineKey.String()); ok {
@@ -188,8 +186,6 @@ func (h *Mirage) handleRegisterCommon(
 	}
 
 	h.SendACode(writer, aCode, registerRequest, machineKey)
-
-	return
 }
 
 type ACacheItem struct {

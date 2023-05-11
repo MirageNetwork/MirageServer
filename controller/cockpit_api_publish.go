@@ -110,6 +110,10 @@ func (c *Cockpit) CAPIPublishClient(
 	switch osType {
 	case "win":
 		sysCfg.ClientVersion.Win = reqData
+	case "ios_store":
+		sysCfg.ClientVersion.IOSStore = reqData
+	case "ios_test":
+		sysCfg.ClientVersion.IOSTestFlight = reqData
 	case "navi_x86_64":
 		sysCfg.ClientVersion.NaviAMD64 = reqData.Version
 	case "navi_aarch64":
@@ -136,5 +140,4 @@ func (c *Cockpit) CAPIPublishClient(
 	}
 
 	c.GetSettingGeneral(w, r)
-	return
 }

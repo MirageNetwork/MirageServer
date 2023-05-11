@@ -22,14 +22,17 @@ export default defineConfig({
     vue(),
   ],
   build: {
+    /*
     watch:{
 
     },
+    */
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
         admin: resolve(__dirname, 'admin/index.html'),
-        login: resolve(__dirname, 'login/index.html')
+        login: resolve(__dirname, 'login/index.html'),
+        downloads: resolve(__dirname, 'downloads/index.html'),
       },
       output:{
         // https://github.com/rollup/rollup/blob/master/src/utils/sanitizeFileName.ts
@@ -45,7 +48,7 @@ export default defineConfig({
     },
     emptyOutDir: true,
     // 指定输出路径，默认'dist'
-    outDir: '../controller/html',
+    outDir: '../controller/console_html',
     // 指定生成静态资源的存放路径(相对于build.outDir)
     assetsDir: 'assets',
     // 小于此阈值的导入或引用资源将内联为base64编码，设置为0可禁用此项。默认4096（4kb）

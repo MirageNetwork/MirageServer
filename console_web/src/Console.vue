@@ -168,7 +168,7 @@ onMounted(() => {
         <nav class="flex items-center">
           <a
             class="hidden text-gray-600 hover:text-gray-800 sm:inline-block px-2 py-1"
-            href="https://github.com/gps949/tailscale/releases"
+            href="/downloads"
             target="_blank"
             rel="noopener noreferrer"
             >下载客户端</a

@@ -80,6 +80,32 @@ function doRegAdmin() {
   getMakeCredentialsChallenge();
 }
 
+function doRevokeAdmin() {
+  fetch("/cockpit/api/revokeAdmin", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) => response.json())
+    .then((response) => {
+      if (response.status === "success") {
+        doLogout();
+        toastMsg.value = "解绑超管成功！";
+        toastShow.value = true;
+        RegDone.value = true;
+        getServiceState();
+      } else {
+        throw new Error(`Server responed with error. The message is: ${response.status}`);
+      }
+    })
+    .catch((error) => {
+      toastMsg.value = error.message;
+      toastShow.value = true;
+    });
+}
+
 function doLogout() {
   axios
     .get("/cockpit/api/logout")
@@ -250,6 +276,43 @@ function goLogin() {
           </g>
         </svg>
         WebAuthn绑定超管
+      </button>
+    </form>
+
+    <form
+      v-if="!RegDone"
+      method="POST"
+      @submit.prevent="doRevokeAdmin"
+      class="mt-8 flex w-full items-center justify-center flex-col"
+    >
+      <div class="flex items-center justify-center mb-6">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="mr-3 text-red-400 h-5 w-5"
+        >
+          <path
+            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+          ></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div>
+          <strong
+            >小心！您即将进行危险操作，解绑后将登出并在下次被访问时可绑定超管</strong
+          >
+        </div>
+      </div>
+      <button
+        type="submit"
+        class="btn rounded-md shadow bg-red-400 hover:bg-red-600 border-red-400 hover:border-red-600 text-white hover:text-white h-10 min-h-fit w-64 justify-center"
+      >
+        超管解绑
       </button>
     </form>
 

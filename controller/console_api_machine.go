@@ -168,7 +168,7 @@ func (h *Mirage) ConsoleMachinesAPI(
 		}
 
 		if !tmpMachine.NeverExpires {
-			ExpiryDuration := machine.Expiry.Sub(time.Now())
+			ExpiryDuration := time.Until(*machine.Expiry)
 			tmpMachine.ExpiryDesc = convExpiryToStr(ExpiryDuration)
 		}
 		if machine.IPAddresses[0].Is4() {
@@ -434,7 +434,7 @@ func (h *Mirage) ConsoleMachinesUpdateAPI(
 				Hostname:          toUpdateMachine.Hostname,
 				NeverExpires:      *toUpdateMachine.Expiry == time.Time{},
 				Expires:           msg,
-				HasTags:           setTags != nil && len(setTags) > 0,
+				HasTags:           len(setTags) > 0,
 				AllowedTags:       allowedTags,
 				InvalidTags:       invalidTags,
 			}
@@ -537,6 +537,9 @@ func (h *Mirage) setMachineSubnet(machine *Machine, ExitNodeEnable bool, allowed
 			}
 		} else {
 			err = h.DisableRoute(uint64(r.ID))
+			if err != nil {
+				return "设置设备出口节点状态失败", err
+			}
 		}
 	}
 	err = h.enableRoutes(machine, allowedIPs...)

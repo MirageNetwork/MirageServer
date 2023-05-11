@@ -199,8 +199,6 @@ func (h *Mirage) generateKey() (string, error) {
 
 func (key *PreAuthKey) GetAclTags() []string {
 	aclTags := make([]string, len(key.ACLTags))
-	for idx := range key.ACLTags {
-		aclTags[idx] = key.ACLTags[idx]
-	}
+	copy(aclTags, key.ACLTags)
 	return aclTags
 }
