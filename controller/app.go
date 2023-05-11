@@ -412,11 +412,13 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 
 	ticker := time.NewTicker(time.Millisecond * updateInterval)
 	defer ticker.Stop()
+	longTicker := time.NewTicker(time.Millisecond * updateInterval * 6)
+	defer longTicker.Stop()
 
 	go h.expireEphemeralNodes(ticker)  //updateInterval)
 	go h.expireExpiredMachines(ticker) //updateInterval)
 	go h.failoverSubnetRoutes(ticker)  //updateInterval)
-	go h.refreshNaviStatusPoller(ticker)
+	go h.refreshNaviStatusPoller(longTicker)
 
 	// Prepare group for running listeners
 	errorGroup := new(errgroup.Group)

@@ -208,7 +208,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 		navi.Statics = NaviStatus{
 			Latency: -1,
 		}
-		m.db.Save(navi)
+		m.db.Model(&navi).Update("statics", navi.Statics)
 		return fmt.Errorf("update navi status request: %w", err)
 	}
 
@@ -218,7 +218,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 		navi.Statics = NaviStatus{
 			Latency: -1,
 		}
-		m.db.Save(navi)
+		m.db.Model(&navi).Update("statics", navi.Statics)
 		return fmt.Errorf("update navi status request: http %d: %.200s",
 			res204.StatusCode, strings.TrimSpace(string(msg)))
 	}
@@ -230,7 +230,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 			Latency:       latency.Milliseconds(),
 			CertExpiresAt: certExpiresAt,
 		}
-		err = m.db.Save(navi).Error
+		err = m.db.Model(&navi).Update("statics", navi.Statics).Error
 		return err
 	}
 
@@ -260,7 +260,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 	navi.Statics = status
 	navi.Statics.Latency = latency.Milliseconds()
 	navi.Statics.CertExpiresAt = certExpiresAt
-	m.db.Save(navi)
+	m.db.Model(&navi).Update("statics", navi.Statics)
 
 	return nil
 }
