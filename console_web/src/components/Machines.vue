@@ -549,7 +549,13 @@ function copyMIPv6() {
                 <div class="flex items-center relative">
                   <div>{{ m.os }}</div>
                 </div>
-                <div class="text-sm text-gray-600">{{ m.ipnVersion }}</div>
+                <div class="text-sm text-gray-600">
+                  {{
+                    m.ipnVersion.split("-")[1].indexOf("t") != -1
+                      ? m.ipnVersion.split("-")[0]
+                      : m.ipnVersion
+                  }}
+                </div>
               </td>
               <td class="hidden lg:table-cell md:flex-auto">
                 <span>

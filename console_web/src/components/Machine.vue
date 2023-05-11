@@ -651,7 +651,13 @@ function isInvalidTag(tag) {
             <dl class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">蜃境客户端版本</dt>
               <dd class="min-w-0 truncate">
-                <div class="flex items-center">{{ currentMachine.ipnVersion }}</div>
+                <div class="flex items-center">
+                  {{
+                    currentMachine.ipnVersion.split("-")[1].indexOf("t") != -1
+                      ? currentMachine.ipnVersion.split("-")[0]
+                      : currentMachine.ipnVersion
+                  }}
+                </div>
               </dd>
             </dl>
             <dl class="flex text-sm">
