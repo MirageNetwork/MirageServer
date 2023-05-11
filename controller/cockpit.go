@@ -23,6 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 	"tailscale.com/types/key"
+	"tailscale.com/version"
 )
 
 type Cockpit struct {
@@ -438,12 +439,20 @@ func (c *Cockpit) Logout(
 	c.doAPIResponse(w, "", "ok")
 }
 
+type svcStateData struct {
+	ControllerVer string `json:"ctrlver"`
+	IsRunning     bool   `json:"isRunning"`
+}
+
 // GetServiceState 获取服务状态
 func (c *Cockpit) GetServiceState(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	c.doAPIResponse(w, "", c.serviceState)
+	c.doAPIResponse(w, "", svcStateData{
+		ControllerVer: version.Long(),
+		IsRunning:     c.serviceState,
+	})
 }
 
 // DoServiceStart 启动服务

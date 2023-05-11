@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"tailscale.com/version"
 )
 
 type selfData struct {
-	Basedomain   string `json:"basedomain"`
-	UserName     string `json:"username"`
-	UserNameHead string `json:"usernamehead"`
-	UserAccount  string `json:"useraccount"`
-	OrgName      string `json:"orgname"`
+	ControllerVer string `json:"ctrlver"`
+	Basedomain    string `json:"basedomain"`
+	UserName      string `json:"username"`
+	UserNameHead  string `json:"usernamehead"`
+	UserAccount   string `json:"useraccount"`
+	OrgName       string `json:"orgname"`
 }
 
 // 提供获取用户信息的API
@@ -33,11 +36,12 @@ func (h *Mirage) ConsoleSelfAPI(
 	// 用户所属组织将存于数据库，合并实现前，不设置配置文件中该项，均按个人用户处理
 
 	resData := selfData{
-		Basedomain:   user.Organization.MagicDnsDomain,
-		UserNameHead: userNameHead,
-		UserName:     userDisName,
-		UserAccount:  userName,
-		OrgName:      userOrgName,
+		ControllerVer: version.Long(),
+		Basedomain:    user.Organization.MagicDnsDomain,
+		UserNameHead:  userNameHead,
+		UserName:      userDisName,
+		UserAccount:   userName,
+		OrgName:       userOrgName,
 	}
 	h.doAPIResponse(writer, "", resData)
 }

@@ -44,6 +44,7 @@ const currentRoute = computed(() => {
 });
 
 //数据填充控制部分
+const ControllerVersion = ref("未知版本");
 const SelfAccount = ref("");
 const Basedomain = ref("");
 const SelfName = ref("");
@@ -58,6 +59,7 @@ function getSelf() {
       .then(function (response) {
         // 处理成功情况
         if (response.data["status"] == "success") {
+          ControllerVersion.value = response.data["data"]["ctrlver"];
           SelfAccount.value = response.data["data"]["useraccount"];
           Basedomain.value = response.data["data"]["basedomain"];
           SelfName.value = response.data["data"]["username"];
@@ -166,6 +168,9 @@ onMounted(() => {
         </a>
 
         <nav class="flex items-center">
+          <div class="text-gray-400 text-sm inline-block px-2 py-1">
+            服务端: {{ ControllerVersion.split("-")[0] }}
+          </div>
           <a
             class="hidden text-gray-600 hover:text-gray-800 sm:inline-block px-2 py-1"
             href="/downloads"

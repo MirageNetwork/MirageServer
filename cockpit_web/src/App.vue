@@ -37,6 +37,7 @@ const currentRoute = computed(() => {
   if (curPath.substring(0, 5) == "/navi") return "navi";
 });
 
+const controllerVersion = ref("未知版本");
 const serviceSwitch = ref(null);
 const serviceState = ref("stopped");
 const serviceStateStr = {
@@ -98,7 +99,10 @@ function getServiceState() {
   axios
     .get("/cockpit/api/service/state")
     .then((res) => {
-      serviceState.value = res.data["data"] ? "running" : "stopped";
+      if (res.data["status"] == "success") {
+        controllerVersion.value = res.data["data"]["ctrlver"];
+        serviceState.value = res.data["data"]["isRunning"] ? "running" : "stopped";
+      }
     })
     .catch((err) => {
       toastMsg.value = err;
@@ -228,8 +232,9 @@ function doLogout() {
         <div class="flex items-center">
           <a href="/cockpit" class="flex items-center" style="max-width: 80%">
             <img width="18" height="18" src="/img/logo.svg" />
-            <div role="banner" class="text-lg font-semibold ml-3 truncate min-w-fit">
-              蜃境系统管理
+            <div class="text-lg font-semibold ml-3 truncate min-w-fit">蜃境系统管理</div>
+            <div class="text-sm text-gray-400 font-semibold ml-3 truncate min-w-fit">
+              服务端: {{ controllerVersion }}
             </div>
           </a>
         </div>

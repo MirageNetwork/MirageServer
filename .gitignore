@@ -5,6 +5,7 @@
 *.so
 *.dylib
 __debug_bin
+.swp
 /MirageServer
 
 # Test binary, built with `go test -c`
@@ -16,6 +17,7 @@ __debug_bin
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
+/dist/dist
 /output
 /.mirage
 /Mirage
