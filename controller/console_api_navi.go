@@ -375,7 +375,7 @@ func (m *Mirage) CAPIDelNaviNode(
 	}
 	// TODO: 是否有必要做远程关闭？
 
-	if err := m.db.Delete(naviNode).Error; err != nil {
+	if err := m.db.Delete(&naviNode).Error; err != nil {
 		m.doAPIResponse(w, "数据库删除司南节点失败:"+err.Error(), nil)
 		return
 	}

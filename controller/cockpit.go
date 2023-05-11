@@ -238,7 +238,7 @@ func (c *Cockpit) RevokeAdmin(
 		return
 	}
 	sysAdmin := c.GetAdmin()
-	err := c.db.Delete(sysAdmin).Error
+	err := c.db.Delete(&sysAdmin).Error
 	if err != nil {
 		c.doAPIResponse(w, "解绑超级管理员失败", nil)
 		return

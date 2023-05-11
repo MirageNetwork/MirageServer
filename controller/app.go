@@ -504,6 +504,9 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 			case "update-config":
 				log.Info().Msg("Received update-config message, updating config")
 				h.cfg = msg.SysCfg
+			case "set-last-update":
+				log.Info().Msg("Received set-last-update message, updating last update time")
+				h.setLastStateChangeToNow()
 			}
 		}
 	}
@@ -610,7 +613,7 @@ func (h *Mirage) setLastStateChangeToNow() {
 		if h.lastStateChange == nil {
 			h.lastStateChange = xsync.NewMapOf[time.Time]()
 		}
-		h.lastStateChange.Store(user.Name, now)
+		h.lastStateChange.Store(user.StableID, now)
 	}
 }
 
@@ -646,7 +649,7 @@ func (h *Mirage) getLastStateChange(users ...User) time.Time {
 	// are past, then use the entier list of users and look for the last update
 	if len(users) > 0 {
 		for _, user := range users {
-			if lastChange, ok := h.lastStateChange.Load(user.Name); ok {
+			if lastChange, ok := h.lastStateChange.Load(user.StableID); ok {
 				times = append(times, lastChange)
 			}
 		}
