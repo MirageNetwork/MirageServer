@@ -269,6 +269,16 @@ func containsStr(ts []string, t string) bool {
 	return false
 }
 
+func containsSubStr(ts []string, t string) bool {
+	for _, v := range ts {
+		if strings.Contains(v, t) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func contains[T string | netip.Prefix](ts []T, t T) bool {
 	for _, v := range ts {
 		if reflect.DeepEqual(v, t) {

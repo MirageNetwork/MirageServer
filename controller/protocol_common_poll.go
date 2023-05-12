@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -647,8 +648,8 @@ func (h *Mirage) scheduledPollWorker(
 			}
 		case ti := <-updateShortTicker.C:
 			ts := ti.UnixMilli()
-			if atomic.LoadInt64(&globalUpdateTs) > lastTs {
-				if updateTs, ok := orgUpdateTsMap.Load(machine.User.OrganizationID); ok && updateTs > lastTs {
+			if math.Abs(float64(atomic.LoadInt64(&globalUpdateTs)-lastTs)) <= 100 {
+				if updateTs, ok := orgUpdateTsMap.Load(machine.User.OrganizationID); ok && math.Abs(float64(updateTs-lastTs)) <= 100 {
 					log.Debug().
 						Str("func", "detectUpdate").
 						Str("machine", machine.Hostname).

@@ -444,7 +444,7 @@ func (h *Mirage) generateACLRules(
 
 		srcIPs := []string{}
 		// 如果dest里面配置了autogroup:self那么src按照self的ip来取，目前只支持了*，没有支持autogroup:member
-		if containsStr(acl.Destinations, AutoGroupSelf) {
+		if containsSubStr(acl.Destinations, AutoGroupSelf) {
 			/*
 				for _, dest := range destPorts {
 					srcIPs = append(srcIPs, dest.IP)

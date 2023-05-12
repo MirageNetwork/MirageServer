@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -636,6 +637,11 @@ func (h *Mirage) setOrgLastStateChangeToNow(orgId ...int64) {
 			h.lastStateChange = xsync.NewMapOf[time.Time]()
 		}
 		h.lastStateChange.Store(user.StableID, now)
+	}
+	tsMill := time.Now().UnixMilli()
+	atomic.StoreInt64(&globalUpdateTs, tsMill)
+	for _, oId := range orgId {
+		orgUpdateTsMap.Store(oId, tsMill)
 	}
 }
 
