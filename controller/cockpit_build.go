@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"errors"
 
@@ -69,7 +70,7 @@ func (c *Cockpit) BuildLinuxClient() {
 				c.markLinuxLastBuildFail()
 				return
 			}
-		} else if sysCfg.ClientVersion.Linux.BuildState == "成功" {
+		} else if strings.Contains(sysCfg.ClientVersion.Linux.BuildState, "成功") {
 			log.Info().Caller().Msg("已成功构建过同样Hash版本，无需重复构建")
 			return
 		}
@@ -144,7 +145,7 @@ func (c *Cockpit) BuildLinuxClient() {
 		c.markLinuxLastBuildFail()
 		return
 	}
-	sysCfg.ClientVersion.Linux.BuildState = "成功"
+	sysCfg.ClientVersion.Linux.BuildState = "成功 " + Time2SHString(time.Now())
 	sysCfg.ClientVersion.Linux.Version = shortVersion
 	sysCfg.ClientVersion.Linux.Hash = repoHash
 	if err := c.db.Model(&sysCfg).Update("client_version", sysCfg.ClientVersion).Error; err != nil {
@@ -287,7 +288,7 @@ func (c *Cockpit) markLinuxLastBuildFail() {
 	if sysCfg == nil {
 		return
 	}
-	sysCfg.ClientVersion.Linux.BuildState = "失败"
+	sysCfg.ClientVersion.Linux.BuildState = "失败 " + Time2SHString(time.Now())
 	if err := c.db.Model(&sysCfg).Update("client_version", sysCfg.ClientVersion).Error; err != nil {
 		log.Error().Caller().Err(err).Msg("记录Linux客户端最近一次构建失败信息未能完成!")
 		return
