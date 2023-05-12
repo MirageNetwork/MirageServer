@@ -102,7 +102,7 @@ func (c *Cockpit) CAPIPublishClient(
 		reqData.Url = "https://" + sysCfg.ServerURL + "/download/" + fileName
 	}
 
-	if reqData.Url == "" || reqData.Version == "" {
+	if reqData.Url == "" || reqData.Version == "" && osType != "linux" {
 		c.doAPIResponse(w, "客户端发布请求处理失败", nil)
 		return
 	}
@@ -118,6 +118,15 @@ func (c *Cockpit) CAPIPublishClient(
 		sysCfg.ClientVersion.NaviAMD64 = reqData.Version
 	case "navi_aarch64":
 		sysCfg.ClientVersion.NaviAARCH64 = reqData.Version
+	case "linux":
+		sysCfg.ClientVersion.Linux.Url = reqData.Url
+		sysCfg.ClientVersion.Linux.BuildState = "正在进行"
+		if reqData.Version != "" {
+			sysCfg.ClientVersion.Linux.RepoCred = reqData.Version
+			if reqData.Version == "clear" {
+				sysCfg.ClientVersion.Linux.RepoCred = ""
+			}
+		}
 	default:
 		c.doAPIResponse(w, "未支持的客户端类型", nil)
 		return
@@ -125,6 +134,10 @@ func (c *Cockpit) CAPIPublishClient(
 	if err := c.db.Save(sysCfg).Error; err != nil {
 		c.doAPIResponse(w, "更新客户端信息失败", nil)
 		return
+	}
+
+	if osType == "linux" {
+		go c.BuildLinuxClient()
 	}
 
 	if c.serviceState {
@@ -140,4 +153,24 @@ func (c *Cockpit) CAPIPublishClient(
 	}
 
 	c.GetSettingGeneral(w, r)
+}
+
+type PublishInfoData struct {
+	UploadURL     string            `json:"upload_url"`
+	ClientVersion ClientVersionInfo `json:"client_version"`
+}
+
+func (c *Cockpit) GetPublishInfo(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	sysCfg := c.GetSysCfg()
+	if sysCfg == nil {
+		c.doAPIResponse(w, "获取系统配置失败", nil)
+		return
+	}
+	c.doAPIResponse(w, "", PublishInfoData{
+		UploadURL:     "https://" + sysCfg.ServerURL + "/cockpit/api/publish",
+		ClientVersion: sysCfg.ClientVersion,
+	})
 }

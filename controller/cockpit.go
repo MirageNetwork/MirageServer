@@ -18,6 +18,7 @@ import (
 	webauthn "github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
+	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog/log"
 	"go4.org/netipx"
 	"golang.org/x/sync/errgroup"
@@ -39,6 +40,8 @@ type Cockpit struct {
 	author     *webauthn.WebAuthn
 	superAdmin *MirageSuperAdmin
 	authCache  *cache.Cache
+
+	BuildCron *cron.Cron
 }
 
 type CtrlMsg struct {
@@ -81,10 +84,13 @@ func NewCockpit(sysAddr string, ctrlChn, msgChn chan CtrlMsg, db *gorm.DB) (*Coc
 		serviceState: false,
 		CtrlChn:      ctrlChn,
 		MsgChn:       msgChn,
+		BuildCron:    cron.New(),
 	}
 	cockpit.authCache = cache.New(0, 0)
 	//	cockpit.superAdmin, cockpit.hasAdmin = cockpit.GetAdmin()
 	cockpit.superAdmin = cockpit.GetSuperAdmin()
+
+	cockpit.BuildCron.AddFunc("0 0 * * *", cockpit.BuildLinuxClient)
 
 	return cockpit, nil
 }
@@ -172,6 +178,7 @@ func (c *Cockpit) createRouter() *mux.Router {
 	cockpit_router.HandleFunc("/api/service/state", c.GetServiceState).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/setting/general", c.GetSettingGeneral).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/tenants", c.CAPIGetTenant).Methods(http.MethodGet)
+	cockpit_router.HandleFunc("/api/publish", c.GetPublishInfo).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/derp/query", c.CAPIQueryDERP).Methods(http.MethodGet)
 
 	cockpit_router.PathPrefix("/api/derp/{id}").HandlerFunc(c.CAPIDelNaviNode).Methods(http.MethodDelete)
@@ -971,6 +978,9 @@ func (c *Cockpit) Run() error {
 	}
 
 	errorGroup.Go(func() error { return httpServer.Serve(httpListener) })
+
+	// 启动buildCron
+	c.BuildCron.Start()
 
 	msgFunc := func(c *Cockpit) {
 		for {

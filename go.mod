@@ -22,6 +22,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/sftp v1.13.5
 	github.com/puzpuzpuz/xsync/v2 v2.4.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/zerolog v1.29.1
 	github.com/samber/lo v1.38.1
 	github.com/sirupsen/logrus v1.9.0
@@ -29,8 +30,8 @@ require (
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
 	go4.org/netipx v0.0.0-20230303233057-f1b76eb4bb35
 	golang.org/x/crypto v0.8.0
-	golang.org/x/net v0.9.0
-	golang.org/x/oauth2 v0.7.0
+	golang.org/x/net v0.10.0
+	golang.org/x/oauth2 v0.8.0
 	golang.org/x/sync v0.2.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/gorm v1.25.0
@@ -57,14 +58,14 @@ require (
 	github.com/alibabacloud-go/tea-xml v1.1.3 // indirect
 	github.com/aliyun/credentials-go v1.2.7 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
-	github.com/beevik/etree v1.1.3 // indirect
+	github.com/beevik/etree v1.1.4 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/clbanning/mxj/v2 v2.5.7 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
-	github.com/dexidp/dex/api/v2 v2.0.0-00010101000000-000000000000 // indirect
+	github.com/dexidp/dex/api/v2 v2.1.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.2.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect

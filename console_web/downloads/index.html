@@ -9,7 +9,7 @@
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   <link rel="shortcut icon" href="/img/favicon.ico" type="img/x-icon">
   <link rel="apple-touch-icon" href="/img/mlogo.png">
-  <title>蜃境 - 控制台</title>
+  <title>蜃境 - 客户端下载</title>
 </head>
 
 <body>
@@ -17,32 +17,6 @@
   <script type="module" src="/src/downloads.js"></script>
   <script type="application/json" id="download-details">
     {{.DownloadDetails}}
-    /*
-    {
-      "macos": {
-        "supportedVersions": "Requires macOS High Sierra 10.13 or later.",
-        "downloadLink": "https://apps.apple.com/ca/app/tailscale/id1475387142?mt=12",
-        "instructions": "\u003col\u003e\n\u003cli\u003eDownload and open the Tailscale macOS app from the App Store, or \u003ca href=\"/kb/1065/macos-variants/#automating-app-store-installs\"\u003eusing the \u003ccode\u003emas\u003c/code\u003e CLI tool\u003c/a\u003e.\u003c/li\u003e\n\u003cli\u003eAccept any prompts to install VPN configurations that may appear\u003c/li\u003e\n\u003cli\u003eClick \u003cstrong\u003eLog in\u003c/strong\u003e from the Tailscale menu bar item and authenticate in your browser\u003c/li\u003e\n\u003cli\u003eSign up with your team email address\u003c/li\u003e\n\u003c/ol\u003e\n"
-      },
-      "ios": {
-        "supportedVersions": "Requires iOS 15 or later.",
-        "downloadLink": "https://apps.apple.com/us/app/tailscale/id1470499037?ls=1",
-        "qr": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACAAQMAAAD58POIAAAABlBMVEX///8AAABVwtN+AAABeUlEQVR42tzUMY6zMBQE4EEu3MEFrPgaFEhciXRbBVKlC1eylMLXcPQu4O1cWMwvErR/aW/KdYP0NTyPRw9/+2gyvD5ekbEOgAC04wmyYKoDm4Tu0pNqzb+A3IL+V7AppqeTzwGQlRHW/79LCUi5D2d/6uUnsQIAUMxnxxR+XqIA2jI0j29iFOZKkISO334bJb4vV4TXT7mNNpnOLnWQZ3NRdzx97lgHmjdZ8+zRhzlMHwK0Wh/33lIWiXXAReIwp6djtEsVIGjTuQvouL4yLYNWN1mGLqE3x6RFgPkyM69uG9XxDEXQe6q5840j36OXQRHtuGk6krWw5Pmx6W2fFB8CaZoHPZMsZqoDe+NeYbqwb5AqgFb34eyezkx5qoSv0KrYoydRB3v9I87p6UNn6mBfnzPXdBplPTpWBEDi0NAydO9KlcEmufLqbCKPgD6CbWj1CfkYvQriMLNJjAF1AISza9E4teZKIOXqLiPGPKmlCv7O+RcAAP//TMjcklfrHLYAAAAASUVORK5CYII=",
-        "instructions": "\u003col\u003e\n\u003cli\u003eDownload and open the Tailscale iOS app\u003c/li\u003e\n\u003cli\u003eAccept the prompts to install a VPN configuration and allow push notifications\u003c/li\u003e\n\u003cli\u003eSign up using your team\u0026rsquo;s email address\u003c/li\u003e\n\u003c/ol\u003e\n"
-      },
-      "windows": {
-        "supportedVersions": "Requires Windows 7 SP1 or later.",
-        "downloadLink": "https://pkgs.tailscale.com/stable/tailscale-setup-1.40.0.exe",
-        "instructions": "\u003col\u003e\n\u003cli\u003eDownload and run the Windows installer\u003c/li\u003e\n\u003cli\u003eClick on \u003cstrong\u003eLog in\u003c/strong\u003e from the Tailscale icon now in your system tray and authenticate in your browser\u003c/li\u003e\n\u003cli\u003eSign up with your team email address\u003c/li\u003e\n\u003c/ol\u003e\n"
-      },
-      "android": {
-        "supportedVersions": "Requires Android 6 or later.",
-        "downloadLink": "https://play.google.com/store/apps/details?id=com.tailscale.ipn",
-        "qr": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACAAQMAAAD58POIAAAABlBMVEX///8AAABVwtN+AAABwklEQVR42tzVsY6bQBAG4H+FlG2spXWBtM9w3V6TfSVWaU8G5NaCVxo3t935FZC2SIvlZiMhJrJ9chonTMpkOr4K5p8Z8F9VyWzRdDHPm4azCAy0LVr4OKOGk4GP4D5E2DYsvwNbBWb3V6At9y6nWQzQelaTI24fb7oCJfM29SG6dHj0YwUAWASONL49+rwC5qsfR1N7jbf6NT+D8kxjGhYQNkaRCNQpYmw6clXZXZ8FUJ5Ip67Lng/4IgO1aKRppz1fOGYRwGdOPDlY5h8yUIvWlWmyS62KJAOm7+nMlFHyMT8D8xL12HDEDOOlQKh2tSfUn0GtgvrQ2zRMzhXcHWVQkkPqjfPFpX8lEVw/v5iaSMUwkBNBeSRbmcC+2txG/Ql8+NFOO3DaL5ABFI3VLmTmS3ffhlUwL9HaSUXm/fmW3Drcl6a5hnM+ZhGoE7Mdzsy2xb1jq2A8WdvWiMWejzKA5xGqi9kO/O6eAmCrMEQ/b1TMIrid4LBowia8OxEY6O1o4FxxUCQEHzHvFLliuOckgm0Vrv+G4jMoCdjKNNcZC/wcoHVaaq3nb3ybqXW4neChd5rb8Osm/xH+2foZAAD//9x6p846avjtAAAAAElFTkSuQmCC",
-        "instructions": "\u003col\u003e\n\u003cli\u003eDownload and the Tailscale app from the Play Store\u003c/li\u003e\n\u003cli\u003eAccept the prompts to install a VPN configuration\u003c/li\u003e\n\u003cli\u003eSign up with your team\u0026rsquo;s email address\u003c/li\u003e\n\u003c/ol\u003e\n"
-      }
-    }
-    */
   </script>
 </body>
 
