@@ -57,6 +57,7 @@ func (c *Cockpit) BuildLinuxClient() {
 		repoHash = lines[0][:39]
 
 		if localHash != repoHash {
+			c.markLinuxInBuilding(sysCfg) //进入构建状态
 			err = os.RemoveAll("src/linux")
 			if err != nil {
 				log.Error().Caller().Err(err).Msg("Linux源码文件夹删除失败")
@@ -73,8 +74,11 @@ func (c *Cockpit) BuildLinuxClient() {
 		} else if strings.Contains(sysCfg.ClientVersion.Linux.BuildState, "成功") {
 			log.Info().Caller().Msg("已成功构建过同样Hash版本，无需重复构建")
 			return
+		} else {
+			c.markLinuxInBuilding(sysCfg) //进入构建状态
 		}
 	} else if os.IsNotExist(err) {
+		c.markLinuxInBuilding(sysCfg) //进入构建状态
 		if _, err := os.Stat("src"); os.IsNotExist(err) {
 			err = os.Mkdir("src", os.ModePerm)
 			if err != nil {
@@ -281,6 +285,17 @@ func ReleaseTgz() error {
 		return errors.New(stderr.String())
 	}
 	return nil
+}
+
+func (c *Cockpit) markLinuxInBuilding(sysCfg *SysConfig) {
+	if sysCfg == nil {
+		return
+	}
+	sysCfg.ClientVersion.Linux.BuildState = "正在进行 "
+	if err := c.db.Model(&sysCfg).Update("client_version", sysCfg.ClientVersion).Error; err != nil {
+		log.Error().Caller().Err(err).Msg("标记正在构建Linux客户端状态未能完成!")
+		return
+	}
 }
 
 func (c *Cockpit) markLinuxLastBuildFail() {

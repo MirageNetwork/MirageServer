@@ -120,7 +120,6 @@ func (c *Cockpit) CAPIPublishClient(
 		sysCfg.ClientVersion.NaviAARCH64 = reqData.Version
 	case "linux":
 		sysCfg.ClientVersion.Linux.Url = reqData.Url
-		sysCfg.ClientVersion.Linux.BuildState = "正在进行"
 		if reqData.Version != "" {
 			sysCfg.ClientVersion.Linux.RepoCred = reqData.Version
 			if reqData.Version == "clear" {
