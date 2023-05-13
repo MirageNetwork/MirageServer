@@ -11,9 +11,9 @@ import Android from './downloads/Android.vue'
 const routes = [
     { path: '/', redirect: '/windows' },
     { path: '/windows', component: Windows },
-    { path: '/ios', component: IOS },
+    { path: '/iOS', component: IOS },
     { path: '/linux', component: Linux },
-    { path: '/mac', component: Mac },
+    { path: '/macOS', component: Mac },
     { path: '/android', component: Android },
 ]
 const router = createRouter({

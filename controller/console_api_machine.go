@@ -53,19 +53,20 @@ type machineData struct {
 }
 
 type machineItem struct {
-	Id                 string   `json:"id"`                 //done
-	StableId           string   `json:"stableId"`           //未实现
-	Name               string   `json:"name"`               //done
-	Fqdn               string   `json:"fqdn"`               //未实现
-	User               string   `json:"user"`               //done
-	UserNameHead       string   `json:"usernamehead"`       // TODO
-	Addresses          []string `json:"addresses"`          //done
-	Os                 string   `json:"os"`                 //done
-	Hostname           string   `json:"hostname"`           //done
-	IpnVersion         string   `json:"ipnVersion"`         //done
-	ConnectedToControl bool     `json:"connectedToControl"` //done
-	LastSeen           string   `json:"lastSeen"`           //done
-	Created            string   `json:"created"`            //done
+	Id                     string   `json:"id"`                     //done
+	StableId               string   `json:"stableId"`               //未实现
+	Name                   string   `json:"name"`                   //done
+	Fqdn                   string   `json:"fqdn"`                   //未实现
+	User                   string   `json:"user"`                   //done
+	UserNameHead           string   `json:"usernamehead"`           // TODO
+	Addresses              []string `json:"addresses"`              //done
+	Os                     string   `json:"os"`                     //done
+	Hostname               string   `json:"hostname"`               //done
+	IpnVersion             string   `json:"ipnVersion"`             //done
+	ConnectedToControl     bool     `json:"connectedToControl"`     //done
+	AvailableUpdateVersion string   `json:"availableUpdateVersion"` //未实现
+	LastSeen               string   `json:"lastSeen"`               //done
+	Created                string   `json:"created"`                //done
 
 	IsExternal   bool `json:"isExternal"`
 	IsEphemeral  bool `json:"isEphemeral"`
@@ -88,6 +89,19 @@ type machineItem struct {
 
 	Endpoints         []string `json:"endpoints"`
 	AutomaticNameMode bool     `json:"automaticNameMode"`
+}
+
+func IsUpdateAvailable(cur, latest string) bool {
+	curV := strings.Split(strings.Split(cur, "-")[0], ".")
+	latestV := strings.Split(strings.Split(latest, "-")[0], ".")
+	for i := 0; i < len(latestV); i++ {
+		curInt, _ := strconv.Atoi(curV[i])
+		latestInt, _ := strconv.Atoi(latestV[i])
+		if curInt < latestInt {
+			return true
+		}
+	}
+	return false
 }
 
 // 控制台获取设备信息列表的API
@@ -132,6 +146,34 @@ func (h *Mirage) ConsoleMachinesAPI(
 			Endpoints:         machine.Endpoints,
 			AutomaticNameMode: machine.AutoGenName,
 		}
+
+		switch machine.HostInfo.OS {
+		case "linux":
+			if IsUpdateAvailable(machine.HostInfo.IPNVersion, h.cfg.ClientVersion.Linux.Version) {
+				tmpMachine.AvailableUpdateVersion = strings.Split(h.cfg.ClientVersion.Linux.Version, "-")[0]
+			}
+		case "windows":
+			if IsUpdateAvailable(machine.HostInfo.IPNVersion, h.cfg.ClientVersion.Win.Version) {
+				tmpMachine.AvailableUpdateVersion = strings.Split(h.cfg.ClientVersion.Win.Version, "-")[0]
+			}
+		case "macOS":
+			if h.cfg.ClientVersion.MacStore.Version != "" && IsUpdateAvailable(machine.HostInfo.IPNVersion, h.cfg.ClientVersion.MacStore.Version) {
+				tmpMachine.AvailableUpdateVersion = strings.Split(h.cfg.ClientVersion.MacStore.Version, "-")[0]
+			} else if IsUpdateAvailable(machine.HostInfo.IPNVersion, h.cfg.ClientVersion.MacTestFlight.Version) {
+				tmpMachine.AvailableUpdateVersion = strings.Split(h.cfg.ClientVersion.MacTestFlight.Version, "-")[0]
+			}
+		case "iOS":
+			if h.cfg.ClientVersion.IOSStore.Version != "" && IsUpdateAvailable(machine.HostInfo.IPNVersion, h.cfg.ClientVersion.IOSStore.Version) {
+				tmpMachine.AvailableUpdateVersion = strings.Split(h.cfg.ClientVersion.IOSStore.Version, "-")[0]
+			} else if IsUpdateAvailable(machine.HostInfo.IPNVersion, h.cfg.ClientVersion.IOSTestFlight.Version) {
+				tmpMachine.AvailableUpdateVersion = strings.Split(h.cfg.ClientVersion.IOSTestFlight.Version, "-")[0]
+			}
+		case "android":
+			if IsUpdateAvailable(machine.HostInfo.IPNVersion, h.cfg.ClientVersion.Android.Version) {
+				tmpMachine.AvailableUpdateVersion = strings.Split(h.cfg.ClientVersion.Android.Version, "-")[0]
+			}
+		}
+
 		if machine.User.Organization.EnableMagic {
 			tmpMachine.Fqdn = machine.GivenName + "." + machine.User.Organization.MagicDnsDomain
 		}

@@ -156,6 +156,17 @@ func (c *Cockpit) BuildLinuxClient() {
 		log.Error().Caller().Err(err).Msg("记录Linux客户端最近一次构建成功信息未能完成!")
 	}
 	log.Info().Msg("Linux客户端构建成功!")
+	if c.serviceState {
+		newCfg, err := c.GetSysCfg().toSrvConfig()
+		if err != nil {
+			log.Error().Caller().Err(err).Msg("Linux构建成功向控制器更新系统配置失败")
+			return
+		}
+		c.CtrlChn <- CtrlMsg{
+			Msg:    "update-config",
+			SysCfg: newCfg,
+		}
+	}
 }
 
 func gitCloneRepo(repo, target string) error {

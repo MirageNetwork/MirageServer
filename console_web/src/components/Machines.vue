@@ -312,7 +312,7 @@ function copyMIPv6() {
               设备
             </th>
             <th class="hidden md:table-cell md:w-1/4">IP</th>
-            <th class="hidden md:table-cell w-1/4 lg:w-1/5">系统</th>
+            <th class="hidden md:table-cell w-1/4 lg:w-1/5">版本</th>
             <th class="hidden lg:table-cell md:flex-auto">状态</th>
             <th class="table-cell justify-end ml-auto md:ml-0 relative w-1/6 lg:w-12">
               <span class="sr-only">设备操作菜单</span>
@@ -547,14 +547,42 @@ function copyMIPv6() {
               </td>
               <td class="hidden md:table-cell w-1/4 lg:w-1/5">
                 <div class="flex items-center relative">
-                  <div>{{ m.os }}</div>
+                  <div
+                    v-if="m.availableUpdateVersion"
+                    class="absolute top-0.5 -left-6 tooltip"
+                    :data-tip="'可更新' + m.availableUpdateVersion"
+                  >
+                    <a
+                      :href="'/downloads#/' + m.os"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      ><svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="1.125em"
+                        height="1.125em"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="text-gray-400"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="16 12 12 8 8 12"></polyline>
+                        <line x1="12" y1="16" x2="12" y2="8"></line></svg
+                    ></a>
+                  </div>
+                  <div>
+                    {{
+                      m.ipnVersion.split("-")[1].indexOf("t") != -1
+                        ? m.ipnVersion.split("-")[0]
+                        : m.ipnVersion
+                    }}
+                  </div>
                 </div>
                 <div class="text-sm text-gray-600">
-                  {{
-                    m.ipnVersion.split("-")[1].indexOf("t") != -1
-                      ? m.ipnVersion.split("-")[0]
-                      : m.ipnVersion
-                  }}
+                  {{ m.os }}
                 </div>
               </td>
               <td class="hidden lg:table-cell md:flex-auto">
