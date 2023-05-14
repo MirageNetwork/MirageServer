@@ -139,10 +139,14 @@ func (h *Mirage) generateMapResponse(
 
 	resp.ClientVersion = &tailcfg.ClientVersion{}
 
-	switch true {
-	case strings.Contains(mapRequest.Hostinfo.OS, "windows"):
-		resp.ClientVersion.LatestVersion = h.cfg.ClientVersion.Win.Version
-		resp.ClientVersion.NotifyURL = h.cfg.ClientVersion.Win.Url
+	if mapRequest.Hostinfo.OS == "windows" {
+		if IsUpdateAvailable(mapRequest.Hostinfo.IPNVersion, h.cfg.ClientVersion.Win.Version) {
+			resp.ClientVersion.RunningLatest = false
+			resp.ClientVersion.LatestVersion = strings.Split(h.cfg.ClientVersion.Win.Version, "-")[0]
+			resp.ClientVersion.NotifyURL = h.cfg.ClientVersion.Win.Url
+		} else {
+			resp.ClientVersion.RunningLatest = true
+		}
 	}
 
 	log.Trace().
