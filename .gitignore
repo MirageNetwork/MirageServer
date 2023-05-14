@@ -30,7 +30,7 @@ derp.yaml
 db.sqlite*
 *.sqlite3
 .db.sqlite-litestream
-
+.vscode
 /download
 
 # Exclude Jetbrains Editors
