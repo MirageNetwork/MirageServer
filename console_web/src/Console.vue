@@ -209,7 +209,7 @@ onMounted(() => {
     <div class="relative overflow-hidden" style="top: 1px">
       <nav
         id="nav"
-        class="navigation flex items-center overflow-auto left-1 relative md:container md:mx-auto md:px-0 md:-left-3"
+        class="navigation flex items-center overflow-auto no-scrollbar left-1 relative md:container md:mx-auto md:px-0 md:-left-3"
       >
         <router-link class="whitespace-nowrap py-2 group relative" to="/machines">
           <div

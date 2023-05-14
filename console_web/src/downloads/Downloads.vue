@@ -112,7 +112,7 @@ const currentRoute = computed(() => {
         class="py-6 px-2 sm:px-6 sm:rounded-lg shadow-2xl w-full sm:max-w-2xl mx-auto bg-white"
       >
         <nav class="text-center mb-7 overflow-y-hidden">
-          <div class="flex overflow-y-auto overflow-x-scroll">
+          <div class="flex overflow-y-auto overflow-x-scroll no-scrollbar">
             <router-link
               class="flex-grow flex-shrink-0 mx-1 block cursor-pointer select-none rounded pt-3 px-4 pb-2 font-normal text-center leading-normal align-middle focus:outline-none active:outline-none"
               :class="{
