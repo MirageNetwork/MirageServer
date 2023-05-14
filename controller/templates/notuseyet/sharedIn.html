@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="tailscale.csrf" content="nDJSYXGPVdThHAsxkoVy83QJ6tbl9v+StU114mnKHNqWc6iW1krD1REtgsZM/vFqQ+YkWj4WVkK3vqMWhkfRmw==" />
+    <link rel="shortcut icon" href="/admin/favicon.ico" class="js-favicon" />
+    <link rel="apple-touch-icon" href="/admin/logo192.png?v=20200714" />
+    <link rel="manifest" href="/admin/manifest.json?v=20200714" crossorigin="use-credentials" />
+    <title>Tailscale</title>
+    <script type="module" crossorigin src="/admin/assets/index.e619bc66.js"></script>
+    <link rel="stylesheet" href="/admin/assets/index.8bab3c1a.css">
+  </head>
+  <body>
+    <div id="browser-support" class="min-h-screen py-10 flex justify-center items-center" style="display: none">
+      <div class="max-w-md">
+        <h3 class="font-semibold text-lg mb-4">Your web browser <span id="browser-version"></span> is&nbsp;unsupported.</h3>
+        <p class="mb-2">
+          Update to a modern browser to access the admin panel. You can use
+          <a class="link" href="https://www.mozilla.org/en-US/firefox/new/" target="_blank">Firefox</a>,
+          <a class="link" href="https://www.microsoft.com/en-us/edge" target="_blank">Edge</a>,
+          Safari, or <a class="link" href="https://www.google.com/chrome/" target="_blank">Chrome</a>.</p>
+        <p>If you need any help, feel free <a href="mailto:support+admin@tailscale.com" class="link">to contact us</a></p>
+      </div>
+    </div>
+    <noscript>
+      <p class="mb-2">You need to enable Javascript to access the admin panel.</p>
+      <p>If you need any help, feel free <a href="mailto:support+admin@tailscale.com" class="link">to contact us</a>.</p>
+    </noscript>
+    <div id="app-root" class="relative z-0"></div>
+    <div id="toast-root" class="relative z-20"></div>
+    <script>
+      !function() {
+        // document.documentMode is only supported in IE8–11. If it's defined,
+        // we know this browser is an IE browser.
+        if (window.document.documentMode) {
+          var $warning = document.getElementById("browser-support")
+          var $browser = document.getElementById("browser-version")
+          $warning.style.display = "flex"
+          $browser.innerText = "(Internet Explorer " + document.documentMode + ")"
+        }
+      }();
+    </script>
+    
+  </body>
+</html>

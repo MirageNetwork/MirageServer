@@ -1,0 +1,386 @@
+/**
+ * This file contains CSS for static pages outside of the admin panel SPA.
+ */
+
+ html {
+    box-sizing: border-box;
+  }
+  *,
+  *:before,
+  *:after {
+    box-sizing: inherit;
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  html,
+  body,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  ul,
+  ol,
+  dd,
+  dt,
+  dl,
+  blockquote,
+  figure {
+    margin: 0;
+    padding: 0;
+  }
+  
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: inherit;
+    font-weight: normal;
+    text-rendering: optimizeLegibility;
+  }
+  
+  a {
+    color: inherit;
+    text-decoration: none;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  }
+  
+  ul,
+  li {
+    list-style: none;
+  }
+  
+  button,
+  input,
+  optgroup,
+  select,
+  textarea {
+    margin: 0;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+  
+  @font-face {
+    font-family: "Inter";
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+    src: url("/fonts/Inter.var.latin.woff2") format("woff2-variations");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  
+  @font-face {
+    font-family: "Inter";
+    font-weight: 100 900;
+    font-style: italic;
+    font-display: swap;
+    src: url("/fonts/Inter.var.italic.latin.woff2") format("woff2-variations");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  
+  :root {
+    --gray0: #f6f4f2;
+    --gray1: #e5e5e5;
+    --gray5: #9f9995;
+    --gray6: #666666;
+    --gray7: #474645;
+    --gray8: #343433;
+    --gray9: #242424;
+    --containerWidth: 94%;
+  }
+  
+  body {
+    color: var(--gray9);
+    background-color: --gray1;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "avenir next", avenir,
+      helvetica, "helvetica neue", ubuntu, roboto, noto, "segoe ui", arial,
+      sans-serif;
+    letter-spacing: -0.0015em;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  main {
+    display: flex;
+    flex-direction: column;
+    padding-top: 3rem;
+    padding-bottom: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 24rem;
+    width: 94%;
+    width: var(--containerWidth);
+    height: 100%;
+  }
+  
+  strong {
+    color: var(--gray9);
+    font-weight: 500;
+  }
+  
+  main header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5rem;
+  }
+  
+  main footer {
+    padding-bottom: 1rem;
+    margin-top: 4rem;
+    font-size: 0.875rem;
+    color: #444342;
+  }
+  
+  main p + p {
+    margin-top: 1rem;
+  }
+  
+  .p-6 {
+    padding: 1.5rem;
+  }
+  
+  .mr-2 {
+    margin-right: 0.5rem;
+  }
+  
+  .mr-4 {
+    margin-right: 1rem;
+  }
+  
+  .mt-1 {
+    margin-top: 0.25rem;
+  }
+  
+  .mb-1 {
+    margin-bottom: 0.25rem;
+  }
+  
+  .mb-2 {
+    margin-bottom: 0.5rem;
+  }
+  
+  .mb-4 {
+    margin-bottom: 1rem;
+  }
+  
+  .mb-6 {
+    margin-bottom: 1.5rem;
+  }
+  
+  .mb-8 {
+    margin-bottom: 2rem;
+  }
+  
+  .mb-10 {
+    margin-bottom: 2.5rem;
+  }
+  
+  .mb-12 {
+    margin-bottom: 3rem;
+  }
+  
+  .mb-16 {
+    margin-bottom: 4rem;
+  }
+  
+  .mb-20 {
+    margin-bottom: 5rem;
+  }
+  
+  .width-full {
+    width: 100%;
+  }
+  
+  .rounded-lg {
+    border-radius: 0.5rem;
+  }
+  
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .relative {
+    position: relative;
+  }
+  
+  .flex {
+    display: flex;
+  }
+  
+  .justify-between {
+    justify-content: space-between;
+  }
+  
+  .items-center {
+    align-items: center;
+  }
+  
+  .bg-white {
+    background-color: white;
+  }
+  
+  .bg-gray-4 {
+    background-color: #b6b0ad;
+  }
+  
+  .text-blue-6 {
+    color: #3f5db3;
+  }
+  
+  .hover\:text-blue-8:hover {
+    color: #253570;
+  }
+  
+  .text-gray-6 {
+    color: #666666;
+  }
+  
+  .text-gray-7 {
+    color: #474645;
+  }
+  
+  .text-gray-8 {
+    color: #232222;
+  }
+  
+  .text-center {
+    text-align: center;
+  }
+  
+  .text-right {
+    text-align: right;
+  }
+  
+  .text-xs {
+    font-size: 0.75rem;
+  }
+  
+  .text-sm {
+    font-size: 0.875rem;
+  }
+  
+  .text-md {
+    font-size: 1.75rem;
+  }
+  
+  .text-lg {
+    font-size: 2rem;
+  }
+  
+  .font-semibold {
+    font-weight: 600;
+  }
+  
+  .font-medium {
+    font-weight: 500;
+  }
+  
+  .font-regular {
+    font-weight: 400;
+  }
+  
+  .leading-3 {
+    line-height: 0.75rem;
+  }
+  
+  .leading-4 {
+    line-height: 1rem;
+  }
+  
+  .leading-5 {
+    line-height: 1.25rem;
+  }
+  
+  .leading-6 {
+    line-height: 1.5rem;
+  }
+  
+  .leading-7 {
+    line-height: 1.75rem;
+  }
+  
+  .leading-8 {
+    line-height: 2rem;
+  }
+  
+  .leading-9 {
+    line-height: 2.25rem;
+  }
+  
+  .leading-10 {
+    line-height: 2.5rem;
+  }
+  
+  .leading-none {
+    line-height: 1;
+  }
+  
+  .leading-tight {
+    line-height: 1.25;
+  }
+  
+  .leading-snug {
+    line-height: 1.375;
+  }
+  
+  .leading-normal {
+    line-height: 1.5;
+  }
+  
+  .leading-relaxed {
+    line-height: 1.625;
+  }
+  
+  .leading-loose {
+    line-height: 2;
+  }
+  
+  .profile-pic {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    background-size: cover;
+    background-color: #e5e5e5;
+    background-color: var(--gray1);
+    margin-right: 0.5rem;
+  }
+  
+  .button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem;
+    color: white;
+    font-weight: 500;
+    background-color: #4d78c8;
+    border-radius: 0.5rem;
+    border: 1px #4b70cc solid;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    transition: border-color 200ms ease, background-color 200ms ease;
+  }
+  
+  .button:hover {
+    background-color: #3f5db3;
+    border-color: #3f5db3;
+  }
+  
+  .link {
+    color: #4b70cc;
+  }
+  
+  .link:hover {
+    color: #324994;
+  }
+  
+  .text-underline {
+    text-decoration: underline;
+  }

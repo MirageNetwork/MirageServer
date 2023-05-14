@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>蜃境</title>
+  <meta name="viewport" content="width=device-width, user-scalable=no initial-scale=1.0, minimum-scale=1.0">
+  <style>
+    html {
+      box-sizing: border-box;
+    }
+
+    *,
+    *:before,
+    *:after {
+      box-sizing: inherit;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    html,
+    body,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p {
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+
+      --gray0: #f6f4f2;
+      --gray1: #efecea;
+      --gray5: #9f9995;
+      --gray6: #666666;
+      --gray7: #474645;
+      --gray8: #343433;
+      --gray9: #242424;
+      --containerWidth: 94%;
+    }
+
+    body {
+      color: #242424;
+      color: var(--gray9);
+      background-color: white;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "avenir next", avenir, helvetica, "helvetica neue", ubuntu, roboto, noto, "segoe ui", arial, sans-serif;
+      letter-spacing: -0.0015em;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 2rem;
+      padding-bottom: 1rem;
+      text-align: center;
+      min-height: 100%;
+      margin: 0 auto;
+    }
+
+    .logo {
+      margin-bottom: 2.5rem;
+    }
+
+    main header,
+    main section {
+      margin-block: 1rem;
+      margin-inline: auto;
+      max-width: 35rem;
+      width: 94%;
+      width: var(--containerWidth);
+    }
+
+    main header h1 {
+      color: #242424;
+      color: var(--gray9);
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    .h-8 {
+      height: 2rem;
+    }
+
+    .w-24 {
+      width: 6rem;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <div class="logo">
+      <img class="h-8 w-24" src="/img/logo_withname@60.png" />
+    </div>
+
+    <header>
+      <h1>错误 {{.ErrCode}}</h1>
+    </header>
+
+    <section>
+      <p>{{.ErrMsg}}</p>
+    </section>
+
+  </main>
+
+</body>
+
+</html>

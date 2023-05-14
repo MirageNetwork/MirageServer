@@ -9,32 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/cmd/headscale",
-            "args": [
-                "serve"
-            ]
+            "program": "${workspaceFolder}",
         },
-        {
-            "name": "User list",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "${workspaceFolder}/cmd/headscale",
-            "args": [
-                "users",
-                "ls"
-            ]
-        },
-        {
-            "name": "ACL PingPong",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "${workspaceFolder}/cmd/headscale",
-            "args": [
-                "acl",
-                "ping"
-            ]
-        }
     ]
 }
