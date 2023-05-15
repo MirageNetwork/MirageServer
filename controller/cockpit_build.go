@@ -42,6 +42,7 @@ func (c *Cockpit) BuildLinuxClient() {
 			return
 		}
 		lines := strings.Split(out.String(), "\n")
+		out.Reset()
 		localHash := lines[0][:39]
 		// 获取远程Hash
 		cmd = exec.Command("git", "ls-remote", repoURL)
