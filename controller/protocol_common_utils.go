@@ -26,7 +26,7 @@ func (h *Mirage) generateMapResponse(
 	mapRequest tailcfg.MapRequest,
 	machine *Machine,
 	streamState *mapResponseStreamState,
-) (*tailcfg.MapResponse, error) {
+) (*tailcfg.MapResponse, error, Machines) {
 	log.Trace().
 		Str("func", "generateMapResponse").
 		Str("machine", mapRequest.Hostinfo.Hostname).
@@ -41,7 +41,7 @@ func (h *Mirage) generateMapResponse(
 			Err(err).
 			Msg("Cannot convert to node")
 
-		return nil, err
+		return nil, err, nil
 	}
 
 	peers, invalidNodeIDs, err := h.getValidPeers(machine)
@@ -55,7 +55,7 @@ func (h *Mirage) generateMapResponse(
 			Err(err).
 			Msg("Cannot fetch peers")
 
-		return nil, err
+		return nil, err, nil
 	}
 
 	profiles := h.getMapResponseUserProfiles(*machine, peers)
@@ -78,7 +78,7 @@ func (h *Mirage) generateMapResponse(
 			Err(err).
 			Msg("Failed to get organization of machine")
 
-		return nil, err
+		return nil, err, nil
 	}
 
 	derpMap, err := h.LoadOrgDERPs(machine.User.OrganizationID)
@@ -142,7 +142,7 @@ func (h *Mirage) generateMapResponse(
 			Err(err).
 			Msg("Cannot apply map response deltas")
 
-		return nil, err
+		return nil, err, nil
 	}
 	resp.ClientVersion = &tailcfg.ClientVersion{}
 
@@ -158,20 +158,21 @@ func (h *Mirage) generateMapResponse(
 		// Interface("payload", resp).
 		Msgf("Generated map response: %s", tailMapResponseToString(resp))
 
-	return &resp, nil
+	return &resp, nil, peers
 }
 
 func (h *Mirage) getMapResponseData(
 	mapRequest tailcfg.MapRequest,
 	machine *Machine,
 	streamState *mapResponseStreamState,
-) ([]byte, error) {
-	mapResponse, err := h.generateMapResponse(mapRequest, machine, streamState)
+) ([]byte, error, Machines) {
+	mapResponse, err, peers := h.generateMapResponse(mapRequest, machine, streamState)
 	if err != nil {
-		return nil, err
+		return nil, err, nil
 	}
 
-	return h.marshalMapResponse(mapResponse, key.MachinePublic{}, mapRequest.Compress)
+	resp, err := h.marshalMapResponse(mapResponse, key.MachinePublic{}, mapRequest.Compress)
+	return resp, err, peers
 
 }
 
@@ -271,12 +272,8 @@ func applyMapResponseDelta(
 	toNodes func(Machines) ([]*tailcfg.Node, error)) (tailcfg.MapResponse, error) {
 
 	// Full update
-	// chuanh: if streamState.peersByID is empty, should we go to full/delta branch?
-	if streamState == nil || len(streamState.peersByID) == 0 {
+	if streamState == nil {
 		nodePeers, err := toNodes(currentPeers)
-		if streamState != nil {
-			streamState.peersByID = machinesByID(currentPeers)
-		}
 		if err != nil {
 			return tailcfg.MapResponse{}, err
 		}
