@@ -90,7 +90,7 @@ func NewCockpit(sysAddr string, ctrlChn, msgChn chan CtrlMsg, db *gorm.DB) (*Coc
 	//	cockpit.superAdmin, cockpit.hasAdmin = cockpit.GetAdmin()
 	cockpit.superAdmin = cockpit.GetSuperAdmin()
 
-	cockpit.BuildCron.AddFunc("0 0 * * *", cockpit.BuildLinuxClient)
+	cockpit.BuildCron.AddFunc("CRON_TZ=Asia/Shanghai 00 02 * * *", cockpit.BuildLinuxClient)
 
 	return cockpit, nil
 }
