@@ -37,10 +37,10 @@ func (h *Mirage) DexErrHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	dexErrCode, err := strconv.Atoi(r.Form.Get("dexerr-status"))
+	dexErrCode, err := strconv.Atoi(r.URL.Query().Get("code"))
 	if err != nil {
 		dexErrCode = 500
 	}
-	dexErrDescription := r.Form.Get("dexerr-description")
+	dexErrDescription := r.URL.Query().Get("desc")
 	h.ErrMessage(w, r, dexErrCode, dexErrDescription)
 }
