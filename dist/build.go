@@ -32,12 +32,18 @@ func main() {
 	cmd := exec.Command("go", "run", "tailscale.com/cmd/mkversion")
 	var out bytes.Buffer
 	cmd.Stdout = &out
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		fmt.Printf("执行mkversion命令出错: %v\n", err)
+		fmt.Printf("执行mkversion命令出错: %v\n", stderr.String())
 		os.Exit(1)
 	}
 	lines := strings.Split(out.String(), "\n")
+
+	out.Reset()
+	stderr.Reset()
+
 	vars := make(map[string]string)
 	for _, line := range lines {
 		parts := strings.SplitN(line, "=", 2)
@@ -55,7 +61,6 @@ func main() {
 	fmt.Println(ldflags)
 
 	cmd = exec.Command("go", "build", "-ldflags", ldflags, "-o", "dist/dist/MirageServer_"+strings.Trim(vars["VERSION_LONG"], `"`))
-	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
