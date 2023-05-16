@@ -3,6 +3,7 @@ package controller
 import (
 	_ "embed"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -30,4 +31,16 @@ func (h *Mirage) ConsoleLogout(
 		nextURL = "/"
 	}
 	http.Redirect(w, r, nextURL, http.StatusFound)
+}
+
+func (h *Mirage) DexErrHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	dexErrCode, err := strconv.Atoi(r.Form.Get("dexerr-status"))
+	if err != nil {
+		dexErrCode = 500
+	}
+	dexErrDescription := r.Form.Get("dexerr-description")
+	h.ErrMessage(w, r, dexErrCode, dexErrDescription)
 }

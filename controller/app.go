@@ -389,6 +389,9 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	router.HandleFunc(ts2021UpgradePath, h.NoiseUpgradeHandler).Methods(http.MethodPost)
 	router.HandleFunc("/key", h.KeyHandler).Methods(http.MethodGet)
 
+	// dex错误前端处理页面
+	router.HandleFunc("/dexerr", h.DexErrHandler).Methods(http.MethodGet)
+
 	// 资源目录们
 	router.PathPrefix("/img/").Handler(http.StripPrefix("/", http.FileServer(http.FS(mainpageDir))))
 	router.PathPrefix("/assets/").Handler(http.StripPrefix("/", http.FileServer(http.FS(mainpageDir))))
