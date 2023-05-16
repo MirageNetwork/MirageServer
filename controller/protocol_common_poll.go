@@ -89,8 +89,8 @@ func (h *Mirage) handlePollCommon(
 			return
 		}
 	}
-
-	mapResp, err, peers := h.getMapResponseData(mapRequest, machine, nil)
+	var mapResponseState mapResponseStreamState
+	mapResp, err := h.getMapResponseData(mapRequest, machine, &mapResponseState)
 	if err != nil {
 		log.Error().
 			Str("handler", "PollNetMap").
@@ -209,8 +209,8 @@ func (h *Mirage) handlePollCommon(
 		writer,
 		ctx,
 		machine,
-		peers,
 		mapRequest,
+		&mapResponseState,
 		pollDataChan,
 		keepAliveChan,
 		updateChan,
@@ -228,8 +228,8 @@ func (h *Mirage) pollNetMapStream(
 	writer http.ResponseWriter,
 	ctxReq context.Context,
 	machine *Machine,
-	peers Machines,
 	mapRequest tailcfg.MapRequest,
+	mapResponseState *mapResponseStreamState,
 	pollDataChan chan []byte,
 	keepAliveChan chan []byte,
 	updateChan chan struct{},
@@ -260,7 +260,6 @@ func (h *Mirage) pollNetMapStream(
 		Str("machine", machine.Hostname).
 		Msgf("pollData is %#v, keepAliveChan is %#v, updateChan is %#v", pollDataChan, keepAliveChan, updateChan)
 
-	var mapResponseState mapResponseStreamState
 	for {
 		select {
 		case data := <-pollDataChan:
@@ -281,8 +280,6 @@ func (h *Mirage) pollNetMapStream(
 
 				return
 			}
-
-			mapResponseState.peersByID = machinesByID(peers)
 			flusher, ok := writer.(http.Flusher)
 			if !ok {
 				log.Error().
@@ -432,7 +429,7 @@ func (h *Mirage) pollNetMapStream(
 					Time("last_successful_update", lastUpdate).
 					Time("last_state_change", h.getOrgLastStateChange(machine.User.OrganizationID)).
 					Msgf("There has been updates since the last successful update to %s", machine.Hostname)
-				data, err, _ := h.getMapResponseData(mapRequest, machine, &mapResponseState)
+				data, err := h.getMapResponseData(mapRequest, machine, mapResponseState)
 				if err != nil {
 					log.Error().
 						Str("handler", "PollNetMapStream").

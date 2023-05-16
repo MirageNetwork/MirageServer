@@ -26,7 +26,7 @@ func (h *Mirage) generateMapResponse(
 	mapRequest tailcfg.MapRequest,
 	machine *Machine,
 	streamState *mapResponseStreamState,
-) (*tailcfg.MapResponse, error, Machines) {
+) (*tailcfg.MapResponse, error) {
 	log.Trace().
 		Str("func", "generateMapResponse").
 		Str("machine", mapRequest.Hostinfo.Hostname).
@@ -41,7 +41,7 @@ func (h *Mirage) generateMapResponse(
 			Err(err).
 			Msg("Cannot convert to node")
 
-		return nil, err, nil
+		return nil, err
 	}
 
 	peers, invalidNodeIDs, err := h.getValidPeers(machine)
@@ -55,7 +55,7 @@ func (h *Mirage) generateMapResponse(
 			Err(err).
 			Msg("Cannot fetch peers")
 
-		return nil, err, nil
+		return nil, err
 	}
 
 	profiles := h.getMapResponseUserProfiles(*machine, peers)
@@ -78,7 +78,7 @@ func (h *Mirage) generateMapResponse(
 			Err(err).
 			Msg("Failed to get organization of machine")
 
-		return nil, err, nil
+		return nil, err
 	}
 
 	derpMap, err := h.LoadOrgDERPs(machine.User.OrganizationID)
@@ -142,7 +142,7 @@ func (h *Mirage) generateMapResponse(
 			Err(err).
 			Msg("Cannot apply map response deltas")
 
-		return nil, err, nil
+		return nil, err
 	}
 	resp.ClientVersion = &tailcfg.ClientVersion{}
 
@@ -158,21 +158,20 @@ func (h *Mirage) generateMapResponse(
 		// Interface("payload", resp).
 		Msgf("Generated map response: %s", tailMapResponseToString(resp))
 
-	return &resp, nil, peers
+	return &resp, nil
 }
 
 func (h *Mirage) getMapResponseData(
 	mapRequest tailcfg.MapRequest,
 	machine *Machine,
 	streamState *mapResponseStreamState,
-) ([]byte, error, Machines) {
-	mapResponse, err, peers := h.generateMapResponse(mapRequest, machine, streamState)
+) ([]byte, error) {
+	mapResponse, err := h.generateMapResponse(mapRequest, machine, streamState)
 	if err != nil {
-		return nil, err, nil
+		return nil, err
 	}
 
-	resp, err := h.marshalMapResponse(mapResponse, key.MachinePublic{}, mapRequest.Compress)
-	return resp, err, peers
+	return h.marshalMapResponse(mapResponse, key.MachinePublic{}, mapRequest.Compress)
 
 }
 
@@ -271,37 +270,36 @@ func applyMapResponseDelta(
 	currentPeers Machines,
 	toNodes func(Machines) ([]*tailcfg.Node, error)) (tailcfg.MapResponse, error) {
 
-	// Full update
-	if streamState == nil {
+	// Peer delta
+	currentPeersByID := machinesByID(currentPeers)
+
+	if streamState.peersByID == nil {
+		// 1st map, send full nodes
 		nodePeers, err := toNodes(currentPeers)
 		if err != nil {
 			return tailcfg.MapResponse{}, err
 		}
 		mapResponse.Peers = nodePeers
-
-		return mapResponse, nil
-	}
-
-	currentPeersByID := machinesByID(currentPeers)
-
-	// Update PeersChanged with any peers which were removed or changed
-	var peersChanged []Machine
-	for id, peer := range currentPeersByID {
-		previousPeer, hadPrevious := streamState.peersByID[id]
-		if !hadPrevious || previousPeer.LastSuccessfulUpdate.Before(*peer.LastSuccessfulUpdate) {
-			peersChanged = append(peersChanged, peer)
+	} else {
+		// Update PeersChanged with any peers which were removed or changed
+		var peersChanged []Machine
+		for id, peer := range currentPeersByID {
+			previousPeer, hadPrevious := streamState.peersByID[id]
+			if !hadPrevious || previousPeer.LastSuccessfulUpdate.Before(*peer.LastSuccessfulUpdate) {
+				peersChanged = append(peersChanged, peer)
+			}
 		}
-	}
-	nodesChanged, err := toNodes(peersChanged)
-	if err != nil {
-		return tailcfg.MapResponse{}, err
-	}
-	mapResponse.PeersChanged = nodesChanged
+		nodesChanged, err := toNodes(peersChanged)
+		if err != nil {
+			return tailcfg.MapResponse{}, err
+		}
+		mapResponse.PeersChanged = nodesChanged
 
-	// Update PeersRemoved with any peers which are no longer present
-	for id := range streamState.peersByID {
-		if _, has := currentPeersByID[id]; !has {
-			mapResponse.PeersRemoved = append(mapResponse.PeersRemoved, tailcfg.NodeID(id))
+		// Update PeersRemoved with any peers which are no longer present
+		for id := range streamState.peersByID {
+			if _, has := currentPeersByID[id]; !has {
+				mapResponse.PeersRemoved = append(mapResponse.PeersRemoved, tailcfg.NodeID(id))
+			}
 		}
 	}
 
