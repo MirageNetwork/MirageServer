@@ -641,6 +641,7 @@ func (h *Mirage) scheduledPollWorker(
 				Str("func", "scheduledPollWorker").
 				Str("machine", machine.Hostname).
 				Msg("Sending update request")
+			h.setLastStateChangeToNow()
 			select {
 			case updateChan <- struct{}{}:
 			case <-ctx.Done():

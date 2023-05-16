@@ -611,7 +611,7 @@ func (h *Mirage) setLastStateChangeToNow() {
 		if h.lastStateChange == nil {
 			h.lastStateChange = xsync.NewMapOf[time.Time]()
 		}
-		h.lastStateChange.Store(user.Name, now)
+		h.lastStateChange.Store(user.StableID, now)
 	}
 }
 
