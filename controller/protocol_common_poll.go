@@ -89,8 +89,8 @@ func (h *Mirage) handlePollCommon(
 			return
 		}
 	}
-
-	mapResp, err := h.getMapResponseData(mapRequest, machine)
+	var mapResponseState mapResponseStreamState
+	mapResp, err := h.getMapResponseData(mapRequest, machine, &mapResponseState)
 	if err != nil {
 		log.Error().
 			Str("handler", "PollNetMap").
@@ -209,6 +209,7 @@ func (h *Mirage) handlePollCommon(
 		ctx,
 		machine,
 		mapRequest,
+		&mapResponseState,
 		pollDataChan,
 		keepAliveChan,
 		updateChan,
@@ -227,6 +228,7 @@ func (h *Mirage) pollNetMapStream(
 	ctxReq context.Context,
 	machine *Machine,
 	mapRequest tailcfg.MapRequest,
+	mapResponseState *mapResponseStreamState,
 	pollDataChan chan []byte,
 	keepAliveChan chan []byte,
 	updateChan chan struct{},
@@ -277,7 +279,6 @@ func (h *Mirage) pollNetMapStream(
 
 				return
 			}
-
 			flusher, ok := writer.(http.Flusher)
 			if !ok {
 				log.Error().
@@ -427,7 +428,7 @@ func (h *Mirage) pollNetMapStream(
 					Time("last_successful_update", lastUpdate).
 					Time("last_state_change", h.getOrgLastStateChange(machine.User.OrganizationID)).
 					Msgf("There has been updates since the last successful update to %s", machine.Hostname)
-				data, err := h.getMapResponseData(mapRequest, machine)
+				data, err := h.getMapResponseData(mapRequest, machine, mapResponseState)
 				if err != nil {
 					log.Error().
 						Str("handler", "PollNetMapStream").
