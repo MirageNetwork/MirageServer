@@ -514,7 +514,7 @@ function publishIOSToTestflight() {
           <el-upload
             :disabled="(!naviProc && naviProc != '') || wantNaviVersion == ''"
             ref="naviAmd64Uploader"
-            :action="uploadURL + 'navi_x86_64'"
+            :action="uploadURL + '/navi_x86_64'"
             :show-file-list="false"
             :limit="1"
             :data="{ version: wantNaviVersion }"
@@ -536,7 +536,7 @@ function publishIOSToTestflight() {
           <el-upload
             :disabled="(!naviProc && naviProc != '') || wantNaviVersion == ''"
             ref="naviAarch64Uploader"
-            :action="uploadURL + 'navi_aarch64'"
+            :action="uploadURL + '/navi_aarch64'"
             :show-file-list="false"
             :limit="1"
             :data="{ version: wantNaviVersion }"
@@ -838,7 +838,7 @@ function publishIOSToTestflight() {
             <el-upload
               ref="winUploader"
               drag
-              :action="uploadURL + 'win'"
+              :action="uploadURL + '/win'"
               :auto-upload="false"
               :show-file-list="false"
               :limit="1"
