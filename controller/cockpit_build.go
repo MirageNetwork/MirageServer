@@ -73,7 +73,7 @@ func (c *Cockpit) BuildLinuxClient() {
 				return
 			}
 		} else if strings.Contains(sysCfg.ClientVersion.Linux.BuildState, "成功") {
-			log.Info().Caller().Msg("已成功构建过同样Hash版本，无需重复构建")
+			log.Info().Msg("已成功构建过同样Hash版本，无需重复构建")
 			return
 		} else {
 			c.markLinuxInBuilding(sysCfg) //进入构建状态
@@ -114,7 +114,7 @@ func (c *Cockpit) BuildLinuxClient() {
 	}
 	lines := strings.Split(out.String(), "\n")
 	shortVersion := strings.Split(lines[len(lines)-3], "=")[1]
-	log.Info().Caller().Msg("Linux客户端构建成功! 版本号：" + shortVersion)
+	log.Info().Msg("Linux客户端构建成功! 版本号：" + shortVersion)
 
 	// 检查发布路径情况
 	_, err = os.Stat("download")

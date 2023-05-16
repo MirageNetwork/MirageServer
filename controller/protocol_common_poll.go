@@ -148,7 +148,6 @@ func (h *Mirage) handlePollCommon(
 
 	// Only create update channel if it has not been created
 	log.Trace().
-		Caller().
 		Str("machine", machine.Hostname).
 		Msg("Loading or creating update channel")
 

@@ -25,7 +25,6 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/zerolog v1.29.1
 	github.com/samber/lo v1.38.1
-	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/viper v1.15.0
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
 	go4.org/netipx v0.0.0-20230303233057-f1b76eb4bb35
@@ -138,7 +137,6 @@ require (
 require (
 	github.com/alexbrainman/sspi v0.0.0-20210105120005-909beea2cc74 // indirect
 	github.com/bwmarrin/snowflake v0.3.0
-	github.com/efekarakus/termcolor v1.0.1
 	github.com/elastic/go-elasticsearch/v8 v8.7.1
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/glebarez/sqlite v1.8.0

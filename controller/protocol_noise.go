@@ -16,7 +16,7 @@ func (t *noiseServer) NoiseRegistrationHandler(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	log.Trace().Caller().Msgf("Noise registration handler for client %s", req.RemoteAddr)
+	log.Trace().Msgf("Noise registration handler for client %s", req.RemoteAddr)
 	if req.Method != http.MethodPost {
 		http.Error(writer, "Wrong method", http.StatusMethodNotAllowed)
 
@@ -60,7 +60,7 @@ func (m *Mirage) handleRegisterNavi(
 	registerRequest tailcfg.RegisterRequest,
 	naviKey key.MachinePublic,
 ) {
-	log.Trace().Caller().Msgf("Noise registration handler for Navi %s", req.RemoteAddr)
+	log.Trace().Msgf("Noise registration handler for Navi %s", req.RemoteAddr)
 
 	node := m.GetNaviNode(registerRequest.Auth.LoginName)
 	if node == nil {
@@ -76,7 +76,7 @@ func (m *Mirage) handleRegisterNavi(
 			http.Error(writer, "Internal error", http.StatusInternalServerError)
 			return
 		}
-		log.Trace().Caller().Msgf("Navi node %s registered", node.ID)
+		log.Trace().Msgf("Navi node %s registered", node.ID)
 
 		trustNodesKeys, err := m.getOrgNodesKey(node.NaviRegion.OrgID)
 		if err != nil {
@@ -145,7 +145,7 @@ func (t *noiseServer) NoiseNaviPollNodesListHandler(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	log.Trace().Caller().Msgf("Noise NodesListPoll handler for Navi %s", req.RemoteAddr)
+	log.Trace().Msgf("Noise NodesListPoll handler for Navi %s", req.RemoteAddr)
 	if req.Method != http.MethodPost {
 		http.Error(writer, "Wrong method", http.StatusMethodNotAllowed)
 

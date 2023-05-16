@@ -50,7 +50,7 @@ func (h *Mirage) NoiseUpgradeHandler(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	log.Trace().Caller().Msgf("Noise upgrade handler for client %s", req.RemoteAddr)
+	log.Trace().Msgf("Noise upgrade handler for client %s", req.RemoteAddr)
 
 	upgrade := req.Header.Get("Upgrade")
 	if upgrade == "" {
@@ -123,14 +123,12 @@ func (h *Mirage) NoiseUpgradeHandler(
 
 func (ns *noiseServer) earlyNoise(protocolVersion int, writer io.Writer) error {
 	log.Trace().
-		Caller().
 		Int("protocol_version", protocolVersion).
 		Str("challenge", ns.challenge.Public().String()).
 		Msg("earlyNoise called")
 
 	if protocolVersion < earlyNoiseCapabilityVersion {
 		log.Trace().
-			Caller().
 			Msgf("protocol version %d does not support early noise", protocolVersion)
 
 		return nil

@@ -42,8 +42,8 @@ func (h *Mirage) initOIDC() error {
 
 		if err != nil {
 			log.Error().
-				Err(err).
 				Caller().
+				Err(err).
 				Msgf("Could not retrieve OIDC Config: %s", err.Error())
 
 			return err
@@ -101,8 +101,8 @@ func (h *Mirage) getIDTokenForOIDCCallback(
 	oauth2Token, err := h.oauth2Config.Exchange(ctx, code)
 	if err != nil {
 		log.Error().
-			Err(err).
 			Caller().
+			Err(err).
 			Msg("Could not exchange code for token")
 		writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		writer.WriteHeader(http.StatusBadRequest)
@@ -118,7 +118,6 @@ func (h *Mirage) getIDTokenForOIDCCallback(
 	}
 
 	log.Trace().
-		Caller().
 		Str("code", code).
 		Str("state", state).
 		Msg("Got oidc callback")
@@ -150,8 +149,8 @@ func (h *Mirage) verifyIDTokenForOIDCCallback(
 	idToken, err := verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		log.Error().
-			Err(err).
 			Caller().
+			Err(err).
 			Msg("failed to verify id token")
 		writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		writer.WriteHeader(http.StatusBadRequest)
@@ -176,8 +175,8 @@ func extractIDTokenClaims(
 	var claims IDTokenClaims
 	if err := idToken.Claims(&claims); err != nil {
 		log.Error().
-			Err(err).
 			Caller().
+			Err(err).
 			Msg("Failed to decode id token claims")
 		writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		writer.WriteHeader(http.StatusBadRequest)

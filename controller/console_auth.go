@@ -192,7 +192,6 @@ func (h *Mirage) ConsoleAuth(next http.Handler) http.Handler {
 		controlCodeC, controcontrolCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCodeCookie.Value)
 		if !ok || controcontrolCodeExpiration.Compare(time.Now()) != 1 {
 			log.Debug().
-				Caller().
 				Msg("could not verifyIDTokenForOIDCCallback")
 			nextURL := r.URL.Path
 			newQuery := r.URL.Query()
@@ -205,7 +204,6 @@ func (h *Mirage) ConsoleAuth(next http.Handler) http.Handler {
 		user, err := h.GetUserByID(controlCodeItem.uid)
 		if err != nil {
 			log.Debug().
-				Caller().
 				Msg("could not verifyIDTokenForOIDCCallback")
 			nextURL := r.URL.Path
 			newQuery := r.URL.Query()
@@ -246,7 +244,6 @@ func (h *Mirage) APIAuth(next http.Handler) http.Handler {
 		controlCodeC, controcontrolCodeExpiration, ok := h.controlCodeCache.GetWithExpiration(controlCodeCookie.Value)
 		if !ok || controcontrolCodeExpiration.Compare(time.Now()) != 1 {
 			log.Debug().
-				Caller().
 				Msg("could not verifyIDTokenForOIDCCallback")
 			renderData := APICheckRes{
 				NeedReauth: true,
@@ -261,7 +258,6 @@ func (h *Mirage) APIAuth(next http.Handler) http.Handler {
 		user, err := h.GetUserByID(controlCodeItem.uid)
 		if err != nil {
 			log.Debug().
-				Caller().
 				Msg("could not verifyIDTokenForOIDCCallback")
 			renderData := APICheckRes{
 				NeedReauth: true,
@@ -274,7 +270,6 @@ func (h *Mirage) APIAuth(next http.Handler) http.Handler {
 		}
 		if user.Role != RoleOwner {
 			log.Debug().
-				Caller().
 				Msg("非管理员用户访问API")
 			renderData := APICheckRes{
 				NeedReauth: true,
@@ -297,7 +292,6 @@ func (h *Mirage) deviceRegPortal(
 	aCode, ok := vars["aCode"]
 
 	log.Debug().
-		Caller().
 		Str("ACode", aCode).
 		Bool("ok", ok).
 		Msg("Received oidc register call")
@@ -391,7 +385,6 @@ func (h *Mirage) deviceReg(
 	aCode, ok := vars["aCode"]
 
 	log.Debug().
-		Caller().
 		Str("ACode", aCode).
 		Bool("ok", ok).
 		Msg("Received connect device call")
@@ -834,7 +827,6 @@ func (h *Mirage) registerMachineFromConsole(
 
 	if oldmachine != nil {
 		log.Trace().
-			Caller().
 			Str("machine", oldmachine.Hostname).
 			Msg("machine already registered, reauthenticating")
 		oldmachine.Hostname = aCodeItem.regReq.Hostinfo.Hostname

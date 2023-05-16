@@ -21,7 +21,7 @@ func main() {
 	}
 
 	zerolog.TimeFieldFormat = MirageDateTimeFormat
-	logger := zerolog.New(zerolog.MultiLevelWriter(os.Stdout)).With().Caller().Timestamp().Logger()
+	logger := zerolog.New(zerolog.MultiLevelWriter(os.Stdout)).With().Timestamp().Logger()
 	logger = logger.Level(zerolog.DebugLevel)
 	log.Logger = logger
 
@@ -44,7 +44,7 @@ func main() {
 
 	go cockpit.Run()
 
-	log.Info().Caller().Msg("Cockpit is ready on " + sysAddr + "")
+	log.Info().Msg("Cockpit is ready on " + sysAddr + "")
 
 	/*
 		err = controller.LoadConfig()
@@ -60,7 +60,7 @@ func main() {
 	for {
 		select {
 		case cockpitMsg := <-ctrlChn:
-			log.Trace().Caller().Msgf("Cockpit message received: %s", cockpitMsg.Msg)
+			log.Trace().Msgf("Cockpit message received: %s", cockpitMsg.Msg)
 			switch cockpitMsg.Msg {
 			case "start":
 				err = datapool.InitMirageDB()
