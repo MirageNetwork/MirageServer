@@ -12,7 +12,7 @@ import (
 )
 
 // // NoiseRegistrationHandler handles the actual registration process of a machine.
-func (t *ts2021App) NoiseRegistrationHandler(
+func (t *noiseServer) NoiseRegistrationHandler(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -22,6 +22,9 @@ func (t *ts2021App) NoiseRegistrationHandler(
 
 		return
 	}
+
+	log.Trace().Any("headers", req.Header).Msg("Headers")
+
 	body, _ := io.ReadAll(req.Body)
 	registerRequest := tailcfg.RegisterRequest{}
 	if err := json.Unmarshal(body, &registerRequest); err != nil {
@@ -33,6 +36,8 @@ func (t *ts2021App) NoiseRegistrationHandler(
 
 		return
 	}
+
+	t.nodeKey = registerRequest.NodeKey
 
 	if registerRequest.Auth.Provider == "Mirage" {
 		t.mirage.handleRegisterNavi(writer, req, registerRequest, t.conn.Peer())
@@ -136,7 +141,7 @@ type PullNodesListResponse struct {
 	Timestamp  *time.Time `json:"Timestamp"`
 }
 
-func (t *ts2021App) NoiseNaviPollNodesListHandler(
+func (t *noiseServer) NoiseNaviPollNodesListHandler(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {

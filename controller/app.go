@@ -386,7 +386,7 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	console_router.PathPrefix("").Handler(http.StripPrefix("/admin", http.FileServer(http.FS(adminDir))))
 
 	// 核心与客户端通信协议，不动
-	router.HandleFunc("/ts2021", h.NoiseUpgradeHandler).Methods(http.MethodPost)
+	router.HandleFunc(ts2021UpgradePath, h.NoiseUpgradeHandler).Methods(http.MethodPost)
 	router.HandleFunc("/key", h.KeyHandler).Methods(http.MethodGet)
 
 	// 资源目录们
