@@ -387,8 +387,11 @@ func (h *Mirage) initRouter(router *mux.Router) {
 	console_router.PathPrefix("").Handler(http.StripPrefix("/admin", http.FileServer(http.FS(adminDir))))
 
 	// 核心与客户端通信协议，不动
-	router.HandleFunc("/ts2021", h.NoiseUpgradeHandler).Methods(http.MethodPost)
+	router.HandleFunc(ts2021UpgradePath, h.NoiseUpgradeHandler).Methods(http.MethodPost)
 	router.HandleFunc("/key", h.KeyHandler).Methods(http.MethodGet)
+
+	// dex错误前端处理页面
+	router.HandleFunc("/dexerr", h.DexErrHandler).Methods(http.MethodGet)
 
 	// 资源目录们
 	router.PathPrefix("/img/").Handler(http.StripPrefix("/", http.FileServer(http.FS(mainpageDir))))
@@ -413,11 +416,13 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 
 	ticker := time.NewTicker(time.Millisecond * updateInterval)
 	defer ticker.Stop()
+	longTicker := time.NewTicker(time.Millisecond * updateInterval * 6)
+	defer longTicker.Stop()
 
 	go h.expireEphemeralNodes(ticker)  //updateInterval)
 	go h.expireExpiredMachines(ticker) //updateInterval)
 	go h.failoverSubnetRoutes(ticker)  //updateInterval)
-	go h.refreshNaviStatusPoller(ticker)
+	go h.refreshNaviStatusPoller(longTicker)
 
 	// Prepare group for running listeners
 	errorGroup := new(errgroup.Group)
@@ -505,6 +510,9 @@ func (h *Mirage) Serve(ctrlChn chan CtrlMsg) error {
 			case "update-config":
 				log.Info().Msg("Received update-config message, updating config")
 				h.cfg = msg.SysCfg
+			case "set-last-update":
+				log.Info().Msg("Received set-last-update message, updating last update time")
+				h.setLastStateChangeToNow()
 			}
 		}
 	}
@@ -652,7 +660,7 @@ func (h *Mirage) getLastStateChange(users ...User) time.Time {
 	// are past, then use the entier list of users and look for the last update
 	if len(users) > 0 {
 		for _, user := range users {
-			if lastChange, ok := h.lastStateChange.Load(user.Name); ok {
+			if lastChange, ok := h.lastStateChange.Load(user.StableID); ok {
 				times = append(times, lastChange)
 			}
 		}

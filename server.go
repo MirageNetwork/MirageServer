@@ -2,11 +2,9 @@ package main
 
 import (
 	"os"
-	"time"
 
 	"MirageNetwork/MirageServer/controller"
 
-	"github.com/efekarakus/termcolor"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -22,33 +20,10 @@ func main() {
 		sysAddr = ":8081"
 	}
 
-	var colors bool
-	switch l := termcolor.SupportLevel(os.Stderr); l {
-	case termcolor.Level16M:
-		colors = true
-	case termcolor.Level256:
-		colors = true
-	case termcolor.LevelBasic:
-		colors = true
-	case termcolor.LevelNone:
-		colors = false
-	default:
-		// no color, return text as is.
-		colors = false
-	}
-
-	// Adhere to no-color.org manifesto of allowing users to
-	// turn off color in cli/services
-	if _, noColorIsSet := os.LookupEnv("NO_COLOR"); noColorIsSet {
-		colors = false
-	}
-
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(zerolog.ConsoleWriter{
-		Out:        os.Stdout,
-		TimeFormat: time.RFC3339,
-		NoColor:    !colors,
-	})
+	zerolog.TimeFieldFormat = MirageDateTimeFormat
+	logger := zerolog.New(zerolog.MultiLevelWriter(os.Stdout)).With().Timestamp().Logger()
+	logger = logger.Level(zerolog.DebugLevel)
+	log.Logger = logger
 
 	datapool := controller.DataPool{}
 	err := datapool.OpenDB()
@@ -69,7 +44,7 @@ func main() {
 
 	go cockpit.Run()
 
-	log.Info().Caller().Msg("Cockpit is ready on " + sysAddr + "")
+	log.Info().Msg("Cockpit is ready on " + sysAddr + "")
 
 	/*
 		err = controller.LoadConfig()
@@ -85,7 +60,7 @@ func main() {
 	for {
 		select {
 		case cockpitMsg := <-ctrlChn:
-			log.Trace().Caller().Msgf("Cockpit message received: %s", cockpitMsg.Msg)
+			log.Trace().Msgf("Cockpit message received: %s", cockpitMsg.Msg)
 			switch cockpitMsg.Msg {
 			case "start":
 				err = datapool.InitMirageDB()

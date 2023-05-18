@@ -49,7 +49,7 @@ func (s *SysConfig) toDexConfig() (*server.Config, error) {
 		PrivateKey:  s.AppleCfg.PrivateKey,
 	}
 
-	logrussor, err := newLogger("error", "json")
+	logrussor, err := newLogger("debug")
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize logger: %v", err)
 	}
@@ -122,7 +122,7 @@ func (s *SysConfig) toDexConfig() (*server.Config, error) {
 		Storage:                storage,
 		Logger:                 logrussor,
 		SupportedResponseTypes: nil,                //c.OAuth2.ResponseTypes,
-		SkipApprovalScreen:     false,              //c.OAuth2.SkipApprovalScreen,
+		SkipApprovalScreen:     true,               //c.OAuth2.SkipApprovalScreen,
 		AlwaysShowLoginScreen:  true,               //c.OAuth2.AlwaysShowLoginScreen,
 		PasswordConnector:      "",                 //c.OAuth2.PasswordConnector,
 		AllowedOrigins:         nil,                //c.Web.AllowedOrigins,

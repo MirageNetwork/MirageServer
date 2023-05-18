@@ -260,16 +260,15 @@ func (ghCfg AppleCfg) Value() (driver.Value, error) {
 }
 
 type ClientVersionInfo struct {
-	NaviAMD64     string    `json:"naviAmd64"`
-	NaviAARCH64   string    `json:"naviAarch64"`
-	Win           ClientVer `json:"win"`
-	MacStore      ClientVer `json:"mac_store"`
-	MacTestFlight ClientVer `json:"mac_test"`
-	LinuxAMD64    ClientVer `json:"linuxAmd64"`
-	LinuxAARCH64  ClientVer `json:"linuxAarch64"`
-	Android       ClientVer `json:"android"`
-	IOSStore      ClientVer `json:"ios_store"`
-	IOSTestFlight ClientVer `json:"ios_test"`
+	NaviAMD64     string         `json:"naviAmd64"`
+	NaviAARCH64   string         `json:"naviAarch64"`
+	Win           ClientVer      `json:"win"`
+	MacStore      ClientVer      `json:"mac_store"`
+	MacTestFlight ClientVer      `json:"mac_test"`
+	Linux         LinuxBuildInfo `json:"linux"`
+	Android       ClientVer      `json:"android"`
+	IOSStore      ClientVer      `json:"ios_store"`
+	IOSTestFlight ClientVer      `json:"ios_test"`
 }
 
 func (c *ClientVersionInfo) Scan(value interface{}) error {
@@ -291,4 +290,12 @@ func (c ClientVersionInfo) Value() (driver.Value, error) {
 type ClientVer struct {
 	Version string `json:"version"`
 	Url     string `json:"url"`
+}
+
+type LinuxBuildInfo struct {
+	Version    string `json:"version"`   // 当前版本号
+	Url        string `json:"url"`       // 当前仓库地址
+	RepoCred   string `json:"repo_cred"` // 当前仓库凭据
+	Hash       string `json:"hash"`      // 当前发布hash
+	BuildState string `json:"buildst"`   // 最近一次构建状态 - 尚未进行、正在进行、成功、失败
 }

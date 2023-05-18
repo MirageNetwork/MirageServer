@@ -650,8 +650,41 @@ function isInvalidTag(tag) {
             </dl>
             <dl class="flex text-sm">
               <dt class="text-gray-500 w-1/3 md:w-1/4 mr-1 shrink-0">蜃境客户端版本</dt>
-              <dd class="min-w-0 truncate">
-                <div class="flex items-center">{{ currentMachine.ipnVersion }}</div>
+              <dd class="min-w-0">
+                <div class="flex items-center">
+                  {{
+                    currentMachine.ipnVersion.split("-")[1].indexOf("t") != -1
+                      ? currentMachine.ipnVersion.split("-")[0]
+                      : currentMachine.ipnVersion
+                  }}
+                  <div
+                    v-if="currentMachine.availableUpdateVersion"
+                    class="ml-1 tooltip"
+                    :data-tip="'可更新' + currentMachine.availableUpdateVersion"
+                  >
+                    <a
+                      :href="'/downloads#/' + currentMachine.os"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      ><svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="1.125em"
+                        height="1.125em"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-label="Update available for steam-win"
+                        class="text-gray-400"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="16 12 12 8 8 12"></polyline>
+                        <line x1="12" y1="16" x2="12" y2="8"></line></svg
+                    ></a>
+                  </div>
+                </div>
               </dd>
             </dl>
             <dl class="flex text-sm">

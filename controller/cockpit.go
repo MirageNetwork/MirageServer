@@ -18,11 +18,13 @@ import (
 	webauthn "github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
+	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog/log"
 	"go4.org/netipx"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 	"tailscale.com/types/key"
+	"tailscale.com/version"
 )
 
 type Cockpit struct {
@@ -38,6 +40,8 @@ type Cockpit struct {
 	author     *webauthn.WebAuthn
 	superAdmin *MirageSuperAdmin
 	authCache  *cache.Cache
+
+	BuildCron *cron.Cron
 }
 
 type CtrlMsg struct {
@@ -80,10 +84,13 @@ func NewCockpit(sysAddr string, ctrlChn, msgChn chan CtrlMsg, db *gorm.DB) (*Coc
 		serviceState: false,
 		CtrlChn:      ctrlChn,
 		MsgChn:       msgChn,
+		BuildCron:    cron.New(),
 	}
 	cockpit.authCache = cache.New(0, 0)
 	//	cockpit.superAdmin, cockpit.hasAdmin = cockpit.GetAdmin()
 	cockpit.superAdmin = cockpit.GetSuperAdmin()
+
+	cockpit.BuildCron.AddFunc("CRON_TZ=Asia/Shanghai 00 02 * * *", cockpit.BuildLinuxClient)
 
 	return cockpit, nil
 }
@@ -171,6 +178,7 @@ func (c *Cockpit) createRouter() *mux.Router {
 	cockpit_router.HandleFunc("/api/service/state", c.GetServiceState).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/setting/general", c.GetSettingGeneral).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/tenants", c.CAPIGetTenant).Methods(http.MethodGet)
+	cockpit_router.HandleFunc("/api/publish", c.GetPublishInfo).Methods(http.MethodGet)
 	cockpit_router.HandleFunc("/api/derp/query", c.CAPIQueryDERP).Methods(http.MethodGet)
 
 	cockpit_router.PathPrefix("/api/derp/{id}").HandlerFunc(c.CAPIDelNaviNode).Methods(http.MethodDelete)
@@ -237,7 +245,7 @@ func (c *Cockpit) RevokeAdmin(
 		return
 	}
 	sysAdmin := c.GetAdmin()
-	err := c.db.Delete(sysAdmin).Error
+	err := c.db.Delete(&sysAdmin).Error
 	if err != nil {
 		c.doAPIResponse(w, "解绑超级管理员失败", nil)
 		return
@@ -438,12 +446,20 @@ func (c *Cockpit) Logout(
 	c.doAPIResponse(w, "", "ok")
 }
 
+type svcStateData struct {
+	ControllerVer string `json:"ctrlver"`
+	IsRunning     bool   `json:"isRunning"`
+}
+
 // GetServiceState 获取服务状态
 func (c *Cockpit) GetServiceState(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	c.doAPIResponse(w, "", c.serviceState)
+	c.doAPIResponse(w, "", svcStateData{
+		ControllerVer: version.Long(),
+		IsRunning:     c.serviceState,
+	})
 }
 
 // DoServiceStart 启动服务
@@ -962,6 +978,9 @@ func (c *Cockpit) Run() error {
 	}
 
 	errorGroup.Go(func() error { return httpServer.Serve(httpListener) })
+
+	// 启动buildCron
+	c.BuildCron.Start()
 
 	msgFunc := func(c *Cockpit) {
 		for {

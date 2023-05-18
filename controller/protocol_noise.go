@@ -12,16 +12,19 @@ import (
 )
 
 // // NoiseRegistrationHandler handles the actual registration process of a machine.
-func (t *ts2021App) NoiseRegistrationHandler(
+func (t *noiseServer) NoiseRegistrationHandler(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	log.Trace().Caller().Msgf("Noise registration handler for client %s", req.RemoteAddr)
+	log.Trace().Msgf("Noise registration handler for client %s", req.RemoteAddr)
 	if req.Method != http.MethodPost {
 		http.Error(writer, "Wrong method", http.StatusMethodNotAllowed)
 
 		return
 	}
+
+	log.Trace().Any("headers", req.Header).Msg("Headers")
+
 	body, _ := io.ReadAll(req.Body)
 	registerRequest := tailcfg.RegisterRequest{}
 	if err := json.Unmarshal(body, &registerRequest); err != nil {
@@ -33,6 +36,8 @@ func (t *ts2021App) NoiseRegistrationHandler(
 
 		return
 	}
+
+	t.nodeKey = registerRequest.NodeKey
 
 	if registerRequest.Auth.Provider == "Mirage" {
 		t.mirage.handleRegisterNavi(writer, req, registerRequest, t.conn.Peer())
@@ -55,7 +60,7 @@ func (m *Mirage) handleRegisterNavi(
 	registerRequest tailcfg.RegisterRequest,
 	naviKey key.MachinePublic,
 ) {
-	log.Trace().Caller().Msgf("Noise registration handler for Navi %s", req.RemoteAddr)
+	log.Trace().Msgf("Noise registration handler for Navi %s", req.RemoteAddr)
 
 	node := m.GetNaviNode(registerRequest.Auth.LoginName)
 	if node == nil {
@@ -71,7 +76,7 @@ func (m *Mirage) handleRegisterNavi(
 			http.Error(writer, "Internal error", http.StatusInternalServerError)
 			return
 		}
-		log.Trace().Caller().Msgf("Navi node %s registered", node.ID)
+		log.Trace().Msgf("Navi node %s registered", node.ID)
 
 		trustNodesKeys, err := m.getOrgNodesKey(node.NaviRegion.OrgID)
 		if err != nil {
@@ -136,11 +141,11 @@ type PullNodesListResponse struct {
 	Timestamp  *time.Time `json:"Timestamp"`
 }
 
-func (t *ts2021App) NoiseNaviPollNodesListHandler(
+func (t *noiseServer) NoiseNaviPollNodesListHandler(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	log.Trace().Caller().Msgf("Noise NodesListPoll handler for Navi %s", req.RemoteAddr)
+	log.Trace().Msgf("Noise NodesListPoll handler for Navi %s", req.RemoteAddr)
 	if req.Method != http.MethodPost {
 		http.Error(writer, "Wrong method", http.StatusMethodNotAllowed)
 

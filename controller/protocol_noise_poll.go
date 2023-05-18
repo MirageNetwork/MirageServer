@@ -20,7 +20,7 @@ import (
 // only after their first request (marked with the ReadOnly field).
 //
 // At this moment the updates are sent in a quite horrendous way, but they kinda work.
-func (t *ts2021App) NoisePollNetMapHandler(
+func (t *noiseServer) NoisePollNetMapHandler(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -39,6 +39,8 @@ func (t *ts2021App) NoisePollNetMapHandler(
 
 		return
 	}
+
+	t.nodeKey = mapRequest.NodeKey
 
 	//machine, err := t.headscale.GetMachineByAnyKey(t.conn.Peer(), mapRequest.NodeKey, key.NodePublic{})
 	//cgao6: 因为MachineKey会用于多个用户，不具备unique特点，故此处应该只判断NodeKey！

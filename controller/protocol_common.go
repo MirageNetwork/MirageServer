@@ -117,7 +117,6 @@ func (h *Mirage) handleRegisterCommon(
 		aCode := registerRequest.Followup[len(registerRequest.Followup)-12:]
 		if _, ok := h.aCodeCache.Get(aCode); ok {
 			log.Debug().
-				Caller().
 				Str("machine", registerRequest.Hostinfo.Hostname).
 				Str("machine_key", machineKey.ShortString()).
 				Str("node_key", registerRequest.NodeKey.ShortString()).
@@ -141,8 +140,7 @@ func (h *Mirage) handleRegisterCommon(
 		}
 	}
 
-	log.Info().
-		Caller().
+	log.Debug().
 		Str("machine", registerRequest.Hostinfo.Hostname).
 		Str("machine_key", machineKey.ShortString()).
 		Str("node_key", registerRequest.NodeKey.ShortString()).
@@ -156,7 +154,7 @@ func (h *Mirage) handleRegisterCommon(
 	// 创建aCode缓存用来后续注册使用
 	// 因为过期时间取决于用户的过期设置，故此处不必记录！
 	// TODO: 创建ACode时是否要记录MachineKey？？？
-	log.Debug().Caller().Str("machine", registerRequest.Hostinfo.Hostname).Msg("The node seems to be new, sending auth url")
+	log.Debug().Str("machine", registerRequest.Hostinfo.Hostname).Msg("The node seems to be new, sending auth url")
 	aCode := h.GenACode()
 	stateCode := h.GenStateCode()
 	h.aCodeCache.Set(
@@ -245,7 +243,7 @@ func (h *Mirage) sendLoginSuccess(
 		log.Error().Caller().Err(err).Msg("Failed to write response")
 	}
 
-	log.Info().Caller().Msg("Successfully Empty authURL")
+	log.Trace().Msg("Successfully Empty authURL")
 }
 
 // cgao6: 替代handleNewMachineCommon，处理新设备注册，变更了返回值
@@ -277,7 +275,7 @@ func (h *Mirage) SendACode(
 		log.Error().Caller().Err(err).Msg("Failed to write response")
 	}
 
-	log.Debug().Caller().Str("AuthURL", resp.AuthURL).Str("machine", registerRequest.Hostinfo.Hostname).Msg("Successfully sent auth url")
+	log.Debug().Str("AuthURL", resp.AuthURL).Str("machine", registerRequest.Hostinfo.Hostname).Msg("Successfully sent auth url")
 }
 
 // handleAuthKeyCommon contains the logic to manage auth key client registration
@@ -352,7 +350,6 @@ func (h *Mirage) handleAuthKeyCommon(
 	machine, _ := h.GetUserMachineByMachineKey(machineKey, pak.User.toTailscaleUser().ID)
 	if machine != nil {
 		log.Trace().
-			Caller().
 			Str("machine", machine.Hostname).
 			Msg("machine was already registered before, refreshing with new auth key")
 
@@ -541,7 +538,6 @@ func (h *Mirage) handleMachineLogOutCommon(
 	h.NotifyNaviOrgNodesChange(machine.User.OrganizationID, "", machine.NodeKey)
 
 	log.Info().
-		Caller().
 		Str("machine", machine.Hostname).
 		Msg("Successfully logged out")
 }
@@ -555,7 +551,6 @@ func (h *Mirage) handleMachineValidRegistrationCommon(
 
 	// The machine registration is valid, respond with redirect to /map
 	log.Debug().
-		Caller().
 		Str("machine", machine.Hostname).
 		Msg("Client is registered and we have the current NodeKey. All clear to /map")
 
@@ -586,7 +581,6 @@ func (h *Mirage) handleMachineValidRegistrationCommon(
 	}
 
 	log.Info().
-		Caller().
 		Str("machine", machine.Hostname).
 		Msg("Machine successfully authorized")
 }

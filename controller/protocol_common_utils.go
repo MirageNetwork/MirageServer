@@ -14,9 +14,18 @@ import (
 	"tailscale.com/types/key"
 )
 
+// mapResponseStreamState tracks state associated with a stream of MapResponse messages,
+// which may optionally send only deltas from the previous message.
+type mapResponseStreamState struct {
+	// peersByID is the peers sent in the last stream message,
+	// for comparison in generating deltas in the new message.
+	peersByID map[int64]Machine
+}
+
 func (h *Mirage) generateMapResponse(
 	mapRequest tailcfg.MapRequest,
 	machine *Machine,
+	streamState *mapResponseStreamState,
 ) (*tailcfg.MapResponse, error) {
 	log.Trace().
 		Str("func", "generateMapResponse").
@@ -52,18 +61,6 @@ func (h *Mirage) generateMapResponse(
 
 	profiles := h.getMapResponseUserProfiles(*machine, peers)
 
-	//cgao6: change to use User's DNSConfig
-	nodePeers, err := h.toNodes(peers) //, h.cfg.BaseDomain, h.cfg.DNSConfig)
-	if err != nil {
-		log.Error().
-			Caller().
-			Str("func", "generateMapResponse").
-			Err(err).
-			Msg("Failed to convert peers to Tailscale nodes")
-
-		return nil, err
-	}
-
 	//cgao6: use User's DNSconfig instead
 	dnsConfig := getMapResponseDNSConfig(
 		h.cfg.IPPrefixes, //
@@ -91,9 +88,6 @@ func (h *Mirage) generateMapResponse(
 
 		// TODO: Only send if updated
 		DERPMap: derpMap, //cgao6: h.DERPMap,
-
-		// TODO: Only send if updated
-		Peers: nodePeers,
 
 		// TODO(kradalby): Implement:
 		// https://github.com/tailscale/tailscale/blob/main/tailcfg/tailcfg.go#L1351-L1374
@@ -129,12 +123,29 @@ func (h *Mirage) generateMapResponse(
 		},
 	}
 
+	toNodes := func(machines Machines) ([]*tailcfg.Node, error) {
+		return h.toNodes(machines) //, h.cfg.BaseDomain, h.cfg.DNSConfig)
+	}
+	resp, err = applyMapResponseDelta(resp, streamState, peers, toNodes)
+	if err != nil {
+		log.Error().
+			Caller().
+			Str("func", "generateMapResponse").
+			Err(err).
+			Msg("Cannot apply map response deltas")
+
+		return nil, err
+	}
 	resp.ClientVersion = &tailcfg.ClientVersion{}
 
-	switch true {
-	case strings.Contains(mapRequest.Hostinfo.OS, "windows"):
-		resp.ClientVersion.LatestVersion = h.cfg.ClientVersion.Win.Version
-		resp.ClientVersion.NotifyURL = h.cfg.ClientVersion.Win.Url
+	if mapRequest.Hostinfo.OS == "windows" {
+		if IsUpdateAvailable(mapRequest.Hostinfo.IPNVersion, h.cfg.ClientVersion.Win.Version) {
+			resp.ClientVersion.RunningLatest = false
+			resp.ClientVersion.LatestVersion = strings.Split(h.cfg.ClientVersion.Win.Version, "-")[0]
+			resp.ClientVersion.NotifyURL = h.cfg.ClientVersion.Win.Url
+		} else {
+			resp.ClientVersion.RunningLatest = true
+		}
 	}
 
 	log.Trace().
@@ -149,8 +160,9 @@ func (h *Mirage) generateMapResponse(
 func (h *Mirage) getMapResponseData(
 	mapRequest tailcfg.MapRequest,
 	machine *Machine,
+	streamState *mapResponseStreamState,
 ) ([]byte, error) {
-	mapResponse, err := h.generateMapResponse(mapRequest, machine)
+	mapResponse, err := h.generateMapResponse(mapRequest, machine, streamState)
 	if err != nil {
 		return nil, err
 	}
@@ -239,4 +251,63 @@ var zstdEncoderPool = &sync.Pool{
 
 		return encoder
 	},
+}
+
+// applyMapResponseDelta returns a modified MapResponse
+// with fields modified which make use of delta (send on changes).
+//
+// mapResponse the current mapResponse with delta fields not set.
+// streamState optional previous state of mapResponse sent in this stream. Set to nil for a "full update" (no deltas).
+// currentPeers list of peers currently available for the node that this mapResponse is for.
+// toNodes a function to convert the Headscale Machines structure to Tailscale Nodes structure.
+func applyMapResponseDelta(
+	mapResponse tailcfg.MapResponse,
+	streamState *mapResponseStreamState,
+	currentPeers Machines,
+	toNodes func(Machines) ([]*tailcfg.Node, error)) (tailcfg.MapResponse, error) {
+
+	// Peer delta
+	currentPeersByID := machinesByID(currentPeers)
+
+	if streamState.peersByID == nil {
+		// 1st map, send full nodes
+		nodePeers, err := toNodes(currentPeers)
+		if err != nil {
+			return tailcfg.MapResponse{}, err
+		}
+		mapResponse.Peers = nodePeers
+	} else {
+		// Update PeersChanged with any peers which were removed or changed
+		var peersChanged []Machine
+		for id, peer := range currentPeersByID {
+			previousPeer, hadPrevious := streamState.peersByID[id]
+			if !hadPrevious || previousPeer.LastSuccessfulUpdate.Before(*peer.LastSuccessfulUpdate) {
+				peersChanged = append(peersChanged, peer)
+			}
+		}
+		nodesChanged, err := toNodes(peersChanged)
+		if err != nil {
+			return tailcfg.MapResponse{}, err
+		}
+		mapResponse.PeersChanged = nodesChanged
+
+		// Update PeersRemoved with any peers which are no longer present
+		for id := range streamState.peersByID {
+			if _, has := currentPeersByID[id]; !has {
+				mapResponse.PeersRemoved = append(mapResponse.PeersRemoved, tailcfg.NodeID(id))
+			}
+		}
+	}
+
+	// Update streamState for use in the next message
+	streamState.peersByID = currentPeersByID
+
+	// TODO(kallen): Also Implement the following deltas for even smaller
+	// message sizes:
+	//
+	// PeersChangedPatch
+	// PeerSeenChange
+	// OnlineChange
+
+	return mapResponse, nil
 }

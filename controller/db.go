@@ -8,7 +8,8 @@ import (
 	"net/netip"
 	"time"
 
-	"gorm.io/driver/sqlite"
+	//"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"tailscale.com/tailcfg"
