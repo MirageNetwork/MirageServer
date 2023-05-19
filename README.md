@@ -37,7 +37,7 @@
         - [ ] DERP详情页 
     - [ ] 用户页?   
         - [ ] 个人租户信息展示与管理？  
-    - [ ] 系统日志页   
+    - [x] 系统日志页   
 - [x] 注册与登录   
     - [x] Google、Microsoft、GitHub、Apple账号登录
     - [x] ~~OIDC对接阿里云IDaaS登录【暂时弃用】~~   
