@@ -635,6 +635,19 @@ func (h *Mirage) GetMachineByNodeKey(
 	return &machine, nil
 }
 
+// GetMachineByNodeKeyiStr finds a Machine by its current NodeKey in string.
+func (h *Mirage) GetMachineByNodeKeyStr(
+	nodeKey string,
+) (*Machine, error) {
+	machine := Machine{}
+	if result := h.db.Preload("AuthKey").Preload("User").Preload("User.Organization").First(&machine, "node_key = ?",
+		nodeKey); result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &machine, nil
+}
+
 // GetMachineByAnyNodeKey finds a Machine by its MachineKey, its current NodeKey or the old one, and returns the Machine struct.
 func (h *Mirage) GetMachineByAnyKey(
 	machineKey key.MachinePublic, nodeKey key.NodePublic, oldNodeKey key.NodePublic,

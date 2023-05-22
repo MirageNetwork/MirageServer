@@ -706,6 +706,23 @@ func (h *Mirage) expandAlias(
 		return ips, nil
 	}
 
+	// if alias is an nodekey
+	if strings.HasPrefix(alias, "nodekey:") {
+		segs := strings.Split(alias, ":")
+		if len(segs) == 2 {
+			node, err := h.GetMachineByNodeKeyStr(segs[0])
+			if err != nil {
+				return ips, nil
+			}
+			ips = append(ips, node.IPAddresses.ToStringSlice()...)
+			if autoAddRoute {
+				ips = append(ips, h.expandMachineRoutes(*node)...)
+			}
+
+			return ips, nil
+		}
+	}
+
 	// if alias is an IP
 	ip, err := netip.ParseAddr(alias)
 	if err == nil {
