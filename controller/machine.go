@@ -202,7 +202,6 @@ func getFilteredByACLPeers(
 	machine *Machine,
 ) (Machines, []tailcfg.NodeID) {
 	log.Trace().
-		Caller().
 		Str("machine", machine.Hostname).
 		Msg("Finding peers filtered by ACLs")
 
@@ -365,7 +364,6 @@ PeersLoop:
 	)
 
 	log.Trace().
-		Caller().
 		Str("machine", machine.Hostname).
 		Msgf("Found some machines: %v", machines)
 
@@ -374,7 +372,6 @@ PeersLoop:
 
 func (h *Mirage) ListPeers(machine *Machine) (Machines, error) {
 	log.Trace().
-		Caller().
 		Str("machine", machine.Hostname).
 		Msg("Finding direct peers")
 
@@ -407,7 +404,6 @@ func (h *Mirage) ListPeers(machine *Machine) (Machines, error) {
 	sort.Slice(machines, func(i, j int) bool { return machines[i].ID < machines[j].ID })
 
 	log.Trace().
-		Caller().
 		Str("machine", machine.Hostname).
 		Msgf("Found peers: %s", machines.String())
 
@@ -460,7 +456,6 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 	sort.Slice(peers, func(i, j int) bool { return peers[i].ID < peers[j].ID })
 
 	log.Trace().
-		Caller().
 		Str("machine", machine.Hostname).
 		Msgf("Found total peers: %s", peers.String())
 
@@ -964,7 +959,6 @@ func (h *Mirage) isOutdated(machine *Machine) bool {
 		lastUpdate = *machine.LastSuccessfulUpdate
 	}
 	log.Trace().
-		Caller().
 		Str("machine", machine.Hostname).
 		Time("last_successful_update", lastChange).
 		Time("last_state_change", lastUpdate).
@@ -1028,7 +1022,6 @@ func (h *Mirage) toNode(
 	err := nodeKey.UnmarshalText([]byte(NodePublicKeyEnsurePrefix(machine.NodeKey)))
 	if err != nil {
 		log.Trace().
-			Caller().
 			Str("node_key", machine.NodeKey).
 			Msgf("Failed to parse node public key from hex")
 
@@ -1227,7 +1220,6 @@ func (h *Mirage) RegisterMachine(machine Machine,
 		}
 
 		log.Trace().
-			Caller().
 			Str("machine", machine.Hostname).
 			Str("machine_key", machine.MachineKey).
 			Str("node_key", machine.NodeKey).
@@ -1258,7 +1250,6 @@ func (h *Mirage) RegisterMachine(machine Machine,
 	}
 
 	log.Trace().
-		Caller().
 		Str("machine", machine.Hostname).
 		Str("ip", strings.Join(ips.ToStringSlice(), ",")).
 		Msg("Machine registered with the database")
@@ -1469,4 +1460,13 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 	}
 
 	return nil
+}
+
+func machinesByID(machines Machines) map[int64]Machine {
+	byID := make(map[int64]Machine)
+	for _, machine := range machines {
+		byID[machine.ID] = machine
+	}
+
+	return byID
 }

@@ -56,8 +56,8 @@ func (m *Mirage) sendDownloadsPage(
 				Primary: clientsInfo.Win.Url,
 			},
 			Linux: DownloadLinks{
-				Primary:   clientsInfo.LinuxAMD64.Url,
-				Secondary: clientsInfo.LinuxAARCH64.Url,
+				Primary:   clientsInfo.Linux.Version,
+				Secondary: m.cfg.ServerURL,
 			},
 			Android: DownloadLinks{
 				Primary: clientsInfo.Android.Url,

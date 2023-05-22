@@ -371,7 +371,7 @@ func (c *Cockpit) CAPIDelNaviNode(
 	}
 	// TODO: 是否有必要做远程关闭？
 
-	if err := c.db.Delete(naviNode).Error; err != nil {
+	if err := c.db.Delete(&naviNode).Error; err != nil {
 		c.doAPIResponse(w, "数据库删除司南节点失败:"+err.Error(), nil)
 		return
 	}
@@ -379,5 +379,8 @@ func (c *Cockpit) CAPIDelNaviNode(
 	delete(c.App.DERPseqnum, naviID)
 	//	c.App.LoadDERPMapFromURL(c.App.cfg.DERPURL)
 
+	c.CtrlChn <- CtrlMsg{
+		Msg: "set-last-update",
+	}
 	c.CAPIQueryDERP(w, r)
 }

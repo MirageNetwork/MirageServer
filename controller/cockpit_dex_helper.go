@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dexidp/dex/pkg/log"
+	dexlog "github.com/dexidp/dex/pkg/log"
 	"github.com/dexidp/dex/server"
 	"github.com/dexidp/dex/storage"
 	"github.com/dexidp/dex/storage/ent"
@@ -15,7 +15,8 @@ import (
 	"github.com/dexidp/dex/storage/kubernetes"
 	"github.com/dexidp/dex/storage/memory"
 	"github.com/dexidp/dex/storage/sql"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // Storage holds app's storage configuration.
@@ -26,7 +27,7 @@ type DexStorage struct {
 
 // StorageConfig is a configuration that can create a storage.
 type DexStorageConfig interface {
-	Open(logger log.Logger) (storage.Storage, error)
+	Open(logger dexlog.Logger) (storage.Storage, error)
 }
 
 var (
@@ -170,40 +171,49 @@ func ToStorageConnector(c Connector) (storage.Connector, error) {
 	}, nil
 }
 
-type utcFormatter struct {
-	f logrus.Formatter
-}
-
-func (f *utcFormatter) Format(e *logrus.Entry) ([]byte, error) {
-	e.Time = e.Time.UTC()
-	return f.f.Format(e)
-}
-func newLogger(level string, format string) (log.Logger, error) {
-	var logLevel logrus.Level
+func newLogger(level string) (dexlog.Logger, error) {
+	var logLevel zerolog.Level
 	switch strings.ToLower(level) {
 	case "debug":
-		logLevel = logrus.DebugLevel
+		logLevel = zerolog.DebugLevel
 	case "", "info":
-		logLevel = logrus.InfoLevel
+		logLevel = zerolog.InfoLevel
 	case "error":
-		logLevel = logrus.ErrorLevel
+		logLevel = zerolog.ErrorLevel
 	default:
 		return nil, fmt.Errorf("log level is not one of the supported values : %s", level)
 	}
 
-	var formatter utcFormatter
-	switch strings.ToLower(format) {
-	case "", "text":
-		formatter.f = &logrus.TextFormatter{DisableColors: true}
-	case "json":
-		formatter.f = &logrus.JSONFormatter{}
-	default:
-		return nil, fmt.Errorf("log format is not one of the supported values : %s", format)
-	}
-
-	return &logrus.Logger{
-		Out:       os.Stderr,
-		Formatter: &formatter,
-		Level:     logLevel,
+	return &zlog{
+		Logger: log.Logger.Level(logLevel).With().Logger(),
 	}, nil
+}
+
+type zlog struct {
+	Logger zerolog.Logger
+}
+
+func (zl *zlog) Debug(args ...interface{}) {
+	zl.Logger.Debug().Msg(fmt.Sprint(args...))
+}
+func (zl *zlog) Info(args ...interface{}) {
+	zl.Logger.Info().Msg(fmt.Sprint(args...))
+}
+func (zl *zlog) Warn(args ...interface{}) {
+	zl.Logger.Warn().Msg(fmt.Sprint(args...))
+}
+func (zl *zlog) Error(args ...interface{}) {
+	zl.Logger.Error().Msg(fmt.Sprint(args...))
+}
+func (zl *zlog) Debugf(format string, args ...interface{}) {
+	zl.Logger.Debug().Msgf(format, args...)
+}
+func (zl *zlog) Infof(format string, args ...interface{}) {
+	zl.Logger.Info().Msgf(format, args...)
+}
+func (zl *zlog) Warnf(format string, args ...interface{}) {
+	zl.Logger.Warn().Msgf(format, args...)
+}
+func (zl *zlog) Errorf(format string, args ...interface{}) {
+	zl.Logger.Error().Msgf(format, args...)
 }

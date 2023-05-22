@@ -112,15 +112,15 @@ const currentRoute = computed(() => {
         class="py-6 px-2 sm:px-6 sm:rounded-lg shadow-2xl w-full sm:max-w-2xl mx-auto bg-white"
       >
         <nav class="text-center mb-7 overflow-y-hidden">
-          <div class="flex overflow-y-auto overflow-x-scroll">
+          <div class="flex overflow-y-auto overflow-x-scroll no-scrollbar">
             <router-link
               class="flex-grow flex-shrink-0 mx-1 block cursor-pointer select-none rounded pt-3 px-4 pb-2 font-normal text-center leading-normal align-middle focus:outline-none active:outline-none"
               :class="{
                 'bg-blue-100 focus:bg-blue-100 active:bg-blue-100':
-                  currentRoute == '/mac',
-                'focus:bg-blue-50 active:bg-blue-50': currentRoute != '/mac',
+                  currentRoute == '/macOS',
+                'focus:bg-blue-50 active:bg-blue-50': currentRoute != '/macOS',
               }"
-              to="/mac"
+              to="/macOS"
               ><svg class="inline-block mb-1" style="width: 32px; height: 20px">
                 <use href="/img/platform-icons.svg#macos"></use>
               </svg>
@@ -130,10 +130,10 @@ const currentRoute = computed(() => {
               class="flex-grow flex-shrink-0 mx-1 block cursor-pointer select-none rounded pt-3 px-4 pb-2 font-normal text-center leading-normal align-middle focus:outline-none active:outline-none"
               :class="{
                 'bg-blue-100 focus:bg-blue-100 active:bg-blue-100':
-                  currentRoute == '/ios',
-                'focus:bg-blue-50 active:bg-blue-50': currentRoute != '/ios',
+                  currentRoute == '/iOS',
+                'focus:bg-blue-50 active:bg-blue-50': currentRoute != '/iOS',
               }"
-              to="/ios"
+              to="/iOS"
               ><svg class="inline-block mb-1" style="width: 32px; height: 20px">
                 <use href="/img/platform-icons.svg#apple"></use>
               </svg>

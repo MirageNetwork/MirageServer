@@ -31,11 +31,19 @@ func (m *Mirage) GetNaviNoiseClient(naviPub key.MachinePublic, naviHostname stri
 			log.Printf("Could not create netMon: %v", err)
 			netMon = nil
 		}
-		if naviDERPPort == 0 {
-			nc, err = controlclient.NewNoiseClient(*m.noisePrivateKey, naviPub, "https://"+naviHostname, dialer, log.Logger.Trace().Msgf, netMon, nil)
-		} else {
-			nc, err = controlclient.NewNoiseClient(*m.noisePrivateKey, naviPub, "https://"+naviHostname+":"+strconv.Itoa(naviDERPPort), dialer, log.Logger.Trace().Msgf, netMon, nil)
+		urlPort := ""
+		if naviDERPPort != 0 {
+			urlPort = ":" + strconv.Itoa(naviDERPPort)
 		}
+		nc, err = controlclient.NewNoiseClient(controlclient.NoiseOpts{
+			PrivKey:      *m.noisePrivateKey,
+			ServerPubKey: naviPub,
+			ServerURL:    "https://" + naviHostname + urlPort,
+			Dialer:       dialer,
+			Logf:         log.Logger.Trace().Msgf,
+			NetMon:       netMon,
+		})
+
 		if err != nil {
 			return nil, err
 		}
@@ -200,7 +208,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 		navi.Statics = NaviStatus{
 			Latency: -1,
 		}
-		m.db.Save(navi)
+		m.db.Model(&navi).Update("statics", navi.Statics)
 		return fmt.Errorf("update navi status request: %w", err)
 	}
 
@@ -210,7 +218,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 		navi.Statics = NaviStatus{
 			Latency: -1,
 		}
-		m.db.Save(navi)
+		m.db.Model(&navi).Update("statics", navi.Statics)
 		return fmt.Errorf("update navi status request: http %d: %.200s",
 			res204.StatusCode, strings.TrimSpace(string(msg)))
 	}
@@ -222,7 +230,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 			Latency:       latency.Milliseconds(),
 			CertExpiresAt: certExpiresAt,
 		}
-		err = m.db.Save(navi).Error
+		err = m.db.Model(&navi).Update("statics", navi.Statics).Error
 		return err
 	}
 
@@ -252,7 +260,7 @@ func (m *Mirage) updateNaviStatus(navi *NaviNode) error {
 	navi.Statics = status
 	navi.Statics.Latency = latency.Milliseconds()
 	navi.Statics.CertExpiresAt = certExpiresAt
-	m.db.Save(navi)
+	m.db.Model(&navi).Update("statics", navi.Statics)
 
 	return nil
 }
