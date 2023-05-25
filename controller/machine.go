@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"net"
 	"net/netip"
 	"sort"
 	"strconv"
@@ -197,7 +196,8 @@ func matchSourceAndDestinationWithRule(
 func getFilteredByACLPeers(
 	machines []Machine,
 	rules []tailcfg.FilterRule,
-	aclPeerCacheMap map[string]map[string]struct{},
+	aclSimpleMap map[string]*UtilsSet[IpContent],
+	aclCIDRMap map[*CIDRIpContent]*UtilsSet[IpContent],
 	autogroupMap map[string]struct{},
 	machine *Machine,
 ) (Machines, []tailcfg.NodeID) {
@@ -210,148 +210,146 @@ func getFilteredByACLPeers(
 	// Aclfilter peers here. We are itering through machines in all users and search through the computed aclRules
 	// for match between rule SrcIPs and DstPorts. If the rule is a match we allow the machine to be viewable.
 	machineIPs := machine.IPAddresses.ToStringSlice()
-PeersLoop:
+PeerLoop:
+
 	for _, peer := range machines {
 		// chuanh: add peer if it is same as machine
 		if peer.ID == machine.ID {
-			continue PeersLoop
+			continue PeerLoop
 		}
 		// chuanh: add peer if autogroup:self set and peer's user is the same as the machine's
 		if _, ok := autogroupMap[AutoGroupSelf]; ok && peer.UserID == machine.UserID {
 			peers[peer.ID] = peer
-			continue PeersLoop
+			continue PeerLoop
 		}
 
 		peerIPs := peer.IPAddresses.ToStringSlice()
-		if dstMap, ok := aclPeerCacheMap["*"]; ok {
+		if dstSet, ok := aclSimpleMap["*"]; ok {
 			// match source and all destination
-			if _, ok := dstMap["*"]; ok {
+			if dstSet.CheckKey(SimpleIpContent{"*"}) {
 				peers[peer.ID] = peer
-				continue PeersLoop
+				continue PeerLoop
 			}
 
 			// match source and all destination
-			for _, peerIP := range peerIPs {
-				for dst := range dstMap {
-					_, cdr, _ := net.ParseCIDR(dst)
-					ip := net.ParseIP(peerIP)
-					if dst == peerIP || (cdr != nil && ip != nil && cdr.Contains(ip)) {
+			for _, ip := range peerIPs {
+				if dstSet.CheckKey(SimpleIpContent{ip}) {
+					peers[peer.ID] = peer
+					continue PeerLoop
+				}
+				for _, dst := range dstSet.GetKeys() {
+					if dst.Contains(ip) {
 						peers[peer.ID] = peer
-						continue PeersLoop
+						continue PeerLoop
 					}
 				}
 			}
 
 			// match all sources and source
-			for _, machineIP := range machineIPs {
-				for dst := range dstMap {
-					_, cdr, _ := net.ParseCIDR(dst)
-					ip := net.ParseIP(machineIP)
-					if dst == machineIP || (cdr != nil && ip != nil && cdr.Contains(ip)) {
+			for _, ip := range machineIPs {
+				if dstSet.CheckKey(SimpleIpContent{ip}) {
+					peers[peer.ID] = peer
+					continue PeerLoop
+				}
+				for _, dst := range dstSet.GetKeys() {
+					if dst.Contains(ip) {
 						peers[peer.ID] = peer
-						continue PeersLoop
+						continue PeerLoop
 					}
 				}
 			}
 		}
 
 		for _, machineIP := range machineIPs {
-			if dstMap, ok := aclPeerCacheMap[machineIP]; ok {
+			// check weither node's Ip in the simple ip/*/other map
+			if dstSet, ok := aclSimpleMap[machineIP]; ok {
 				// match source and all destination
-				if _, ok := dstMap["*"]; ok {
+				if dstSet.CheckKey(SimpleIpContent{"*"}) {
 					peers[peer.ID] = peer
-					continue PeersLoop
+					continue PeerLoop
 				}
-
 				// match source and destination
-				for _, peerIP := range peerIPs {
-					for dst := range dstMap {
-						_, cdr, _ := net.ParseCIDR(dst)
-						ip := net.ParseIP(peerIP)
-						if dst == peerIP || (cdr != nil && ip != nil && cdr.Contains(ip)) {
+				for _, ip := range peerIPs {
+					if dstSet.CheckKey(SimpleIpContent{ip}) {
+						peers[peer.ID] = peer
+						continue PeerLoop
+					}
+					for _, dst := range dstSet.GetKeys() {
+						if dst.Contains(ip) {
 							peers[peer.ID] = peer
-
-							continue
+							continue PeerLoop
 						}
 					}
 				}
 			}
 
+			// check weither node's Ip in range of CIDRs
+			for cidr, dstSet := range aclCIDRMap {
+				if cidr.Contains(machineIP) {
+					// match source and all destination
+					if dstSet.CheckKey(SimpleIpContent{"*"}) {
+						peers[peer.ID] = peer
+						continue PeerLoop
+					}
+					// match source and destination
+					for _, ip := range peerIPs {
+						if dstSet.CheckKey(SimpleIpContent{ip}) {
+							peers[peer.ID] = peer
+							continue PeerLoop
+						}
+						for _, dst := range dstSet.GetKeys() {
+							if dst.Contains(ip) {
+								peers[peer.ID] = peer
+								continue PeerLoop
+							}
+						}
+					}
+				}
+			}
 		}
 
 		for _, peerIP := range peerIPs {
-			if dstMap, ok := aclPeerCacheMap[peerIP]; ok {
+			// check weither peer's Ip in the simple ip/*/other map
+			if dstSet, ok := aclSimpleMap[peerIP]; ok {
 				// match source and all destination
-				if _, ok := dstMap["*"]; ok {
+				if dstSet.CheckKey(SimpleIpContent{"*"}) {
 					peers[peer.ID] = peer
-					continue PeersLoop
+					continue PeerLoop
 				}
-
-				// match return path
-				for _, machineIP := range machineIPs {
-					for dst := range dstMap {
-						_, cdr, _ := net.ParseCIDR(dst)
-						ip := net.ParseIP(machineIP)
-						if dst == machineIP || (cdr != nil && ip != nil && cdr.Contains(ip)) {
+				// match source and destination
+				for _, ip := range machineIPs {
+					if dstSet.CheckKey(SimpleIpContent{ip}) {
+						peers[peer.ID] = peer
+						continue PeerLoop
+					}
+					for _, dst := range dstSet.GetKeys() {
+						if dst.Contains(ip) {
 							peers[peer.ID] = peer
-							continue PeersLoop
+							continue PeerLoop
+						}
+					}
+				}
+			}
+
+			// check weither peer's Ip in range of CIDRs
+			for cidr, dstSet := range aclCIDRMap {
+				if cidr.Contains(peerIP) {
+					for _, ip := range machineIPs {
+						if dstSet.CheckKey(SimpleIpContent{ip}) {
+							peers[peer.ID] = peer
+							continue PeerLoop
+						}
+						for _, dst := range dstSet.GetKeys() {
+							if dst.Contains(ip) {
+								peers[peer.ID] = peer
+								continue PeerLoop
+							}
 						}
 					}
 				}
 			}
 		}
 		invalidNodeIDs = append(invalidNodeIDs, tailcfg.NodeID(peer.ID))
-		/*
-			for _, rule := range rules {
-				// normal dst ip slice
-				var dst []string
-				// dst ip slice for autogroup
-				for _, d := range rule.DstPorts {
-					dst = append(dst, d.IP)
-				}
-				peerIPs := peer.IPAddresses.ToStringSlice()
-				if matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					[]string{"*"},
-					[]string{"*"},
-				) || // match all source and all destination
-					matchSourceAndDestinationWithRule(
-						rule.SrcIPs,
-						dst,
-						machineIPs,
-						[]string{"*"},
-					) || // match machine source and all destination
-					matchSourceAndDestinationWithRule(
-						rule.SrcIPs,
-						dst,
-						[]string{"*"},
-						peerIPs,
-					) || // match all source and peer destination
-					matchSourceAndDestinationWithRule(
-						rule.SrcIPs,
-						dst,
-						[]string{"*"},
-						machineIPs,
-					) || // match all sources and machine destination
-					matchSourceAndDestinationWithRule(
-						rule.SrcIPs,
-						dst,
-						machineIPs,
-						peerIPs,
-					) || // match source and destination
-					matchSourceAndDestinationWithRule(
-						rule.SrcIPs,
-						dst,
-						peerIPs,
-						machineIPs,
-					) { // match return path
-					peers[peer.ID] = peer
-				} else {
-					invalidNodeIDs = append(invalidNodeIDs, tailcfg.NodeID(peer.ID))
-				}
-			}
-		*/
 	}
 
 	authorizedPeers := make([]Machine, 0, len(peers))
@@ -439,7 +437,7 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 
 			return Machines{}, []tailcfg.NodeID{}, err
 		}
-		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, org.AclPeersCacheMap, org.AutoGroupMap, machine)
+		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, org.AclSimpleMap, org.AclCIDRMap, org.AutoGroupMap, machine)
 	} else {
 		peers, err = h.ListPeers(machine)
 		if err != nil {

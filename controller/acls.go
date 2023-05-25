@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -15,7 +16,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
 	"github.com/tailscale/hujson"
-	"go4.org/netipx"
 	"gopkg.in/yaml.v3"
 	"tailscale.com/envknob"
 	"tailscale.com/tailcfg"
@@ -210,63 +210,38 @@ func (h *Mirage) UpdateACLRules(userId int64) error {
 	return nil
 }
 
-func (h *Mirage) generateACLPeerCacheMap(rules []tailcfg.FilterRule) (aclCachePeerMap map[string]map[string]struct{}) {
-	aclCachePeerMap = map[string]map[string]struct{}{}
+func (h *Mirage) generateACLPeerCache(rules []tailcfg.FilterRule) (aclSimpleMap map[string]*UtilsSet[IpContent], aclCIDRMap map[*CIDRIpContent]*UtilsSet[IpContent]) {
+	aclSimpleMap = map[string]*UtilsSet[IpContent]{}
+	aclCIDRMap = map[*CIDRIpContent]*UtilsSet[IpContent]{}
 	for _, rule := range rules {
 		for _, srcIP := range rule.SrcIPs {
-			for _, ip := range expandACLPeerAddr(srcIP) {
-				if data, ok := aclCachePeerMap[ip]; ok {
-					for _, dstPort := range rule.DstPorts {
-						data[dstPort.IP] = struct{}{}
-					}
-				} else {
-					dstPortsMap := make(map[string]struct{})
-					for _, dstPort := range rule.DstPorts {
-						dstPortsMap[dstPort.IP] = struct{}{}
-					}
-					aclCachePeerMap[ip] = dstPortsMap
+			var keyStr string
+			var keyCIDR *CIDRIpContent
+			if ip, err := netip.ParseAddr(srcIP); err == nil {
+				keyStr = ip.String()
+			} else if _, ipnet, err := net.ParseCIDR(srcIP); err == nil {
+				keyCIDR = &CIDRIpContent{ipnet}
+			} else {
+				keyStr = srcIP
+			}
+			if keyStr != "" {
+				if aclSimpleMap[keyStr] == nil {
+					aclSimpleMap[keyStr] = NewUtilsSet[IpContent]()
+				}
+				for _, dstPort := range rule.DstPorts {
+					aclSimpleMap[keyStr].SetKey(GetIpContentFromStr(dstPort.IP))
+				}
+			} else if keyCIDR != nil && keyCIDR.IPNet != nil {
+				if aclCIDRMap[keyCIDR] == nil {
+					aclCIDRMap[keyCIDR] = NewUtilsSet[IpContent]()
+				}
+				for _, dstPort := range rule.DstPorts {
+					aclCIDRMap[keyCIDR].SetKey(GetIpContentFromStr(dstPort.IP))
 				}
 			}
 		}
 	}
-
-	log.Trace().Interface("ACL Cache Map", aclCachePeerMap).Msg("ACL Peer Cache Map generated")
 	return
-}
-
-// expandACLPeerAddr takes a "tailcfg.FilterRule" "IP" and expands it into
-// something our cache logic can look up, which is "*" or single IP addresses.
-// This is probably quite inefficient, but it is a result of
-// "make it work, then make it fast", and a lot of the ACL stuff does not
-// work, but people have tried to make it fast.
-func expandACLPeerAddr(srcIP string) []string {
-	if ip, err := netip.ParseAddr(srcIP); err == nil {
-		return []string{ip.String()}
-	}
-
-	if cidr, err := netip.ParsePrefix(srcIP); err == nil {
-		addrs := []string{}
-
-		ipRange := netipx.RangeOfPrefix(cidr)
-
-		from := ipRange.From()
-		too := ipRange.To()
-
-		if from == too {
-			return []string{from.String()}
-		}
-
-		for from != too && from.Less(too) {
-			addrs = append(addrs, from.String())
-			from = from.Next()
-		}
-		addrs = append(addrs, too.String()) // Add the last IP address in the range
-
-		return addrs
-	}
-
-	// probably "*" or other string based "IP"
-	return []string{srcIP}
 }
 
 func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) error {
@@ -291,7 +266,7 @@ func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) error {
 	log.Trace().Interface("ACL", rules).Msg("ACL rules generated")
 	org.AclRules = rules
 	org.AutoGroupMap = autogroupMap
-	org.AclPeersCacheMap = h.generateACLPeerCacheMap(rules)
+	org.AclSimpleMap, org.AclCIDRMap = h.generateACLPeerCache(rules)
 
 	if featureEnableSSH() {
 		sshRules, err := h.generateSSHRulesOfOrg(machines, userId, org)

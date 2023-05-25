@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -408,5 +409,49 @@ func ShadowClone[K any](in K) K {
 	} else {
 		// in is not a pointer, so use it directly
 		return in
+	}
+}
+
+type IpContent interface {
+	Contains(string) bool
+	String() string
+}
+
+type SimpleIpContent struct {
+	string
+}
+
+type CIDRIpContent struct {
+	*net.IPNet
+}
+
+func (c SimpleIpContent) Contains(s string) bool {
+	return c.string == s
+}
+
+func (c SimpleIpContent) String() string {
+	return c.string
+}
+
+func (c CIDRIpContent) Contains(s string) bool {
+	if c.IPNet == nil {
+		return false
+	}
+	ip := net.ParseIP(s)
+	return c.IPNet.Contains(ip)
+}
+func (c CIDRIpContent) String() string {
+	if c.IPNet == nil {
+		return ""
+	}
+	return c.IPNet.String()
+}
+func GetIpContentFromStr(s string) IpContent {
+	if ip, err := netip.ParseAddr(s); err == nil {
+		return SimpleIpContent{ip.String()}
+	} else if _, ipnet, err := net.ParseCIDR(s); err == nil {
+		return CIDRIpContent{ipnet}
+	} else {
+		return SimpleIpContent{s}
 	}
 }
