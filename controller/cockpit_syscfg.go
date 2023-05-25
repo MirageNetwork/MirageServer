@@ -36,6 +36,7 @@ type SysConfig struct {
 	//	OidcConfig OIDCConfig
 	DexSecret string
 
+	DingtalkCfg  DingtalkCfg
 	MicrosoftCfg MicrosoftCfg
 	GithubCfg    GithubCfg
 	GoogleCfg    GoogleCfg
@@ -66,6 +67,7 @@ type GeneralCfg struct {
 	SMSConfig   SMSConfig `json:"sms"`
 	IDaaSConfig ALIConfig `json:"idaas"`
 
+	DingtalkCfg  DingtalkCfg  `json:"dingtalk"`
 	MicrosoftCfg MicrosoftCfg `json:"microsoft"`
 	GithubCfg    GithubCfg    `json:"github"`
 	GoogleCfg    GoogleCfg    `json:"google"`
@@ -92,6 +94,7 @@ func (s *SysConfig) toGeneralCfg() GeneralCfg {
 
 		SMSConfig:    s.SMSConfig,
 		IDaaSConfig:  s.IdaasConfig,
+		DingtalkCfg:  s.DingtalkCfg,
 		MicrosoftCfg: s.MicrosoftCfg,
 		GithubCfg:    s.GithubCfg,
 		GoogleCfg:    s.GoogleCfg,
@@ -107,6 +110,9 @@ func (s *SysConfig) toSrvConfig() (*Config, error) {
 		return nil, err
 	}
 	idps := []string{}
+	if s.DingtalkCfg.ClientID != "" && s.DingtalkCfg.ClientSecret != "" {
+		idps = append(idps, "Dingtalk")
+	}
 	if s.MicrosoftCfg.ClientID != "" && s.MicrosoftCfg.ClientSecret != "" {
 		idps = append(idps, "Microsoft")
 	}
@@ -169,6 +175,27 @@ func (ac *AdminCredential) Scan(value interface{}) error {
 
 func (ac AdminCredential) Value() (driver.Value, error) {
 	bytes, err := json.Marshal(ac)
+	return string(bytes), err
+}
+
+type DingtalkCfg struct {
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+}
+
+func (dingCfg *DingtalkCfg) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, dingCfg)
+	case string:
+		return json.Unmarshal([]byte(v), dingCfg)
+	default:
+		return fmt.Errorf("cannot parse dingtalk config: unexpected data type %T", value)
+	}
+}
+
+func (dingCfg DingtalkCfg) Value() (driver.Value, error) {
+	bytes, err := json.Marshal(dingCfg)
 	return string(bytes), err
 }
 

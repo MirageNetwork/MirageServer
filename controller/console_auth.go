@@ -73,7 +73,7 @@ func (h *Mirage) doLogin(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, stateCodeCookie)
 
 	switch provider {
-	case "Github", "Microsoft", "Google", "Apple", "Ali":
+	case "Dingtalk", "Github", "Microsoft", "Google", "Apple", "Ali":
 		h.doDexLogin(w, r, stateCode, provider)
 	case "WXScan":
 		h.doWXScanLogin(w, r, stateCode)
@@ -500,7 +500,7 @@ func (h *Mirage) oauthResponse(
 	userDisName := ""
 	orgName := ""
 	switch qStateItem.provider {
-	case "Microsoft", "Google", "Github", "Apple", "Ali":
+	case "Dingtalk", "Microsoft", "Google", "Github", "Apple", "Ali":
 		oauth2Token, err := h.oauth2Config.Exchange(r.Context(), code)
 		if err != nil {
 			h.ErrMessage(w, r, 403, "三方登录认证错误")

@@ -6,6 +6,7 @@ import (
 
 	gosundheit "github.com/AppsFlyer/go-sundheit"
 	"github.com/dexidp/dex/connector/apple"
+	"github.com/dexidp/dex/connector/dingtalk"
 	"github.com/dexidp/dex/connector/github"
 	"github.com/dexidp/dex/connector/google"
 	"github.com/dexidp/dex/connector/microsoft"
@@ -20,6 +21,12 @@ func (s *SysConfig) toDexConfig() (*server.Config, error) {
 		Config: &dexSQL.SQLite3{
 			File: AbsolutePathFromConfigPath(DatabasePath), //DexDBPath),
 		},
+	}
+	dingtalkCfg := &dingtalk.Config{
+		AppID:       s.DingtalkCfg.ClientID,
+		AppSecret:   s.DingtalkCfg.ClientSecret,
+		RedirectURI: "https://" + s.ServerURL + "/issuer/callback",
+		//	Scopes:       []string{"openid"}, //, "profile", "email"},
 	}
 	msConnCfg := &microsoft.Config{
 		ClientID:     s.MicrosoftCfg.ClientID,
@@ -67,12 +74,17 @@ func (s *SysConfig) toDexConfig() (*server.Config, error) {
 		},
 	}})
 
-	storageConnectors := make([]dexStorage.Connector, 4)
+	storageConnectors := make([]dexStorage.Connector, 5)
 	for i, c := range []Connector{{
 		ID:     "Microsoft",
 		Name:   "Microsoft",
 		Type:   "microsoft",
 		Config: msConnCfg,
+	}, {
+		ID:     "Dingtalk",
+		Name:   "Dingtalk",
+		Type:   "dingtalk",
+		Config: dingtalkCfg,
 	}, {
 		ID:     "Github",
 		Name:   "Github",

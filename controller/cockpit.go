@@ -778,6 +778,26 @@ func (c *Cockpit) SetSettingGeneral(
 			c.doAPIResponse(w, "更新系统配置失败", nil)
 			return
 		}
+	case "set-dingtalk":
+		DingInt, ok := reqData["Dingtalk"].(map[string]interface{})
+		if !ok {
+			c.doAPIResponse(w, "用户请求钉钉解析失败", nil)
+			return
+		}
+		DingCfg := DingtalkCfg{
+			ClientID:     DingInt["client_id"].(string),
+			ClientSecret: DingInt["client_secret"].(string),
+		}
+		sysCfg := c.GetSysCfg()
+		if sysCfg == nil {
+			c.doAPIResponse(w, "获取系统配置失败", nil)
+			return
+		}
+		sysCfg.DingtalkCfg = DingCfg
+		if err := c.db.Save(sysCfg).Error; err != nil {
+			c.doAPIResponse(w, "更新系统配置失败", nil)
+			return
+		}
 	case "set-microsoft":
 		MSInt, ok := reqData["Microsoft"].(map[string]interface{})
 		if !ok {
