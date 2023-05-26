@@ -64,6 +64,7 @@ func (h *Mirage) generateMapResponse(
 
 		return nil, err
 	}
+	machine.User.Organization = *org
 	// in this function, we get the peers and the organization(with aclRules updated), organization was set to field :machine.User.Organization
 	peers, invalidNodeIDs, err := h.getValidPeers(machine)
 	if invalidNodeIDs != nil {
