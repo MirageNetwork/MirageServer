@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -46,26 +45,6 @@ const (
 	AutoGroupSelf   = "autogroup:self"
 	AutoGroupOwner  = "autogroup:owner"
 )
-
-// 需要在获取peers时候特殊处理的autogroup类型
-var AutoGroupMap = map[string]struct{}{
-	AutoGroupSelf: {},
-}
-
-var DefaultEmptyAclPolicy ACLPolicy = ACLPolicy{
-	ACLs: []ACL{{
-		Action:       "accept",
-		Protocol:     "",
-		Sources:      []string{"*"},
-		Destinations: []string{"*:*"},
-	}},
-}
-var DefaultEmptyAcls []ACL = []ACL{{
-	Action:       "accept",
-	Protocol:     "",
-	Sources:      []string{"*"},
-	Destinations: []string{"*:*"},
-}}
 
 // For some reason golang.org/x/net/internal/iana is an internal package.
 const (
@@ -210,68 +189,27 @@ func (h *Mirage) UpdateACLRules(userId int64) error {
 	return nil
 }
 
-func (h *Mirage) generateACLPeerCache(rules []tailcfg.FilterRule) (aclSimpleMap map[string]*UtilsSet[IpContent], aclCIDRMap map[*CIDRIpContent]*UtilsSet[IpContent]) {
-	aclSimpleMap = map[string]*UtilsSet[IpContent]{}
-	aclCIDRMap = map[*CIDRIpContent]*UtilsSet[IpContent]{}
-	for _, rule := range rules {
-		for _, srcIP := range rule.SrcIPs {
-			var keyStr string
-			var keyCIDR *CIDRIpContent
-			if ip, err := netip.ParseAddr(srcIP); err == nil {
-				keyStr = ip.String()
-			} else if _, ipnet, err := net.ParseCIDR(srcIP); err == nil {
-				keyCIDR = &CIDRIpContent{ipnet}
-			} else {
-				keyStr = srcIP
-			}
-			if keyStr != "" {
-				if aclSimpleMap[keyStr] == nil {
-					aclSimpleMap[keyStr] = NewUtilsSet[IpContent]()
-				}
-				for _, dstPort := range rule.DstPorts {
-					aclSimpleMap[keyStr].SetKey(GetIpContentFromStr(dstPort.IP))
-				}
-			} else if keyCIDR != nil && keyCIDR.IPNet != nil {
-				if aclCIDRMap[keyCIDR] == nil {
-					aclCIDRMap[keyCIDR] = NewUtilsSet[IpContent]()
-				}
-				for _, dstPort := range rule.DstPorts {
-					aclCIDRMap[keyCIDR].SetKey(GetIpContentFromStr(dstPort.IP))
-				}
-			}
-		}
-	}
-	return
-}
-
-func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) error {
+func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) (bool, error) {
+	var enableSelf bool
 	if org == nil || org.ID == 0 {
-		return ErrOrgNotFound
+		return enableSelf, ErrOrgNotFound
 	}
 	machines, err := h.ListMachinesByOrgID(org.ID)
 	if err != nil {
-		return err
+		return enableSelf, err
 	}
 	aclPolicy := org.AclPolicy
-	if org.AclPolicy == nil {
-		aclPolicy = &DefaultEmptyAclPolicy
-	} else if len(org.AclPolicy.ACLs) == 0 {
-		aclPolicy = ShadowClone(org.AclPolicy)
-		aclPolicy.ACLs = DefaultEmptyAcls
-	}
-	rules, autogroupMap, err := h.generateACLRules(machines, userId, *aclPolicy, h.cfg.OIDC.StripEmaildomain)
+	rules, enableSelf, err := h.generateACLRules(machines, userId, *aclPolicy, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
-		return err
+		return enableSelf, err
 	}
 	log.Trace().Interface("ACL", rules).Msg("ACL rules generated")
 	org.AclRules = rules
-	org.AutoGroupMap = autogroupMap
-	org.AclSimpleMap, org.AclCIDRMap = h.generateACLPeerCache(rules)
 
 	if featureEnableSSH() {
 		sshRules, err := h.generateSSHRulesOfOrg(machines, userId, org)
 		if err != nil {
-			return err
+			return enableSelf, err
 		}
 		log.Trace().Interface("SSH", sshRules).Msg("SSH rules generated")
 		if org.SshPolicy == nil {
@@ -282,7 +220,7 @@ func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) error {
 		log.Info().Msg("SSH ACLs has been defined, but MIRAGE_EXPERIMENTAL_FEATURE_SSH is not enabled, this is a unstable feature, check docs before activating")
 	}
 
-	return nil
+	return enableSelf, nil
 }
 
 func (h *Mirage) generateSSHRulesOfOrg(machines []Machine, userId int64, org *Organization) ([]*tailcfg.SSHRule, error) {
@@ -290,12 +228,6 @@ func (h *Mirage) generateSSHRulesOfOrg(machines []Machine, userId int64, org *Or
 		return nil, ErrOrgNotFound
 	}
 	a := org.AclPolicy
-	if a == nil {
-		a = &DefaultEmptyAclPolicy
-	} else if len(a.ACLs) == 0 {
-		a = ShadowClone(org.AclPolicy)
-		a.ACLs = DefaultEmptyAcls
-	}
 
 	rules := []*tailcfg.SSHRule{}
 
@@ -382,12 +314,12 @@ func (h *Mirage) generateACLRules(
 	userId int64,
 	aclPolicy ACLPolicy,
 	stripEmaildomain bool,
-) ([]tailcfg.FilterRule, map[string]struct{}, error) {
+) ([]tailcfg.FilterRule, bool, error) {
 	rules := []tailcfg.FilterRule{}
-	agMap := map[string]struct{}{}
+	enableSelf := false
 	for index, acl := range aclPolicy.ACLs {
 		if acl.Action != "accept" {
-			return nil, agMap, errInvalidAction
+			return nil, enableSelf, errInvalidAction
 		}
 
 		protocols, needsWildcard, err := parseProtocol(acl.Protocol)
@@ -395,7 +327,7 @@ func (h *Mirage) generateACLRules(
 			log.Error().
 				Msgf("Error parsing ACL %d. protocol unknown %s", index, acl.Protocol)
 
-			return nil, agMap, err
+			return nil, enableSelf, err
 		}
 
 		destPorts := []tailcfg.NetPortRange{}
@@ -412,7 +344,7 @@ func (h *Mirage) generateACLRules(
 				log.Error().
 					Msgf("Error parsing ACL %d, Destination %d", index, innerIndex)
 
-				return nil, agMap, err
+				return nil, enableSelf, err
 			}
 			destPorts = append(destPorts, dests...)
 		}
@@ -425,14 +357,14 @@ func (h *Mirage) generateACLRules(
 					srcIPs = append(srcIPs, dest.IP)
 				}
 			*/
-			// src 按照autogroup:self的规则来解析
-			agMap[AutoGroupSelf] = struct{}{}
+			// src 按照autogroup:self的规则来解析,目前先支持*即全体user,之后可以在src里面加上对于作用域的选择
+			enableSelf = true
 			srcs, err := h.generateACLPolicySrc(machines, userId, aclPolicy, AutoGroupSelf, stripEmaildomain)
 			if err != nil {
 				log.Error().
 					Msgf("Error parsing ACL %d, Source %d", index, 0)
 
-				return nil, agMap, err
+				return nil, enableSelf, err
 			}
 			srcIPs = append(srcIPs, srcs...)
 		} else {
@@ -442,7 +374,7 @@ func (h *Mirage) generateACLRules(
 					log.Error().
 						Msgf("Error parsing ACL %d, Source %d", index, innerIndex)
 
-					return nil, agMap, err
+					return nil, enableSelf, err
 				}
 				srcIPs = append(srcIPs, srcs...)
 			}
@@ -454,7 +386,7 @@ func (h *Mirage) generateACLRules(
 		})
 	}
 
-	return rules, agMap, nil
+	return rules, enableSelf, nil
 }
 
 func (h *Mirage) generateSSHRules(userId int64) ([]*tailcfg.SSHRule, error) {
@@ -794,6 +726,9 @@ func (h *Mirage) expandAlias(
 				return
 			}
 			for _, node := range nodes {
+				if len(node.ForcedTags) > 0 {
+					continue
+				}
 				ips = append(ips, node.IPAddresses.ToStringSlice()...)
 				if autoAddRoute {
 					ips = append(ips, h.expandMachineRoutes(node)...)

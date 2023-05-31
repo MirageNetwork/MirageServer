@@ -10,7 +10,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -370,21 +369,18 @@ func GetShortId(longID int64) string {
 }
 
 type UtilsSet[K comparable] struct {
-	slice []K
-	set   map[K]struct{}
+	set map[K]struct{}
 }
 
 func NewUtilsSet[K comparable]() *UtilsSet[K] {
 	ret := &UtilsSet[K]{}
 	ret.set = make(map[K]struct{})
-	ret.slice = make([]K, 0)
 	return ret
 }
 
 func (s *UtilsSet[K]) SetKey(key K) {
 	if _, ok := s.set[key]; !ok {
 		s.set[key] = struct{}{}
-		s.slice = append(s.slice, key)
 	}
 }
 
@@ -394,64 +390,9 @@ func (s *UtilsSet[K]) CheckKey(key K) bool {
 }
 
 func (s *UtilsSet[K]) GetKeys() []K {
-	return s.slice
-}
-func ShadowClone[K any](in K) K {
-	if reflect.TypeOf(in).Kind() == reflect.Ptr { // check if in is a pointer
-		val := reflect.ValueOf(in).Elem() // get the value pointed to by the pointer
-		// use val here to work with the value pointed to by the pointer
-
-		newPtr := reflect.New(reflect.TypeOf(in).Elem()) // create a new pointer to K
-		newVal := newPtr.Elem()                          // get the value pointed to by the new pointer
-		newVal.Set(val)                                  // copy the input's content to the new value
-
-		return newPtr.Interface().(K) // return the new pointer as type K
-	} else {
-		// in is not a pointer, so use it directly
-		return in
+	slice := []K{}
+	for k := range s.set {
+		slice = append(slice, k)
 	}
-}
-
-type IpContent interface {
-	Contains(string) bool
-	String() string
-}
-
-type SimpleIpContent struct {
-	string
-}
-
-type CIDRIpContent struct {
-	*net.IPNet
-}
-
-func (c SimpleIpContent) Contains(s string) bool {
-	return c.string == s
-}
-
-func (c SimpleIpContent) String() string {
-	return c.string
-}
-
-func (c CIDRIpContent) Contains(s string) bool {
-	if c.IPNet == nil {
-		return false
-	}
-	ip := net.ParseIP(s)
-	return c.IPNet.Contains(ip)
-}
-func (c CIDRIpContent) String() string {
-	if c.IPNet == nil {
-		return ""
-	}
-	return c.IPNet.String()
-}
-func GetIpContentFromStr(s string) IpContent {
-	if ip, err := netip.ParseAddr(s); err == nil {
-		return SimpleIpContent{ip.String()}
-	} else if _, ipnet, err := net.ParseCIDR(s); err == nil {
-		return CIDRIpContent{ipnet}
-	} else {
-		return SimpleIpContent{s}
-	}
+	return slice
 }

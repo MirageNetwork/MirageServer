@@ -3,12 +3,9 @@ package controller
 import (
 	"context"
 	"fmt"
-	"math"
 	"net/http"
-	"sync/atomic"
 	"time"
 
-	"github.com/puzpuzpuz/xsync/v2"
 	"github.com/rs/zerolog/log"
 	"tailscale.com/tailcfg"
 )
@@ -20,10 +17,6 @@ const (
 type contextKey string
 
 const machineNameContextKey = contextKey("machineName")
-
-var globalUpdateTs int64
-
-var orgUpdateTsMap = xsync.NewIntegerMapOf[int64, int64]()
 
 // handlePollCommon is the common code for the Noise protocols to
 // managed the poll loop.
@@ -183,8 +176,6 @@ func (h *Mirage) handlePollCommon(
 		// It sounds like we should update the nodes when we have received a endpoint update
 		// even tho the comments in the tailscale code dont explicitly say so.
 		updateChan <- struct{}{}
-		atomic.StoreInt64(&globalUpdateTs, time.Now().UnixMilli())
-		orgUpdateTsMap.Store(machine.User.OrganizationID, time.Now().UnixMilli())
 
 		return
 	} else if mapRequest.OmitPeers && mapRequest.Stream {
@@ -212,8 +203,6 @@ func (h *Mirage) handlePollCommon(
 		Str("machine", machine.Hostname).
 		Msg("Notifying peers")
 	updateChan <- struct{}{}
-	atomic.StoreInt64(&globalUpdateTs, time.Now().UnixMilli())
-	orgUpdateTsMap.Store(machine.User.OrganizationID, time.Now().UnixMilli())
 
 	h.pollNetMapStream(
 		writer,
@@ -595,9 +584,6 @@ func (h *Mirage) scheduledPollWorker(
 ) {
 	keepAliveTicker := time.NewTicker(keepAliveInterval)
 	updateCheckerTicker := time.NewTicker(NodeUpdateCheckInterval)
-	updateShortTicker := time.NewTicker(100 * time.Millisecond)
-	var lastTs int64
-	defer updateShortTicker.Stop()
 
 	defer closeChanWithLog(
 		updateChan,
@@ -646,22 +632,6 @@ func (h *Mirage) scheduledPollWorker(
 			case <-ctx.Done():
 				return
 			}
-		case ti := <-updateShortTicker.C:
-			ts := ti.UnixMilli()
-			if math.Abs(float64(atomic.LoadInt64(&globalUpdateTs)-lastTs)) <= 100 {
-				if updateTs, ok := orgUpdateTsMap.Load(machine.User.OrganizationID); ok && math.Abs(float64(updateTs-lastTs)) <= 100 {
-					log.Debug().
-						Str("func", "detectUpdate").
-						Str("machine", machine.Hostname).
-						Msg("Sending update request")
-					select {
-					case updateChan <- struct{}{}:
-					case <-ctx.Done():
-						return
-					}
-				}
-			}
-			lastTs = ts
 		}
 	}
 }

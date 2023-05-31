@@ -37,15 +37,11 @@ type Organization struct {
 	Nameservers    StringList
 	SplitDns       SplitDNS
 	AclPolicy      *ACLPolicy
-	AclRules       []tailcfg.FilterRule                    `gorm:"-"`
-	AclSimpleMap   map[string]*UtilsSet[IpContent]         `gorm:"-"`
-	AclCIDRMap     map[*CIDRIpContent]*UtilsSet[IpContent] `gorm:"-"`
-	// 可以在过滤peer阶段提前处理的autogroup
-	AutoGroupMap  map[string]struct{} `gorm:"-"`
-	SshPolicy     *tailcfg.SSHPolicy  `gorm:"-"`
-	NaviBanList   NaviBanList
-	NaviDeployKey string
-	NaviDeployPub string
+	AclRules       []tailcfg.FilterRule `gorm:"-"`
+	SshPolicy      *tailcfg.SSHPolicy   `gorm:"-"`
+	NaviBanList    NaviBanList
+	NaviDeployKey  string
+	NaviDeployPub  string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -132,7 +128,18 @@ func (m *Mirage) CreateOrgnaizationInTx(tx *gorm.DB, name, provider string) (*Or
 	org.Name = name
 	org.Provider = provider
 	org.ExpiryDuration = DefaultExpireTime
-	org.AclPolicy = &ACLPolicy{}
+	org.AclPolicy = &ACLPolicy{
+		Groups:    make(Groups, 0),
+		Hosts:     make(Hosts, 0),
+		TagOwners: make(TagOwners, 0),
+		ACLs:      make([]ACL, 0),
+		Tests:     make([]ACLTest, 0),
+		AutoApprovers: AutoApprovers{
+			Routes:   make(map[string][]string, 0),
+			ExitNode: make([]string, 0),
+		},
+		SSHs: make([]SSH, 0),
+	}
 
 	//cgao6: 添加组织幻域域名roll生成
 	newMagicDNSDomain, err := m.GenNewMagicDNSDomain(tx)

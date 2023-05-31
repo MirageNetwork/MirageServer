@@ -54,7 +54,8 @@ func (h *Mirage) generateMapResponse(
 
 		return nil, err
 	}
-	err = h.UpdateACLRulesOfOrg(org, machine.UserID)
+	// enableSelf 目前支持的是全作用域,即*=全体用户
+	enableSelf, err := h.UpdateACLRulesOfOrg(org, machine.UserID)
 	if err != nil {
 		log.Error().
 			Caller().
@@ -64,9 +65,9 @@ func (h *Mirage) generateMapResponse(
 
 		return nil, err
 	}
+	// organization be set to field :machine.User.Organization
 	machine.User.Organization = *org
-	// in this function, we get the peers and the organization(with aclRules updated), organization was set to field :machine.User.Organization
-	peers, invalidNodeIDs, err := h.getValidPeers(machine)
+	peers, invalidNodeIDs, err := h.getValidPeers(machine, enableSelf)
 	if invalidNodeIDs != nil {
 		log.Trace().Msg("Should ignore invalidNodeIDs for current")
 	}
