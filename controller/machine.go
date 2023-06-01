@@ -214,7 +214,7 @@ func getFilteredByACLPeers(
 			continue
 		}
 		// 处理self情况:如果启用了self且没有tag,直接加入peer列表
-		if enableSelf && len(peer.ForcedTags) == 0 && len(machine.ForcedTags) == 0 {
+		if enableSelf && peer.UserID == machine.UserID && len(peer.ForcedTags) == 0 && len(machine.ForcedTags) == 0 {
 			peers[peer.ID] = peer
 			continue
 		}
