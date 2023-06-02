@@ -651,6 +651,38 @@ func (h *Mirage) expandAlias(
 		Str("alias", alias).
 		Msg("Expanding")
 
+	// autogroup
+	if strings.HasPrefix(alias, AutoGroupPrefix) {
+		// 处理 autogroup:self
+		if alias == AutoGroupSelf {
+			nodes, err := h.ListMachinesByUser(userId)
+			if err != nil {
+				resErr = err
+				return
+			}
+			for _, node := range nodes {
+				if len(node.ForcedTags) > 0 {
+					continue
+				}
+				ips = append(ips, node.IPAddresses.ToStringSlice()...)
+				if autoAddRoute {
+					ips = append(ips, h.expandMachineRoutes(node)...)
+				}
+			}
+			// 处理 autogroup:owner
+		} else if alias == AutoGroupOwner {
+			for _, machine := range machines {
+				if machine.User.Role == RoleOwner {
+					ips = append(ips, machine.IPAddresses.ToStringSlice()...)
+					if autoAddRoute {
+						ips = append(ips, h.expandMachineRoutes(machine)...)
+					}
+				}
+			}
+		}
+		return
+	}
+
 	if strings.HasPrefix(alias, "group:") {
 		users, err := expandGroup(aclPolicy, alias, stripEmailDomain)
 		if err != nil {
@@ -713,38 +745,6 @@ func (h *Mirage) expandAlias(
 			}
 		}
 
-		return
-	}
-
-	// autogroup
-	if strings.HasPrefix(alias, AutoGroupPrefix) {
-		// 处理 autogroup:self
-		if alias == AutoGroupSelf {
-			nodes, err := h.ListMachinesByUser(userId)
-			if err != nil {
-				resErr = err
-				return
-			}
-			for _, node := range nodes {
-				if len(node.ForcedTags) > 0 {
-					continue
-				}
-				ips = append(ips, node.IPAddresses.ToStringSlice()...)
-				if autoAddRoute {
-					ips = append(ips, h.expandMachineRoutes(node)...)
-				}
-			}
-			// 处理 autogroup:owner
-		} else if alias == AutoGroupOwner {
-			for _, machine := range machines {
-				if machine.User.Role == RoleOwner {
-					ips = append(ips, machine.IPAddresses.ToStringSlice()...)
-					if autoAddRoute {
-						ips = append(ips, h.expandMachineRoutes(machine)...)
-					}
-				}
-			}
-		}
 		return
 	}
 
