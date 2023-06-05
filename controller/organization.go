@@ -136,7 +136,7 @@ func (m *Mirage) CreateOrgnaizationInTx(tx *gorm.DB, name, provider string) (*Or
 			{
 				Action:       "accept",
 				Protocol:     "",
-				Sources:      []string{""},
+				Sources:      []string{"*"},
 				Destinations: []string{"*:*"},
 			},
 		},
