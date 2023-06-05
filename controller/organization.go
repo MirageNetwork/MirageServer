@@ -132,8 +132,15 @@ func (m *Mirage) CreateOrgnaizationInTx(tx *gorm.DB, name, provider string) (*Or
 		Groups:    make(Groups, 0),
 		Hosts:     make(Hosts, 0),
 		TagOwners: make(TagOwners, 0),
-		ACLs:      make([]ACL, 0),
-		Tests:     make([]ACLTest, 0),
+		ACLs: []ACL{
+			{
+				Action:       "accept",
+				Protocol:     "",
+				Sources:      []string{""},
+				Destinations: []string{"*:*"},
+			},
+		},
+		Tests: make([]ACLTest, 0),
 		AutoApprovers: AutoApprovers{
 			Routes:   make(map[string][]string, 0),
 			ExitNode: make([]string, 0),
