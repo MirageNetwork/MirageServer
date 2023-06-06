@@ -317,6 +317,7 @@ func (h *Mirage) generateACLRules(
 ) ([]tailcfg.FilterRule, bool, error) {
 	rules := []tailcfg.FilterRule{}
 	enableSelf := false
+Loop:
 	for index, acl := range aclPolicy.ACLs {
 		if acl.Action != "accept" {
 			return nil, enableSelf, errInvalidAction
@@ -333,22 +334,28 @@ func (h *Mirage) generateACLRules(
 		if containsSubStr(acl.Destinations, AutoGroupSelf) {
 			if containsStr(acl.Sources, "*") {
 				enableSelf = true
-			} else if len(acl.Sources) > 0 && strings.HasPrefix(acl.Sources[0], "group:") {
-				users, err := expandGroup(aclPolicy, acl.Sources[0], stripEmaildomain)
-				if err != nil {
-					log.Error().
-						Msgf("Error expand group %s ", acl.Sources[0])
-					continue
-				}
-				if containsStr(users, user.Name) {
-					enableSelf = true
-				} else {
-					continue
-				}
-			} else if containsStr(acl.Sources, user.Name) {
-				enableSelf = true
 			} else {
-				continue
+			LoopForSelf:
+				for _, alias := range acl.Sources {
+					if strings.HasPrefix(alias, "group:") {
+						users, err := expandGroup(aclPolicy, acl.Sources[0], stripEmaildomain)
+						if err != nil {
+							log.Error().
+								Msgf("Error expand group %s ", acl.Sources[0])
+							continue LoopForSelf
+						}
+						if containsStr(users, user.Name) {
+							enableSelf = true
+							break LoopForSelf
+						}
+					} else if alias == user.Name {
+						enableSelf = true
+						break LoopForSelf
+					}
+				}
+			}
+			if !enableSelf {
+				continue Loop
 			}
 		}
 		destPorts := []tailcfg.NetPortRange{}
@@ -971,22 +978,19 @@ func expandGroup(
 			errInvalidGroup,
 		)
 	}
-	for _, group := range aclGroups {
-		if strings.HasPrefix(group, "group:") {
+	for _, name := range aclGroups {
+		if strings.HasPrefix(name, "group:") {
 			return []string{}, fmt.Errorf(
 				"%w. A group cannot be composed of groups. https://tailscale.com/kb/1018/acls/#groups",
 				errInvalidGroup,
 			)
 		}
-		grp, err := NormalizeToFQDNRules(group, stripEmailDomain)
-		if err != nil {
-			return []string{}, fmt.Errorf(
-				"failed to normalize group %q, err: %w",
-				group,
-				errInvalidGroup,
-			)
+		if stripEmailDomain {
+			if atIdx := strings.Index(name, "@"); atIdx > 0 {
+				name = name[:atIdx]
+			}
 		}
-		outGroups = append(outGroups, grp)
+		outGroups = append(outGroups, name)
 	}
 
 	return outGroups, nil
