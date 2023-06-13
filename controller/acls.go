@@ -39,6 +39,11 @@ const (
 	expectedTokenItems = 2
 )
 
+const (
+	AutoGroupPrefix   = "autogroup:"
+	AutoGroupInternet = "autogroup:internet"
+)
+
 // For some reason golang.org/x/net/internal/iana is an internal package.
 const (
 	protocolICMP     = 1   // Internet Control Message
@@ -615,6 +620,15 @@ func (h *Mirage) expandAlias(
 	log.Debug().
 		Str("alias", alias).
 		Msg("Expanding")
+
+	// autogroup
+	if strings.HasPrefix(alias, AutoGroupPrefix) {
+		// 处理 autogroup:internet
+		if alias == AutoGroupInternet {
+			ips = append(ips, InternetIpLists...)
+			return ips, nil
+		}
+	}
 
 	if strings.HasPrefix(alias, "group:") {
 		users, err := expandGroup(aclPolicy, alias, stripEmailDomain)
