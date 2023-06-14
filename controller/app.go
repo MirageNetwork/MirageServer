@@ -691,16 +691,24 @@ func (h *Mirage) getOrgLastStateChange(orgId int64) time.Time {
 	}
 	for _, user := range users {
 		if lastChange, ok := h.lastStateChange.Load(user.StableID); ok {
-			times = append(times, lastChange)
+			if len(times) != 0 {
+				if times[0].Before(lastChange) {
+					times[0] = lastChange
+				}
+			} else {
+				times = append(times, lastChange)
+			}
 		}
 	}
 
 	if len(times) == 0 {
 		return time.Now().UTC()
 	}
-	sort.Slice(times, func(i, j int) bool {
-		return times[i].After(times[j])
-	})
+	/*
+		sort.Slice(times, func(i, j int) bool {
+			return times[i].After(times[j])
+		})
+	*/
 
 	return times[0]
 }

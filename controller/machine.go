@@ -196,6 +196,7 @@ func matchSourceAndDestinationWithRule(
 func getFilteredByACLPeers(
 	machines []Machine,
 	rules []tailcfg.FilterRule,
+	enableSelf bool,
 	machine *Machine,
 ) (Machines, []tailcfg.NodeID) {
 	log.Trace().
@@ -207,8 +208,14 @@ func getFilteredByACLPeers(
 	// Aclfilter peers here. We are itering through machines in all users and search through the computed aclRules
 	// for match between rule SrcIPs and DstPorts. If the rule is a match we allow the machine to be viewable.
 	machineIPs := machine.IPAddresses.ToStringSlice()
+
 	for _, peer := range machines {
 		if peer.ID == machine.ID {
+			continue
+		}
+		// 处理self情况:如果启用了self且没有tag,直接加入peer列表
+		if enableSelf && peer.UserID == machine.UserID && len(peer.ForcedTags) == 0 && len(machine.ForcedTags) == 0 {
+			peers[peer.ID] = peer
 			continue
 		}
 		for _, rule := range rules {
@@ -217,49 +224,35 @@ func getFilteredByACLPeers(
 				dst = append(dst, d.IP)
 			}
 			peerIPs := peer.IPAddresses.ToStringSlice()
-			if matchSourceAndDestinationWithRule(
-				rule.SrcIPs,
-				dst,
-				machineIPs,
-				peerIPs,
-			) || // match source and destination
-				matchSourceAndDestinationWithRule(
+			var starInSrc, starInDst bool
+			starInSrc = containsAddresses(rule.SrcIPs, []string{"*"})
+			starInDst = containsAddresses(dst, []string{"*"})
+
+			if (starInSrc && starInDst) ||
+				(starInSrc && containsAddresses(dst, machineIPs)) ||
+				(starInDst && containsAddresses(rule.SrcIPs, machineIPs)) ||
+				(starInSrc && containsAddresses(dst, peerIPs)) ||
+				(starInDst && containsAddresses(rule.SrcIPs, peerIPs)) {
+				peers[peer.ID] = peer
+			} else if !starInSrc && !starInDst &&
+				(matchSourceAndDestinationWithRule(
 					rule.SrcIPs,
 					dst,
 					peerIPs,
 					machineIPs,
-				) || // match return path
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					machineIPs,
-					[]string{"*"},
-				) || // match source and all destination
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					[]string{"*"},
-					[]string{"*"},
-				) || // match source and all destination
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					[]string{"*"},
-					peerIPs,
-				) || // match source and all destination
-				matchSourceAndDestinationWithRule(
-					rule.SrcIPs,
-					dst,
-					[]string{"*"},
-					machineIPs,
-				) { // match all sources and source
+				) ||
+					matchSourceAndDestinationWithRule(
+						rule.SrcIPs,
+						dst,
+						machineIPs,
+						peerIPs,
+					)) {
 				peers[peer.ID] = peer
 			} else {
 				invalidNodeIDs = append(invalidNodeIDs, tailcfg.NodeID(peer.ID))
 			}
 		}
 	}
-
 	authorizedPeers := make([]Machine, 0, len(peers))
 	for _, m := range peers {
 		authorizedPeers = append(authorizedPeers, m)
@@ -316,20 +309,15 @@ func (h *Mirage) ListPeers(machine *Machine) (Machines, error) {
 	return machines, nil
 }
 
-func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) {
+func (h *Mirage) getPeers(machine *Machine, enableSelf bool) (Machines, []tailcfg.NodeID, error) {
 	var peers Machines
 	var invalidNodeIDs []tailcfg.NodeID
 	var err error
 
+	org := &machine.User.Organization
 	// If ACLs rules are defined, filter visible host list with the ACLs
 	// else use the classic user scope
 	if machine.User.Organization.AclPolicy != nil {
-		org, err := h.GetOrgnaizationByID(machine.User.OrganizationID)
-		if err != nil {
-			log.Error().Err(err).Msg("Error retrieving organization of machine")
-
-			return Machines{}, []tailcfg.NodeID{}, err
-		}
 		var machines []Machine
 		machines, err = h.ListMachinesByOrgID(org.ID)
 		if err != nil {
@@ -337,7 +325,7 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 
 			return Machines{}, []tailcfg.NodeID{}, err
 		}
-		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, machine)
+		peers, invalidNodeIDs = getFilteredByACLPeers(machines, org.AclRules, enableSelf, machine)
 	} else {
 		peers, err = h.ListPeers(machine)
 		if err != nil {
@@ -360,10 +348,10 @@ func (h *Mirage) getPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) 
 	return peers, invalidNodeIDs, nil
 }
 
-func (h *Mirage) getValidPeers(machine *Machine) (Machines, []tailcfg.NodeID, error) {
+func (h *Mirage) getValidPeers(machine *Machine, enableSelf bool) (Machines, []tailcfg.NodeID, error) {
 	validPeers := make(Machines, 0)
 
-	peers, nodeIDs, err := h.getPeers(machine)
+	peers, nodeIDs, err := h.getPeers(machine, enableSelf)
 	if err != nil {
 		return Machines{}, []tailcfg.NodeID{}, err
 	}
@@ -662,10 +650,12 @@ func (h *Mirage) UpdateMachineFromDatabase(machine *Machine) error {
 
 // SetTags takes a Machine struct pointer and update the forced tags.
 func (h *Mirage) SetTags(machine *Machine, tags []string) error {
-	org, err := h.GetMachineOrgByID(machine)
-	if err != nil {
-		return fmt.Errorf("failed to update tags for machine in the database: %w", err)
-	}
+	/*
+		org, err := h.GetMachineOrgByID(machine)
+		if err != nil {
+			return fmt.Errorf("failed to update tags for machine in the database: %w", err)
+		}
+	*/
 	newTags := []string{}
 	for _, tag := range tags {
 		if !contains(newTags, tag) {
@@ -673,9 +663,11 @@ func (h *Mirage) SetTags(machine *Machine, tags []string) error {
 		}
 	}
 	machine.ForcedTags = newTags
-	if err := h.UpdateACLRulesOfOrg(org); err != nil && !errors.Is(err, errEmptyPolicy) {
-		return err
-	}
+	/*
+		if err := h.UpdateACLRulesOfOrg(org); err != nil && !errors.Is(err, errEmptyPolicy) {
+			return err
+		}
+	*/
 	h.setOrgLastStateChangeToNow(machine.User.OrganizationID)
 
 	if err := h.db.Save(machine).Error; err != nil {
@@ -1323,7 +1315,7 @@ func (h *Mirage) EnableAutoApprovedRoutes(machine *Machine) error {
 			if approvedAlias == machine.User.Name {
 				approvedRoutes = append(approvedRoutes, advertisedRoute)
 			} else {
-				approvedIps, err := h.expandAlias(false, []Machine{*machine}, *(machine.User.Organization.AclPolicy), approvedAlias, h.cfg.OIDC.StripEmaildomain)
+				approvedIps, err := h.expandAlias(false, []Machine{*machine}, machine.UserID, *(machine.User.Organization.AclPolicy), approvedAlias, h.cfg.OIDC.StripEmaildomain)
 				if err != nil {
 					log.Err(err).
 						Str("alias", approvedAlias).

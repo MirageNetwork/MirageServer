@@ -44,7 +44,30 @@ func (h *Mirage) generateMapResponse(
 		return nil, err
 	}
 
-	peers, invalidNodeIDs, err := h.getValidPeers(machine)
+	org, err := h.GetOrgnaizationByID(machine.User.OrganizationID)
+	if err != nil {
+		log.Error().
+			Caller().
+			Str("func", "generateMapResponse").
+			Err(err).
+			Msg("Cannot get organization of the machine")
+
+		return nil, err
+	}
+	// enableSelf 目前支持的是全作用域,即*=全体用户
+	enableSelf, err := h.UpdateACLRulesOfOrg(org, machine.UserID)
+	if err != nil {
+		log.Error().
+			Caller().
+			Str("func", "generateMapResponse").
+			Err(err).
+			Msg("Cannot get ACL rules")
+
+		return nil, err
+	}
+	// organization be set to field :machine.User.Organization
+	machine.User.Organization = *org
+	peers, invalidNodeIDs, err := h.getValidPeers(machine, enableSelf)
 	if invalidNodeIDs != nil {
 		log.Trace().Msg("Should ignore invalidNodeIDs for current")
 	}
@@ -70,16 +93,7 @@ func (h *Mirage) generateMapResponse(
 	)
 
 	now := time.Now()
-	org, err := h.GetOrgnaizationByID(machine.User.OrganizationID)
-	if err != nil {
-		log.Error().
-			Caller().
-			Str("func", "generateMapResponse").
-			Err(err).
-			Msg("Failed to get organization of machine")
-
-		return nil, err
-	}
+	//org := &machine.User.Organization
 
 	derpMap, err := h.LoadOrgDERPs(machine.User.OrganizationID)
 	if err != nil {

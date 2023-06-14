@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/samber/lo"
 	"github.com/tailscale/hujson"
 	"gopkg.in/yaml.v3"
 	"tailscale.com/envknob"
@@ -40,7 +41,9 @@ const (
 )
 
 const (
-	AutoGroupPrefix   = "autogroup:"
+	AutoGroupPrefix = "autogroup:"
+	AutoGroupSelf   = "autogroup:self"
+	AutoGroupOwner  = "autogroup:owner"
 	AutoGroupInternet = "autogroup:internet"
 )
 
@@ -92,7 +95,7 @@ func (h *Mirage) CreateDefaultACLPolicy() error {
 			Destinations: []string{"*:*"},
 		}},
 	}
-	return h.UpdateACLRules()
+	return h.UpdateACLRules(0)
 }
 
 // LoadACLPolicy loads the ACL policy from the specify path, and generates the ACL rules.
@@ -150,10 +153,10 @@ func (h *Mirage) LoadACLPolicy(path string) error {
 
 	h.aclPolicy = &policy
 
-	return h.UpdateACLRules()
+	return h.UpdateACLRules(0)
 }
 
-func (h *Mirage) UpdateACLRules() error {
+func (h *Mirage) UpdateACLRules(userId int64) error {
 	machines, err := h.ListMachines()
 	if err != nil {
 		return err
@@ -163,7 +166,7 @@ func (h *Mirage) UpdateACLRules() error {
 		return errEmptyPolicy
 	}
 
-	rules, err := h.generateACLRules(machines, *h.aclPolicy, h.cfg.OIDC.StripEmaildomain)
+	rules, _, err := h.generateACLRules(machines, userId, *h.aclPolicy, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
 		return err
 	}
@@ -171,7 +174,7 @@ func (h *Mirage) UpdateACLRules() error {
 	h.aclRules = rules
 
 	if featureEnableSSH() {
-		sshRules, err := h.generateSSHRules()
+		sshRules, err := h.generateSSHRules(userId)
 		if err != nil {
 			return err
 		}
@@ -187,25 +190,27 @@ func (h *Mirage) UpdateACLRules() error {
 	return nil
 }
 
-func (h *Mirage) UpdateACLRulesOfOrg(org *Organization) error {
-	if org == nil || org.AclPolicy == nil || org.ID == 0 {
-		return errEmptyPolicy
+func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) (bool, error) {
+	var enableSelf bool
+	if org == nil || org.ID == 0 {
+		return enableSelf, ErrOrgNotFound
 	}
 	machines, err := h.ListMachinesByOrgID(org.ID)
 	if err != nil {
-		return err
+		return enableSelf, err
 	}
-	rules, err := h.generateACLRules(machines, *org.AclPolicy, h.cfg.OIDC.StripEmaildomain)
+	aclPolicy := org.AclPolicy
+	rules, enableSelf, err := h.generateACLRules(machines, userId, *aclPolicy, h.cfg.OIDC.StripEmaildomain)
 	if err != nil {
-		return err
+		return enableSelf, err
 	}
 	log.Trace().Interface("ACL", rules).Msg("ACL rules generated")
 	org.AclRules = rules
 
 	if featureEnableSSH() {
-		sshRules, err := h.generateSSHRulesOfOrg(machines, org)
+		sshRules, err := h.generateSSHRulesOfOrg(machines, userId, org)
 		if err != nil {
-			return err
+			return enableSelf, err
 		}
 		log.Trace().Interface("SSH", sshRules).Msg("SSH rules generated")
 		if org.SshPolicy == nil {
@@ -216,17 +221,14 @@ func (h *Mirage) UpdateACLRulesOfOrg(org *Organization) error {
 		log.Info().Msg("SSH ACLs has been defined, but MIRAGE_EXPERIMENTAL_FEATURE_SSH is not enabled, this is a unstable feature, check docs before activating")
 	}
 
-	return nil
+	return enableSelf, nil
 }
 
-func (h *Mirage) generateSSHRulesOfOrg(machines []Machine, org *Organization) ([]*tailcfg.SSHRule, error) {
+func (h *Mirage) generateSSHRulesOfOrg(machines []Machine, userId int64, org *Organization) ([]*tailcfg.SSHRule, error) {
 	if org == nil || org.ID == 0 {
 		return nil, ErrOrgNotFound
 	}
 	a := org.AclPolicy
-	if a == nil {
-		return nil, errEmptyPolicy
-	}
 
 	rules := []*tailcfg.SSHRule{}
 
@@ -275,6 +277,7 @@ func (h *Mirage) generateSSHRulesOfOrg(machines []Machine, org *Organization) ([
 			expandedSrcs, err := h.expandAlias(
 				false,
 				machines,
+				userId,
 				*a,
 				rawSrc,
 				h.cfg.OIDC.StripEmaildomain,
@@ -309,26 +312,15 @@ func (h *Mirage) generateSSHRulesOfOrg(machines []Machine, org *Organization) ([
 
 func (h *Mirage) generateACLRules(
 	machines []Machine,
+	userId int64,
 	aclPolicy ACLPolicy,
 	stripEmaildomain bool,
-) ([]tailcfg.FilterRule, error) {
+) ([]tailcfg.FilterRule, bool, error) {
 	rules := []tailcfg.FilterRule{}
-
+	enableSelf := false
 	for index, acl := range aclPolicy.ACLs {
 		if acl.Action != "accept" {
-			return nil, errInvalidAction
-		}
-
-		srcIPs := []string{}
-		for innerIndex, src := range acl.Sources {
-			srcs, err := h.generateACLPolicySrc(machines, aclPolicy, src, stripEmaildomain)
-			if err != nil {
-				log.Error().
-					Msgf("Error parsing ACL %d, Source %d", index, innerIndex)
-
-				return nil, err
-			}
-			srcIPs = append(srcIPs, srcs...)
+			return nil, enableSelf, errInvalidAction
 		}
 
 		protocols, needsWildcard, err := parseProtocol(acl.Protocol)
@@ -336,13 +328,14 @@ func (h *Mirage) generateACLRules(
 			log.Error().
 				Msgf("Error parsing ACL %d. protocol unknown %s", index, acl.Protocol)
 
-			return nil, err
+			return nil, enableSelf, err
 		}
 
 		destPorts := []tailcfg.NetPortRange{}
 		for innerIndex, dest := range acl.Destinations {
 			dests, err := h.generateACLPolicyDest(
 				machines,
+				userId,
 				aclPolicy,
 				dest,
 				needsWildcard,
@@ -352,11 +345,41 @@ func (h *Mirage) generateACLRules(
 				log.Error().
 					Msgf("Error parsing ACL %d, Destination %d", index, innerIndex)
 
-				return nil, err
+				return nil, enableSelf, err
 			}
 			destPorts = append(destPorts, dests...)
 		}
 
+		srcIPs := []string{}
+		// 如果dest里面配置了autogroup:self那么src按照self的ip来取，目前只支持了*，没有支持autogroup:member
+		if containsSubStr(acl.Destinations, AutoGroupSelf) {
+			/*
+				for _, dest := range destPorts {
+					srcIPs = append(srcIPs, dest.IP)
+				}
+			*/
+			// src 按照autogroup:self的规则来解析,目前先支持*即全体user,之后可以在src里面加上对于作用域的选择
+			enableSelf = true
+			srcs, err := h.generateACLPolicySrc(machines, userId, aclPolicy, AutoGroupSelf, stripEmaildomain)
+			if err != nil {
+				log.Error().
+					Msgf("Error parsing ACL %d, Source %d", index, 0)
+
+				return nil, enableSelf, err
+			}
+			srcIPs = append(srcIPs, srcs...)
+		} else {
+			for innerIndex, src := range acl.Sources {
+				srcs, err := h.generateACLPolicySrc(machines, userId, aclPolicy, src, stripEmaildomain)
+				if err != nil {
+					log.Error().
+						Msgf("Error parsing ACL %d, Source %d", index, innerIndex)
+
+					return nil, enableSelf, err
+				}
+				srcIPs = append(srcIPs, srcs...)
+			}
+		}
 		rules = append(rules, tailcfg.FilterRule{
 			SrcIPs:   srcIPs,
 			DstPorts: destPorts,
@@ -364,10 +387,10 @@ func (h *Mirage) generateACLRules(
 		})
 	}
 
-	return rules, nil
+	return rules, enableSelf, nil
 }
 
-func (h *Mirage) generateSSHRules() ([]*tailcfg.SSHRule, error) {
+func (h *Mirage) generateSSHRules(userId int64) ([]*tailcfg.SSHRule, error) {
 	rules := []*tailcfg.SSHRule{}
 
 	if h.aclPolicy == nil {
@@ -424,6 +447,7 @@ func (h *Mirage) generateSSHRules() ([]*tailcfg.SSHRule, error) {
 			expandedSrcs, err := h.expandAlias(
 				false,
 				machines,
+				userId,
 				*h.aclPolicy,
 				rawSrc,
 				h.cfg.OIDC.StripEmaildomain,
@@ -475,15 +499,17 @@ func sshCheckAction(duration string) (*tailcfg.SSHAction, error) {
 
 func (h *Mirage) generateACLPolicySrc(
 	machines []Machine,
+	userId int64,
 	aclPolicy ACLPolicy,
 	src string,
 	stripEmaildomain bool,
 ) ([]string, error) {
-	return h.expandAlias(false, machines, aclPolicy, src, stripEmaildomain)
+	return h.expandAlias(false, machines, userId, aclPolicy, src, stripEmaildomain)
 }
 
 func (h *Mirage) generateACLPolicyDest(
 	machines []Machine,
+	userId int64,
 	aclPolicy ACLPolicy,
 	dest string,
 	needsWildcard bool,
@@ -510,6 +536,7 @@ func (h *Mirage) generateACLPolicyDest(
 	expanded, err := h.expandAlias(
 		h.cfg.AllowRouteDueToMachine,
 		machines,
+		userId,
 		aclPolicy,
 		alias,
 		stripEmaildomain,
@@ -608,13 +635,17 @@ func (h *Mirage) expandMachineRoutes(machine Machine) []string {
 func (h *Mirage) expandAlias(
 	autoAddRoute bool,
 	machines []Machine,
+	userId int64,
 	aclPolicy ACLPolicy,
 	alias string,
 	stripEmailDomain bool,
-) ([]string, error) {
-	ips := []string{}
+) (ips []string, resErr error) {
+	defer func() {
+		ips = lo.Uniq(ips)
+	}()
 	if alias == "*" {
-		return []string{"*"}, nil
+		ips = []string{"*"}
+		return
 	}
 
 	log.Debug().
@@ -623,17 +654,44 @@ func (h *Mirage) expandAlias(
 
 	// autogroup
 	if strings.HasPrefix(alias, AutoGroupPrefix) {
+		// 处理 autogroup:self
+		if alias == AutoGroupSelf {
+			nodes, err := h.ListMachinesByUser(userId)
+			if err != nil {
+				resErr = err
+				return
+			}
+			for _, node := range nodes {
+				if len(node.ForcedTags) > 0 {
+					continue
+				}
+				ips = append(ips, node.IPAddresses.ToStringSlice()...)
+				if autoAddRoute {
+					ips = append(ips, h.expandMachineRoutes(node)...)
+				}
+			}
+			// 处理 autogroup:owner
+		} else if alias == AutoGroupOwner {
+			for _, machine := range machines {
+				if machine.User.Role == RoleOwner {
+					ips = append(ips, machine.IPAddresses.ToStringSlice()...)
+					if autoAddRoute {
+						ips = append(ips, h.expandMachineRoutes(machine)...)
+					}
+				}
+			}
 		// 处理 autogroup:internet
-		if alias == AutoGroupInternet {
+		} else if alias == AutoGroupInternet {
 			ips = append(ips, InternetIpLists...)
-			return ips, nil
 		}
+    return
 	}
 
 	if strings.HasPrefix(alias, "group:") {
 		users, err := expandGroup(aclPolicy, alias, stripEmailDomain)
 		if err != nil {
-			return ips, err
+			resErr = err
+			return
 		}
 		for _, n := range users {
 			nodes := filterMachinesByUser(machines, n)
@@ -644,8 +702,7 @@ func (h *Mirage) expandAlias(
 				}
 			}
 		}
-
-		return ips, nil
+		return
 	}
 
 	if strings.HasPrefix(alias, "tag:") {
@@ -664,16 +721,17 @@ func (h *Mirage) expandAlias(
 		if err != nil {
 			if errors.Is(err, errInvalidTag) {
 				if len(ips) == 0 {
-					return ips, fmt.Errorf(
+					resErr = fmt.Errorf(
 						"%w. %v isn't owned by a TagOwner and no forced tags are defined",
 						errInvalidTag,
 						alias,
 					)
+					return
 				}
-
-				return ips, nil
+				return
 			} else {
-				return ips, err
+				resErr = err
+				return
 			}
 		}
 
@@ -691,7 +749,7 @@ func (h *Mirage) expandAlias(
 			}
 		}
 
-		return ips, nil
+		return
 	}
 
 	// if alias is a user
@@ -705,7 +763,7 @@ func (h *Mirage) expandAlias(
 		}
 	}
 	if len(ips) > 0 {
-		return ips, nil
+		return
 	}
 
 	// if alias is an host
@@ -748,7 +806,7 @@ func (h *Mirage) expandAlias(
 
 	log.Debug().Msgf("No IPs found with the alias %v", alias)
 
-	return ips, nil
+	return
 }
 
 // excludeCorrectlyTaggedNodes will remove from the list of input nodes the ones

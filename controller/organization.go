@@ -127,15 +127,26 @@ func (m *Mirage) CreateOrgnaizationInTx(tx *gorm.DB, name, provider string) (*Or
 	org := Organization{}
 	org.Name = name
 	org.Provider = provider
-	org.AclPolicy = &ACLPolicy{
-		ACLs: []ACL{{
-			Action:       "accept",
-			Protocol:     "",
-			Sources:      []string{"*"},
-			Destinations: []string{"*:*"},
-		}},
-	}
 	org.ExpiryDuration = DefaultExpireTime
+	org.AclPolicy = &ACLPolicy{
+		Groups:    make(Groups, 0),
+		Hosts:     make(Hosts, 0),
+		TagOwners: make(TagOwners, 0),
+		ACLs: []ACL{
+			{
+				Action:       "accept",
+				Protocol:     "",
+				Sources:      []string{"*"},
+				Destinations: []string{"*:*"},
+			},
+		},
+		Tests: make([]ACLTest, 0),
+		AutoApprovers: AutoApprovers{
+			Routes:   make(map[string][]string, 0),
+			ExitNode: make([]string, 0),
+		},
+		SSHs: make([]SSH, 0),
+	}
 
 	//cgao6: 添加组织幻域域名roll生成
 	newMagicDNSDomain, err := m.GenNewMagicDNSDomain(tx)
@@ -159,15 +170,17 @@ func (m *Mirage) CreateOrgnaizationInTx(tx *gorm.DB, name, provider string) (*Or
 	return &org, nil
 }
 
-func (m *Mirage) GetOrgnaizationByName(name, provider string) (*Organization, error) {
-	org, err := GetOrgnaizationByNameInTx(m.db.Session(&gorm.Session{}), name, provider)
-	if err != nil {
-		return nil, err
-	}
-	m.UpdateACLRulesOfOrg(org)
-	return org, err
+// GetOrgnaizationRecordByName get Organization Info only(not to update the AclRules)
+func (m *Mirage) GetOrgnaizationRecordByName(name, provider string) (*Organization, error) {
+	var org Organization
+	err := m.db.Model(&Organization{}).Where(&Organization{
+		Name:     name,
+		Provider: provider,
+	}).Take(&org).Error
+	return &org, err
 }
 
+// GetOrgnaizationIDByName get Organization id (the primary key of the db table)
 func (m *Mirage) GetOrgnaizationIDByName(name, provider string) (int64, error) {
 	var id int64
 	err := m.db.Model(&Organization{}).Where(&Organization{
@@ -177,13 +190,14 @@ func (m *Mirage) GetOrgnaizationIDByName(name, provider string) (int64, error) {
 	return id, err
 }
 
+// GetOrgnaizationByID get Organization Info and update the AclRules
 func (m *Mirage) GetOrgnaizationByID(id int64) (*Organization, error) {
 	org := &Organization{}
 	err := m.db.Where(&Organization{ID: id}).Take(org).Error
 	if err != nil {
 		return nil, err
 	}
-	m.UpdateACLRulesOfOrg(org)
+	//m.UpdateACLRulesOfOrg(org)
 	return org, err
 }
 

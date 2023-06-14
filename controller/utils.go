@@ -269,6 +269,16 @@ func containsStr(ts []string, t string) bool {
 	return false
 }
 
+func containsSubStr(ts []string, t string) bool {
+	for _, v := range ts {
+		if strings.Contains(v, t) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func contains[T string | netip.Prefix](ts []T, t T) bool {
 	for _, v := range ts {
 		if reflect.DeepEqual(v, t) {
@@ -359,21 +369,18 @@ func GetShortId(longID int64) string {
 }
 
 type UtilsSet[K comparable] struct {
-	slice []K
-	set   map[K]struct{}
+	set map[K]struct{}
 }
 
 func NewUtilsSet[K comparable]() *UtilsSet[K] {
 	ret := &UtilsSet[K]{}
 	ret.set = make(map[K]struct{})
-	ret.slice = make([]K, 0)
 	return ret
 }
 
 func (s *UtilsSet[K]) SetKey(key K) {
 	if _, ok := s.set[key]; !ok {
 		s.set[key] = struct{}{}
-		s.slice = append(s.slice, key)
 	}
 }
 
@@ -383,5 +390,9 @@ func (s *UtilsSet[K]) CheckKey(key K) bool {
 }
 
 func (s *UtilsSet[K]) GetKeys() []K {
-	return s.slice
+	slice := []K{}
+	for k := range s.set {
+		slice = append(slice, k)
+	}
+	return slice
 }
