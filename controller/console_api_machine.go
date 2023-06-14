@@ -495,7 +495,7 @@ func (h *Mirage) ConsoleRemoveMachineAPI(
 		h.doAPIResponse(writer, "用户信息核对失败:"+err.Error(), nil)
 		return
 	}
-	UserMachines, err := h.ListMachinesByUser(user.ID)
+	UserMachines, err := h.ListMachinesByOrgID(user.OrganizationID)
 	if err != nil {
 		h.doAPIResponse(writer, "用户设备检索失败:"+err.Error(), nil)
 		return

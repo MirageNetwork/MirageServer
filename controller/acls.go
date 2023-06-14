@@ -44,6 +44,7 @@ const (
 	AutoGroupPrefix = "autogroup:"
 	AutoGroupSelf   = "autogroup:self"
 	AutoGroupOwner  = "autogroup:owner"
+	AutoGroupInternet = "autogroup:internet"
 )
 
 // For some reason golang.org/x/net/internal/iana is an internal package.
@@ -679,8 +680,11 @@ func (h *Mirage) expandAlias(
 					}
 				}
 			}
+		// 处理 autogroup:internet
+		} else if alias == AutoGroupInternet {
+			ips = append(ips, InternetIpLists...)
 		}
-		return
+    return
 	}
 
 	if strings.HasPrefix(alias, "group:") {
