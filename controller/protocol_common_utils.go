@@ -56,6 +56,7 @@ func (h *Mirage) generateMapResponse(
 	}
 	// enableSelf 表示该节点的用户是否启用了self
 	enableSelf, err := h.UpdateACLRulesOfOrg(org, &machine.User)
+
 	if err != nil {
 		log.Error().
 			Caller().

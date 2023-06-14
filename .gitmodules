@@ -1,7 +1,7 @@
 [submodule "dex"]
 	path = dex
-	url = https://github.com/MirageNetwork/dex.git
+	url = git@github.com:MirageNetwork/dex.git
 [submodule "MirageClient"]
 	path = MirageClient
-	url = https://github.com/MirageNetwork/MirageClient.git
+	url = git@github.com:MirageNetwork/MirageClient.git
 	branch = main

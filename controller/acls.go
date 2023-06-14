@@ -44,6 +44,7 @@ const (
 	AutoGroupPrefix = "autogroup:"
 	AutoGroupSelf   = "autogroup:self"
 	AutoGroupOwner  = "autogroup:owner"
+	AutoGroupInternet = "autogroup:internet"
 )
 
 // For some reason golang.org/x/net/internal/iana is an internal package.
@@ -166,6 +167,7 @@ func (h *Mirage) UpdateACLRules(userId int64) error {
 	}
 
 	rules, _, err := h.generateACLRules(machines, &User{}, *h.aclPolicy, h.cfg.OIDC.StripEmaildomain)
+
 	if err != nil {
 		return err
 	}
@@ -190,6 +192,7 @@ func (h *Mirage) UpdateACLRules(userId int64) error {
 }
 
 func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, user *User) (bool, error) {
+
 	var enableSelf bool
 	if org == nil || org.ID == 0 {
 		return enableSelf, ErrOrgNotFound
@@ -200,6 +203,7 @@ func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, user *User) (bool, error
 	}
 	aclPolicy := org.AclPolicy
 	rules, enableSelf, err := h.generateACLRules(machines, user, *aclPolicy, h.cfg.OIDC.StripEmaildomain)
+
 	if err != nil {
 		return enableSelf, err
 	}
@@ -208,6 +212,7 @@ func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, user *User) (bool, error
 
 	if featureEnableSSH() {
 		sshRules, err := h.generateSSHRulesOfOrg(machines, user.ID, org)
+
 		if err != nil {
 			return enableSelf, err
 		}
@@ -380,6 +385,7 @@ Loop:
 		srcIPs := []string{}
 		// 如果dest里面配置了autogroup:self,且src的作用域包含了user
 		if enableSelf {
+
 			/*
 				for _, dest := range destPorts {
 					srcIPs = append(srcIPs, dest.IP)
@@ -387,6 +393,7 @@ Loop:
 			*/
 			// src 按照autogroup:self的规则来解析
 			srcs, err := h.generateACLPolicySrc(machines, user.ID, aclPolicy, AutoGroupSelf, stripEmaildomain)
+
 			if err != nil {
 				log.Error().
 					Msgf("Error parsing ACL %d, Source %d", index, 0)
@@ -397,6 +404,7 @@ Loop:
 		} else {
 			for innerIndex, src := range acl.Sources {
 				srcs, err := h.generateACLPolicySrc(machines, user.ID, aclPolicy, src, stripEmaildomain)
+
 				if err != nil {
 					log.Error().
 						Msgf("Error parsing ACL %d, Source %d", index, innerIndex)
@@ -706,8 +714,12 @@ func (h *Mirage) expandAlias(
 					}
 				}
 			}
+
+		// 处理 autogroup:internet
+		} else if alias == AutoGroupInternet {
+			ips = append(ips, InternetIpLists...)
 		}
-		return
+    return
 	}
 
 	if strings.HasPrefix(alias, "group:") {
