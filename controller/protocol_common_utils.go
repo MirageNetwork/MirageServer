@@ -54,8 +54,9 @@ func (h *Mirage) generateMapResponse(
 
 		return nil, err
 	}
-	// enableSelf 目前支持的是全作用域,即*=全体用户
-	enableSelf, err := h.UpdateACLRulesOfOrg(org, machine.UserID)
+	// enableSelf 表示该节点的用户是否启用了self
+	enableSelf, err := h.UpdateACLRulesOfOrg(org, &machine.User)
+
 	if err != nil {
 		log.Error().
 			Caller().

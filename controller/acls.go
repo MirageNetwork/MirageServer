@@ -166,7 +166,8 @@ func (h *Mirage) UpdateACLRules(userId int64) error {
 		return errEmptyPolicy
 	}
 
-	rules, _, err := h.generateACLRules(machines, userId, *h.aclPolicy, h.cfg.OIDC.StripEmaildomain)
+	rules, _, err := h.generateACLRules(machines, &User{}, *h.aclPolicy, h.cfg.OIDC.StripEmaildomain)
+
 	if err != nil {
 		return err
 	}
@@ -190,7 +191,8 @@ func (h *Mirage) UpdateACLRules(userId int64) error {
 	return nil
 }
 
-func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) (bool, error) {
+func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, user *User) (bool, error) {
+
 	var enableSelf bool
 	if org == nil || org.ID == 0 {
 		return enableSelf, ErrOrgNotFound
@@ -200,7 +202,8 @@ func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) (bool, err
 		return enableSelf, err
 	}
 	aclPolicy := org.AclPolicy
-	rules, enableSelf, err := h.generateACLRules(machines, userId, *aclPolicy, h.cfg.OIDC.StripEmaildomain)
+	rules, enableSelf, err := h.generateACLRules(machines, user, *aclPolicy, h.cfg.OIDC.StripEmaildomain)
+
 	if err != nil {
 		return enableSelf, err
 	}
@@ -208,7 +211,8 @@ func (h *Mirage) UpdateACLRulesOfOrg(org *Organization, userId int64) (bool, err
 	org.AclRules = rules
 
 	if featureEnableSSH() {
-		sshRules, err := h.generateSSHRulesOfOrg(machines, userId, org)
+		sshRules, err := h.generateSSHRulesOfOrg(machines, user.ID, org)
+
 		if err != nil {
 			return enableSelf, err
 		}
@@ -312,12 +316,13 @@ func (h *Mirage) generateSSHRulesOfOrg(machines []Machine, userId int64, org *Or
 
 func (h *Mirage) generateACLRules(
 	machines []Machine,
-	userId int64,
+	user *User,
 	aclPolicy ACLPolicy,
 	stripEmaildomain bool,
 ) ([]tailcfg.FilterRule, bool, error) {
 	rules := []tailcfg.FilterRule{}
 	enableSelf := false
+Loop:
 	for index, acl := range aclPolicy.ACLs {
 		if acl.Action != "accept" {
 			return nil, enableSelf, errInvalidAction
@@ -331,11 +336,38 @@ func (h *Mirage) generateACLRules(
 			return nil, enableSelf, err
 		}
 
+		if containsSubStr(acl.Destinations, AutoGroupSelf) {
+			if containsStr(acl.Sources, "*") {
+				enableSelf = true
+			} else {
+			LoopForSelf:
+				for _, alias := range acl.Sources {
+					if strings.HasPrefix(alias, "group:") {
+						users, err := expandGroup(aclPolicy, acl.Sources[0], stripEmaildomain)
+						if err != nil {
+							log.Error().
+								Msgf("Error expand group %s ", acl.Sources[0])
+							continue LoopForSelf
+						}
+						if containsStr(users, user.Name) {
+							enableSelf = true
+							break LoopForSelf
+						}
+					} else if alias == user.Name {
+						enableSelf = true
+						break LoopForSelf
+					}
+				}
+			}
+			if !enableSelf {
+				continue Loop
+			}
+		}
 		destPorts := []tailcfg.NetPortRange{}
 		for innerIndex, dest := range acl.Destinations {
 			dests, err := h.generateACLPolicyDest(
 				machines,
-				userId,
+				user.ID,
 				aclPolicy,
 				dest,
 				needsWildcard,
@@ -351,16 +383,17 @@ func (h *Mirage) generateACLRules(
 		}
 
 		srcIPs := []string{}
-		// 如果dest里面配置了autogroup:self那么src按照self的ip来取，目前只支持了*，没有支持autogroup:member
-		if containsSubStr(acl.Destinations, AutoGroupSelf) {
+		// 如果dest里面配置了autogroup:self,且src的作用域包含了user
+		if enableSelf {
+
 			/*
 				for _, dest := range destPorts {
 					srcIPs = append(srcIPs, dest.IP)
 				}
 			*/
-			// src 按照autogroup:self的规则来解析,目前先支持*即全体user,之后可以在src里面加上对于作用域的选择
-			enableSelf = true
-			srcs, err := h.generateACLPolicySrc(machines, userId, aclPolicy, AutoGroupSelf, stripEmaildomain)
+			// src 按照autogroup:self的规则来解析
+			srcs, err := h.generateACLPolicySrc(machines, user.ID, aclPolicy, AutoGroupSelf, stripEmaildomain)
+
 			if err != nil {
 				log.Error().
 					Msgf("Error parsing ACL %d, Source %d", index, 0)
@@ -370,7 +403,8 @@ func (h *Mirage) generateACLRules(
 			srcIPs = append(srcIPs, srcs...)
 		} else {
 			for innerIndex, src := range acl.Sources {
-				srcs, err := h.generateACLPolicySrc(machines, userId, aclPolicy, src, stripEmaildomain)
+				srcs, err := h.generateACLPolicySrc(machines, user.ID, aclPolicy, src, stripEmaildomain)
+
 				if err != nil {
 					log.Error().
 						Msgf("Error parsing ACL %d, Source %d", index, innerIndex)
@@ -680,6 +714,7 @@ func (h *Mirage) expandAlias(
 					}
 				}
 			}
+
 		// 处理 autogroup:internet
 		} else if alias == AutoGroupInternet {
 			ips = append(ips, InternetIpLists...)
@@ -955,22 +990,19 @@ func expandGroup(
 			errInvalidGroup,
 		)
 	}
-	for _, group := range aclGroups {
-		if strings.HasPrefix(group, "group:") {
+	for _, name := range aclGroups {
+		if strings.HasPrefix(name, "group:") {
 			return []string{}, fmt.Errorf(
 				"%w. A group cannot be composed of groups. https://tailscale.com/kb/1018/acls/#groups",
 				errInvalidGroup,
 			)
 		}
-		grp, err := NormalizeToFQDNRules(group, stripEmailDomain)
-		if err != nil {
-			return []string{}, fmt.Errorf(
-				"failed to normalize group %q, err: %w",
-				group,
-				errInvalidGroup,
-			)
+		if stripEmailDomain {
+			if atIdx := strings.Index(name, "@"); atIdx > 0 {
+				name = name[:atIdx]
+			}
 		}
-		outGroups = append(outGroups, grp)
+		outGroups = append(outGroups, name)
 	}
 
 	return outGroups, nil
