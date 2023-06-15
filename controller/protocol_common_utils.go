@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/binary"
 	"encoding/json"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -312,6 +313,9 @@ func applyMapResponseDelta(
 		if err != nil {
 			return tailcfg.MapResponse{}, err
 		}
+		sort.Slice(nodesChanged, func(i, j int) bool {
+			return nodesChanged[i].ID < nodesChanged[j].ID
+		})
 		mapResponse.PeersChanged = nodesChanged
 
 		// Update PeersRemoved with any peers which are no longer present
