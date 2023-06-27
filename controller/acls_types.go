@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"net"
 	"net/netip"
 	"strings"
 
@@ -76,7 +77,12 @@ func (hosts *Hosts) UnmarshalJSON(data []byte) error {
 	}
 	for host, prefixStr := range hostIPPrefixMap {
 		if !strings.Contains(prefixStr, "/") {
-			prefixStr += "/32"
+			parsedIP := net.ParseIP(prefixStr)
+			if parsedIP != nil && parsedIP.To4() != nil {
+				prefixStr += "/32"
+			} else if parsedIP != nil {
+				prefixStr += "/128"
+			}
 		}
 		prefix, err := netip.ParsePrefix(prefixStr)
 		if err != nil {

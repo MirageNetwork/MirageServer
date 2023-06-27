@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -41,9 +42,9 @@ const (
 )
 
 const (
-	AutoGroupPrefix = "autogroup:"
-	AutoGroupSelf   = "autogroup:self"
-	AutoGroupOwner  = "autogroup:owner"
+	AutoGroupPrefix   = "autogroup:"
+	AutoGroupSelf     = "autogroup:self"
+	AutoGroupOwner    = "autogroup:owner"
 	AutoGroupInternet = "autogroup:internet"
 )
 
@@ -549,22 +550,27 @@ func (h *Mirage) generateACLPolicyDest(
 	needsWildcard bool,
 	stripEmaildomain bool,
 ) ([]tailcfg.NetPortRange, error) {
-	tokens := strings.Split(dest, ":")
-	if len(tokens) < expectedTokenItems || len(tokens) > 3 {
-		return nil, errInvalidPortFormat
-	}
 
-	var alias string
-	// We can have here stuff like:
-	// git-server:*
-	// 192.168.1.0/24:22
-	// tag:montreal-webserver:80,443
-	// tag:api-server:443
-	// example-host-1:*
-	if len(tokens) == expectedTokenItems {
-		alias = tokens[0]
-	} else {
-		alias = fmt.Sprintf("%s:%s", tokens[0], tokens[1])
+	// First, consider the case where the input is in the format of 'ip:port'
+	alias, portStr, err := net.SplitHostPort(dest)
+	if err != nil {
+		tokens := strings.Split(dest, ":")
+		if len(tokens) < expectedTokenItems || len(tokens) > 3 {
+			return nil, errInvalidPortFormat
+		}
+
+		// We can have here stuff like:
+		// git-server:*
+		// 192.168.1.0/24:22
+		// tag:montreal-webserver:80,443
+		// tag:api-server:443
+		// example-host-1:*
+		if len(tokens) == expectedTokenItems {
+			alias = tokens[0]
+		} else {
+			alias = fmt.Sprintf("%s:%s", tokens[0], tokens[1])
+		}
+		portStr = tokens[len(tokens)-1]
 	}
 
 	expanded, err := h.expandAlias(
@@ -578,7 +584,7 @@ func (h *Mirage) generateACLPolicyDest(
 	if err != nil {
 		return nil, err
 	}
-	ports, err := expandPorts(tokens[len(tokens)-1], needsWildcard)
+	ports, err := expandPorts(portStr, needsWildcard)
 	if err != nil {
 		return nil, err
 	}
@@ -715,11 +721,11 @@ func (h *Mirage) expandAlias(
 				}
 			}
 
-		// 处理 autogroup:internet
+			// 处理 autogroup:internet
 		} else if alias == AutoGroupInternet {
 			ips = append(ips, InternetIpLists...)
 		}
-    return
+		return
 	}
 
 	if strings.HasPrefix(alias, "group:") {
