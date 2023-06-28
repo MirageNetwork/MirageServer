@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -551,8 +552,8 @@ func (h *Mirage) generateACLPolicyDest(
 	stripEmaildomain bool,
 ) ([]tailcfg.NetPortRange, error) {
 
-	// First, consider the case where the input is in the format of 'ip:port'
-	alias, portStr, err := net.SplitHostPort(dest)
+	// First, consider the case where the input is in the format of 'ip:port' or 'cidr:port'
+	alias, portStr, err := parseDest(dest)
 	if err != nil {
 		tokens := strings.Split(dest, ":")
 		if len(tokens) < expectedTokenItems || len(tokens) > 3 {
@@ -601,6 +602,37 @@ func (h *Mirage) generateACLPolicyDest(
 	}
 
 	return dests, nil
+}
+
+// 匹配 "/数字" 的正则表达式
+var re = regexp.MustCompile(`/(\d+)`)
+
+func parseDest(dest string) (cidr, port string, err error) {
+	ipWithPorts, mask := matchCIDR(dest)
+	var host string
+	var e error
+	if len(ipWithPorts) > 0 && len(mask) > 0 {
+		host, port, e = net.SplitHostPort(ipWithPorts)
+	} else {
+		host, port, e = net.SplitHostPort(dest)
+	}
+	if len(mask) > 0 {
+		host = host + "/" + mask
+	}
+	return host, port, e
+}
+func matchCIDR(str string) (ipWithPorts string, maskLen string) {
+
+	// 查找匹配项
+	match := re.FindStringSubmatch(str)
+	if match != nil && len(match) >= 2 {
+		// 提取连续数字部分
+		maskLen = match[1]
+
+		// 替换原字符串中的匹配部分
+		ipWithPorts = re.ReplaceAllString(str, "")
+	}
+	return ipWithPorts, maskLen
 }
 
 // parseProtocol reads the proto field of the ACL and generates a list of
