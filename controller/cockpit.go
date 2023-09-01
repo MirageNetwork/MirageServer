@@ -343,11 +343,11 @@ func (c *Cockpit) RegisterAdmin(
 		c.doAPIResponse(w, "", "ok")
 		return
 	} else { // 注册请求
-		if c.author == nil {
+		//if c.author == nil {
 			wconfig := &webauthn.Config{
 				RPDisplayName: "蜃境网络",                        // Display Name for your site
 				RPID:          r.Host,                        // Generally the FQDN for your site
-				RPOrigins:     []string{"https://" + r.Host}, //[]string{"https://" + serverURL}, // The origin URLs allowed for WebAuthn requests
+				RPOrigins:     r.Header["Origin"], //[]string{"https://" + serverURL}, // The origin URLs allowed for WebAuthn requests
 			}
 			webAuthor, err := webauthn.New(wconfig)
 			if err != nil {
@@ -355,7 +355,7 @@ func (c *Cockpit) RegisterAdmin(
 				return
 			}
 			c.author = webAuthor
-		}
+		//}
 		options, webAuthSession, err := c.author.BeginRegistration(c.superAdmin)
 		c.authCache.Set("MirageSuperAdmin", webAuthSession, 5*time.Minute)
 		if err != nil {
@@ -403,11 +403,11 @@ func (c *Cockpit) Login(
 		http.SetCookie(w, authCookie)
 		c.doAPIResponse(w, "", "ok")
 	} else { // 登录请求
-		if c.author == nil {
+		//if c.author == nil {
 			wconfig := &webauthn.Config{
 				RPDisplayName: "蜃境网络",                        // Display Name for your site
 				RPID:          r.Host,                        // Generally the FQDN for your site
-				RPOrigins:     []string{"https://" + r.Host}, //[]string{"https://" + serverURL}, // The origin URLs allowed for WebAuthn requests
+				RPOrigins:     r.Header["Origin"], //[]string{"https://" + serverURL}, // The origin URLs allowed for WebAuthn requests
 			}
 			webAuthor, err := webauthn.New(wconfig)
 			if err != nil {
@@ -415,7 +415,7 @@ func (c *Cockpit) Login(
 				return
 			}
 			c.author = webAuthor
-		}
+		//}
 		options, session, err := c.author.BeginLogin(c.superAdmin)
 		if err != nil {
 			c.doAPIResponse(w, "启动超管登录失败", nil)
